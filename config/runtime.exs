@@ -72,6 +72,8 @@ if config_env() == :prod do
 
   config :purple_flow, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  config :purple_flow, :workflows_dir, System.get_env("WORKFLOWS_DIR", "/app/workflows")
+
   config :purple_flow, PurpleFlowWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

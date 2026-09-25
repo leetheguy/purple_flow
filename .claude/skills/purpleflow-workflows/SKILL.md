@@ -107,7 +107,7 @@ Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
 
 ## Gotchas
 
-- **Webhook input is wrapped**: `%{"body" => ..., "query" => ..., "headers" => ...}`. Most webhook workflows start with a tiny Code step that returns `input["body"]` (see `workflows/hello/numbers.exs`).
+- **Webhook input is wrapped**: `%{"body" => ..., "query" => ..., "headers" => ...}`. Most webhook workflows start with a tiny Code step that returns `input["body"]` (see `workflows/samples/hello/numbers.exs`).
 - Webhook calls wait for the result by default. For runs that can take longer than ~100s (Cloudflare's limit), use `respond = "immediately"`.
 - A list output from an HTTP or Postgres node makes the next step run per item. That's usually what you want. If not, use `run = "all"`.
 - Workflows are loaded when the server starts. **After editing, reload**: the Reload button on the home page, or restart the server.

@@ -1,0 +1,57 @@
+services:
+  app:
+    build: .
+    container_name: purple_flow
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PHX_HOST=${PHX_HOST:-localhost}
+      - PORT=${PORT:-4000}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?SECRET_KEY_BASE is required, generate one with `openssl rand -base64 48`}
+      - DATABASE_URL=${DATABASE_URL:-ecto://purple_flow:purple_flow@db/purple_flow}
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    volumes:
+      - ./workflows:/app/workflows
+    networks:
+      - purple_flow
+    # Remove this block if you're pointing DATABASE_URL at an external
+    # Postgres instead of the bundled "db" service — see README "Database".
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:${PORT:-4000}/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Bundled Postgres, for a self-contained install. If you're connecting to
+  # an existing Postgres instead, delete this service and the app's
+  # `depends_on: db` block, then point DATABASE_URL at your own database
+  # (see README "Database").
+  db:
+    image: postgres:17
+    container_name: purple_flow-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=purple_flow
+      - POSTGRES_PASSWORD=purple_flow
+      - POSTGRES_DB=purple_flow
+    volumes:
+      - purple_flow_db_data:/var/lib/postgresql/data
+    networks:
+      - purple_flow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U purple_flow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  purple_flow:
+
+volumes:
+  purple_flow_db_data:

@@ -60,31 +60,29 @@ The UI is an execution history viewer (Phoenix LiveView). Pick a run and see eve
 
 ## Running it
 
-You need Elixir and Postgres (dev login `postgres` / `postgres` on localhost).
+The supported way to run PurpleFlow is Docker Compose:
+
+```sh
+docker compose up -d --build   # http://localhost:4000
+docker compose down
+```
+
+This starts PurpleFlow and Postgres together. Postgres has a health check, and
+the app container only starts once it passes; migrations run automatically on
+boot, and the container restarts on its own if the app dies. See
+`docker-compose.yml` and `.env.example` for the environment variables to set
+(`SECRET_KEY_BASE`, `PHX_HOST`, Postgres credentials).
+
+For local development without Docker, you need Elixir and Postgres (dev login
+`postgres` / `postgres` on localhost):
 
 ```sh
 mix setup          # install deps, create the database
 mix test
+mix phx.server      # http://localhost:4000
 ```
 
-Start the server with `bin/start.sh` instead of a bare `mix phx.server` — it
-waits for Postgres to be reachable before booting and auto-restarts the
-server if it crashes or wedges (process alive but not responding on the
-port). Stop it with `bin/stop.sh`.
-
-```sh
-nohup bin/start.sh > /root/purple_flow/phx_server.log 2>&1 &   # http://localhost:4000
-bin/stop.sh
-```
-
-If Postgres lives in a separate container (e.g. the `db` service in
-goo_home/docker-compose.yml), set `POSTGRES_HOST` before starting:
-
-```sh
-POSTGRES_HOST=db nohup bin/start.sh > /root/purple_flow/phx_server.log 2>&1 &
-```
-
-- Workflows live in `workflows/`. Two examples are included: `hello` (webhook, per-item routes) and `users` (HTTP, per-item).
+- Workflows live in `workflows/`, mounted into the container as a volume so you can edit them on the host. Everything directly under `workflows/` is yours and gitignored — nothing you build there gets committed to this repo. Two annotated examples live in `workflows/samples/` (tracked, part of the repo): `hello` (webhook, per-item routes) and `users` (HTTP, per-item). Copy one into `workflows/` to try it — the app only loads workflows one level under `workflows/`, not `workflows/samples/` itself.
 - Credentials go in `.env` (see `.env.example`) and are used as `{{ env.NAME }}`.
 - After editing workflow files, hit **Reload** on the home page.
 

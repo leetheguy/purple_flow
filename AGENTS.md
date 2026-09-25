@@ -2,13 +2,12 @@ This is a web application written using the Phoenix web framework.
 
 **Working on workflows?** Read `.claude/skills/purpleflow-workflows/SKILL.md` first. It covers the workflow files, nodes, templates, credentials, and how to check and run them.
 
-**Starting/restarting the dev server?** Use `bin/start.sh`, never a bare `mix
-phx.server`. It waits for Postgres to be reachable and auto-restarts the
-server if it crashes or wedges (process alive but the endpoint stops
+**Starting/restarting the server?** Use `docker compose up -d --build`, not a
+bare `mix phx.server`. Docker waits for Postgres to be healthy before
+starting the app, runs migrations automatically on boot, and restarts the
+container if it crashes or wedges (process alive but the endpoint stops
 responding — this has happened before and looks like a hang, not a crash).
-See the README's "Running it" section for the exact command, including the
-`POSTGRES_HOST` env var if Postgres is a separate container. Stop with
-`bin/stop.sh`.
+See the README's "Running it" section for details.
 
 ## Project guidelines
 

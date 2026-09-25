@@ -1,0 +1,23 @@
+# Override for connecting PurpleFlow to a Postgres you already run,
+# instead of the bundled "db" service. Usage:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.external-db.yml up -d --build
+#
+# Set DATABASE_URL in .env to point at your database, and EXTERNAL_DB_NETWORK
+# to the Docker network that database is reachable on (find it with
+# `docker network ls` / `docker inspect <db-container>`).
+services:
+  app:
+    depends_on: !reset []
+    networks:
+      - purple_flow
+      - external_db
+
+  db:
+    profiles:
+      - donotstart
+
+networks:
+  external_db:
+    name: ${EXTERNAL_DB_NETWORK:?set EXTERNAL_DB_NETWORK to the network your Postgres is on}
+    external: true

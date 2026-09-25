@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+./purple_flow eval PurpleFlow.Release.migrate
+PHX_SERVER=true exec ./purple_flow start
