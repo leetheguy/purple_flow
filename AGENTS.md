@@ -1,5 +1,7 @@
 This is a web application written using the Phoenix web framework.
 
+**Working on workflows?** Read `.claude/skills/purpleflow-workflows/SKILL.md` first. It covers the workflow files, nodes, templates, credentials, and how to check and run them.
+
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
