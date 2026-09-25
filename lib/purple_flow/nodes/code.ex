@@ -24,9 +24,15 @@ defmodule PurpleFlow.Nodes.Code do
   value, which becomes `{:ok, value}`.
 
   The file is read and checked when the workflow loads, so a syntax error
-  shows up then, not mid-run. This runs any code at all, which is fine as long
-  as only you write the workflow files.
+  shows up then, not mid-run.
+
+  The script runs on a separate, throwaway BEAM node: no access to this
+  app's modules, database, or environment variables, so it can't reach
+  credentials or other state it wasn't handed as `input`/`steps`. See
+  `specs/070_code_sandbox.md`.
   """
+
+  alias PurpleFlow.Nodes.Code.Sandbox
 
   @behaviour PurpleFlow.Node
 
@@ -44,7 +50,7 @@ defmodule PurpleFlow.Nodes.Code do
   @impl true
   def execute(input, config, steps) do
     {:quoted, quoted, path} = Map.fetch!(config, "code")
-    {result, _bindings} = Code.eval_quoted(quoted, [input: input, steps: steps], file: path)
+    {result, _bindings} = Sandbox.eval_quoted(quoted, [input: input, steps: steps], file: path)
 
     case result do
       {:ok, _} -> result
