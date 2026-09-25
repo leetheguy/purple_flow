@@ -1,4 +1,45 @@
-# PurpleFlow
+# Purple Flow
+
+## Human written intro
+
+Purple Flow makes building workflows as easy for AI as n8n makes automation for people.
+
+I love n8n with all of my heart. It's an amazing tool that's quick to learn, quick to master, and so fun and easy to build with.
+
+But, like every solution at all ever, it has its limitations. For me, those limitations looked like:
+
+- Stripped down AI Agent output (I want the full OpenAI JSON without an http request please)
+- Limited streaming ability
+- AI reasoning challenges (not much training data; most tutorials are video; MCP can be confusing for light models)
+- Latency issues
+- No self-hosted middle rungs between "just me" and business for (currently) $960 per month
+- No Git version control without enterprise
+- Scalability and licensing challenges (can't easily turn your solution into a SaaS or sell it)
+
+So I built Purple Flow. It's a minimal, first-principles reimagining of n8n made with Elixir. I borrowed the architectural decisions I loved and built everything else from scratch using OTP efficiency and reliability.
+
+All the workflows and nodes are plain-text TOML files. Easy for agents to reason about while still being human readable.
+
+Most n8n nodes are convenience wrappers for APIs. Many of them don't cover every use case and you need to drop down to http requests anyway. AI can easily look up APIs and generate http requests for them, so no convenience wrappers are needed. Here's what you get instead:
+
+- triggers
+  - webhook
+  - cron
+  - manual
+- nodes
+  - http - your trusty http request node
+  - postgres - only one db for now; but http can cover anything with a REST interface
+  - code - just a reference to an actual .exs code script
+  - workflow - calls sub-workflows to keep things tidy and reusable
+  - if/else - Except not really a node; Flow control is a natural part of workflows
+
+---
+
+Because you own everything, you can build full workflows for distribution to clients. And you can manage version control however you like.
+
+Because this is built on the BEAM VM, you can scale your workflows to thousands of simultaneous executions. That means you can turn a convenient personal tool into paid SaaS with just a little elbow grease.
+
+## AI written intro
 
 A barebones n8n on Elixir/OTP. Workflows are TOML files in git.
 
@@ -32,3 +73,7 @@ mix test
 - After editing workflow files, hit **Reload** on the home page.
 
 The design is in [specs/](specs/000_overview.md).
+
+## License
+
+[MIT](LICENSE) © 2026 [Lee Nathan](https://leenathan.com)
