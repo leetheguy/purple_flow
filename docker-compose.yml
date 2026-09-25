@@ -10,6 +10,9 @@ services:
       - PORT=${PORT:-4000}
       - SECRET_KEY_BASE=${SECRET_KEY_BASE:?SECRET_KEY_BASE is required, generate one with `openssl rand -base64 48`}
       - DATABASE_URL=${DATABASE_URL:-ecto://purple_flow:purple_flow@db/purple_flow}
+      - PURPLEFLOW_SECRET_KEY=${PURPLEFLOW_SECRET_KEY:?PURPLEFLOW_SECRET_KEY is required, generate one with `openssl rand -base64 32`}
+      - PURPLEFLOW_ADMIN_USERNAME=${PURPLEFLOW_ADMIN_USERNAME:?PURPLEFLOW_ADMIN_USERNAME is required}
+      - PURPLEFLOW_ADMIN_PASSWORD=${PURPLEFLOW_ADMIN_PASSWORD:?PURPLEFLOW_ADMIN_PASSWORD is required}
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
     volumes:

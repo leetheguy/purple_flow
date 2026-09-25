@@ -6,14 +6,14 @@ defmodule PurpleFlow.Template do
 
   - `{{ input.user.id }}`: a value from the node's input
   - `{{ steps.fetch.output.total }}`: a value from an ancestor step's output
-  - `{{ env.API_TOKEN }}`: an environment variable (credentials go here)
+  - `{{ creds.API_TOKEN }}`: a credential (see `PurpleFlow.Credentials`)
 
   If a string is *only* a placeholder, the raw value is used, so numbers,
   lists, and maps keep their type. Otherwise the value is turned into text.
   List positions work too: `{{ input.items.0.name }}`.
   """
 
-  alias PurpleFlow.Env
+  alias PurpleFlow.Credentials
 
   @pattern ~r/\{\{\s*([^{}]+?)\s*\}\}/
   @whole ~r/\A\{\{\s*([^{}]+?)\s*\}\}\z/
@@ -36,7 +36,7 @@ defmodule PurpleFlow.Template do
 
   @doc """
   Lists every placeholder in `config` without filling anything in, as
-  `{:env, name}`, `{:steps, name, path}`, `{:input, path}`, or `{:bad, text}`.
+  `{:creds, name}`, `{:steps, name, path}`, `{:input, path}`, or `{:bad, text}`.
   Used when a workflow loads, to catch mistakes early.
   """
   def refs(config) do
@@ -86,9 +86,9 @@ defmodule PurpleFlow.Template do
 
   defp lookup(path, ctx, secrets) do
     case classify(path) do
-      {:env, name} ->
-        case Env.get(name) do
-          nil -> fail("env var #{name} isn't set")
+      {:creds, name} ->
+        case Credentials.get(name) do
+          nil -> fail("credential #{name} isn't set — set it at /credentials")
           value -> {value, [value | secrets]}
         end
 
@@ -108,7 +108,7 @@ defmodule PurpleFlow.Template do
 
   defp classify(path) do
     case String.split(path, ".") do
-      ["env", name] -> {:env, name}
+      ["creds", name] -> {:creds, name}
       ["input" | rest] -> {:input, rest}
       ["steps", name, "output" | rest] -> {:steps, name, rest}
       _ -> {:bad, path}

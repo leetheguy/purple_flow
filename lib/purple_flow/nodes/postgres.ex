@@ -5,7 +5,7 @@ defmodule PurpleFlow.Nodes.Postgres do
       module = "PurpleFlow.Nodes.Postgres"
 
       [config]
-      database_url = "{{ env.SHOP_DB_URL }}"
+      database_url = "{{ creds.SHOP_DB_URL }}"
       query = "SELECT id, email FROM users WHERE created_at > $1::text::timestamptz"
       params = ["{{ input.since }}"]
 

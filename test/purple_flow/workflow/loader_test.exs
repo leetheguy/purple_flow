@@ -1,5 +1,5 @@
 defmodule PurpleFlow.Workflow.LoaderTest do
-  use ExUnit.Case, async: true
+  use PurpleFlow.DataCase, async: true
 
   import PurpleFlow.WorkflowHelpers
 
@@ -149,12 +149,12 @@ defmodule PurpleFlow.Workflow.LoaderTest do
         node = "sibling.toml"
         """,
         %{
-          "n.toml" => fake_node(%{"return" => "{{ env.PF_DEFINITELY_UNSET }}"}),
+          "n.toml" => fake_node(%{"return" => "{{ creds.PF_DEFINITELY_UNSET }}"}),
           "sibling.toml" => fake_node(%{"return" => "{{ steps.a.output }}"})
         }
       )
 
-    assert text =~ "env var PF_DEFINITELY_UNSET isn't set"
+    assert text =~ "credential PF_DEFINITELY_UNSET isn't set"
     assert text =~ ~s("a" isn't an ancestor of this step)
   end
 

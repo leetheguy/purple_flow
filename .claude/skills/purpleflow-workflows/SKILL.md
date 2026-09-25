@@ -56,7 +56,7 @@ module = "PurpleFlow.Nodes.Http"
 
 [config]
 url = "https://api.example.com/items?since={{ input.since }}"
-headers = { authorization = "Bearer {{ env.API_TOKEN }}" }
+headers = { authorization = "Bearer {{ creds.API_TOKEN }}" }
 ```
 
 ## How data moves
@@ -75,15 +75,16 @@ headers = { authorization = "Bearer {{ env.API_TOKEN }}" }
 |---|---|
 | `{{ input.user.id }}` | from this node's input (`input.items.0` for list positions) |
 | `{{ steps.fetch.output.total }}` | from an **ancestor** step's output (only ancestors, never sibling branches) |
-| `{{ env.API_TOKEN }}` | an environment variable |
+| `{{ creds.API_TOKEN }}` | a credential |
 
 If a string is only one placeholder, the raw value is used (numbers, lists, and maps stay as they are). A missing path fails the step.
 
-## Credentials: never in TOML
+## Credentials: never in TOML, never yours to set
 
-- Put them in `.env` (gitignored), add the name to `.env.example`, and use them as `{{ env.NAME }}`.
-- They're redacted as `[redacted]` in every saved record automatically.
-- A workflow that uses an env var that isn't set won't load.
+- Reference a credential by name: `{{ creds.NAME }}`. That's the only interaction a workflow file has with one.
+- You can't create a credential, see its value, or set it — there's no file to edit and no command for it. A human sets values at `/credentials`, directly, outside of anything you do.
+- If a workflow uses a `creds.NAME` that isn't set, it fails to load with a clear message. Tell whoever you're working with the name it needs, so they can set it at `/credentials` — that's the whole handoff.
+- Values are redacted as `[redacted]` in every saved record automatically.
 
 ## Built-in nodes
 

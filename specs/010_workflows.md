@@ -69,7 +69,7 @@ module = "PurpleFlow.Nodes.Http"
 [config]
 method = "GET"
 url = "https://api.example.com/records?since={{ input.since }}"
-headers = { authorization = "Bearer {{ env.API_TOKEN }}" }
+headers = { authorization = "Bearer {{ creds.API_TOKEN }}" }
 ```
 
 `module` is any module implementing `PurpleFlow.Node`. `config` is passed to it after templates are filled in.
@@ -80,7 +80,7 @@ Any string in `config` can contain:
 
 - `{{ input.some.path }}`, a value from the node's input
 - `{{ steps.fetch.output.some.path }}`, a value from an earlier step's output (see [030](030_runs.md))
-- `{{ env.NAME }}`, an environment variable. See Credentials below.
+- `{{ creds.NAME }}`, a credential. See Credentials below.
 
 If a string is *only* one template (`"{{ input.ids }}"`), the raw value is used, so numbers, lists, and maps keep their type. Otherwise the value is turned into text and inserted into the string. A missing path fails the step.
 
@@ -88,14 +88,11 @@ The runtime fills templates before calling the node, so nodes never see `{{ }}`.
 
 ## Credentials
 
-**No passwords, keys, or tokens in TOML, ever.** Credentials are environment variables, used through `{{ env.NAME }}`.
+**No passwords, keys, or tokens in TOML, ever.** Credentials are stored encrypted and referenced by name through `{{ creds.NAME }}`. See [080](080_credentials.md) for how they're stored, how a name is chosen, and the UI that sets them — a workflow file only ever reads one by name, never creates or sees one.
 
-- `.env` in the project root is loaded at boot with `dotenvy`. It's gitignored.
-- `.env.example` is committed, listing every variable name with an empty value.
-- At load time, a workflow that uses an `env.NAME` that isn't set fails its checks.
-- **Credentials are never saved or shown.** Filled-in config is never stored or logged. Before any record, error, or log line is saved, every env value a step used is replaced with `[redacted]`.
-
-A proper credential store like n8n's comes later.
+- A credential is created and given a value through the `/credentials` UI, not through any workflow file.
+- At load time, a workflow that uses a `creds.NAME` that isn't set fails its checks.
+- **Credentials are never saved or shown.** Filled-in config is never stored or logged. Before any record, error, or log line is saved, every credential value a step used is replaced with `[redacted]`.
 
 ## Loading
 
@@ -109,7 +106,7 @@ Each workflow is checked when it's loaded:
 - `after` names exist
 - no cycles
 - `when` is only used with a single `after`
-- every `env.NAME` used is set
+- every `creds.NAME` used is set
 - every `steps.NAME` used in a template is an ancestor of that step
 
 A workflow that fails a check is logged and skipped. Other workflows still load.

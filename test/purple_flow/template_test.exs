@@ -1,7 +1,7 @@
 defmodule PurpleFlow.TemplateTest do
-  use ExUnit.Case, async: true
+  use PurpleFlow.DataCase, async: true
 
-  alias PurpleFlow.Template
+  alias PurpleFlow.{Credentials, Template}
 
   @ctx %{
     input: %{"user" => %{"id" => 7, "tags" => ["a", "b"]}},
@@ -26,19 +26,20 @@ defmodule PurpleFlow.TemplateTest do
              Template.render(["{{ input.user.tags.1 }}", "{{ steps.fetch.output.total }}"], @ctx)
   end
 
-  test "env vars are filled in and reported as secrets" do
-    System.put_env("PF_TEMPLATE_TEST", "s3cret-token")
+  test "credentials are filled in and reported as secrets" do
+    {:ok, cred} = Credentials.create("PF_TEMPLATE_TEST", "")
+    {:ok, _} = Credentials.update(cred.id, %{key: "s3cret-token"})
 
     assert {:ok, "Bearer s3cret-token", ["s3cret-token"]} =
-             Template.render("Bearer {{ env.PF_TEMPLATE_TEST }}", @ctx)
+             Template.render("Bearer {{ creds.PF_TEMPLATE_TEST }}", @ctx)
   end
 
   test "missing things fail with a clear message" do
     assert {:error, "{{ input.user.nope }}: no \"nope\" found"} =
              Template.render("{{ input.user.nope }}", @ctx)
 
-    assert {:error, "env var PF_NOT_SET_ANYWHERE isn't set"} =
-             Template.render("{{ env.PF_NOT_SET_ANYWHERE }}", @ctx)
+    assert {:error, "credential PF_NOT_SET_ANYWHERE isn't set — set it at /credentials"} =
+             Template.render("{{ creds.PF_NOT_SET_ANYWHERE }}", @ctx)
 
     assert {:error, "step other isn't an ancestor, or didn't run"} =
              Template.render("{{ steps.other.output }}", @ctx)
@@ -50,12 +51,12 @@ defmodule PurpleFlow.TemplateTest do
   test "refs lists placeholders without filling them in" do
     refs =
       Template.refs(%{
-        "a" => "{{ env.X }} {{ steps.fetch.output.y }}",
+        "a" => "{{ creds.X }} {{ steps.fetch.output.y }}",
         "b" => ["{{ input.z }}"],
         "c" => 1
       })
 
-    assert {:env, "X"} in refs
+    assert {:creds, "X"} in refs
     assert {:steps, "fetch", ["y"]} in refs
     assert {:input, ["z"]} in refs
   end

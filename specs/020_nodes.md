@@ -35,7 +35,7 @@ Uses `Req`. Config: `method`, `url`, `headers`, `body`, `query`. Output is the d
 
 ### `PurpleFlow.Nodes.Postgres`
 
-Uses `Postgrex`. Config: `query` and `params`, plus `database_url` (usually `{{ env.SOME_DB_URL }}`). Values go in `params` (`$1`, `$2`, …), **never** templated into `query`. That prevents SQL injection. Output is a list of row maps, so the next step runs per row.
+Uses `Postgrex`. Config: `query` and `params`, plus `database_url` (usually `{{ creds.SOME_DB_URL }}`). Values go in `params` (`$1`, `$2`, …), **never** templated into `query`. That prevents SQL injection. Output is a list of row maps, so the next step runs per row.
 
 Connections are pooled, with one pool per `database_url` (default size 10), so a step running 1,000 items at once doesn't open 1,000 connections.
 

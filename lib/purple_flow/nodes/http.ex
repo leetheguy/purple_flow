@@ -7,7 +7,7 @@ defmodule PurpleFlow.Nodes.Http do
       [config]
       method = "POST"                       # default "GET"
       url = "https://api.example.com/items"
-      headers = { authorization = "Bearer {{ env.API_TOKEN }}" }
+      headers = { authorization = "Bearer {{ creds.API_TOKEN }}" }
       query = { page = 1 }                  # optional
       body = { name = "{{ input.name }}" }  # optional; maps/lists are sent as JSON
 

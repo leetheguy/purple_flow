@@ -21,7 +21,7 @@ There are no loops or cycles. Parallelism comes only from "list in, run per item
 
 - **One node contract.** Every node is a module with `execute(input, config)`. There's no connector library. HTTP, Postgres, and Code nodes cover most jobs. See [020](020_nodes.md).
 - **TOML, one file per node, one file per workflow.** No YAML and no frontmatter. Git does the versioning. See [010](010_workflows.md).
-- **No credentials in TOML, ever.** Credentials are env vars (`.env`), referenced as `{{ env.NAME }}`, and redacted from every record. See [010](010_workflows.md).
+- **No credentials in TOML, ever.** Credentials are stored encrypted and referenced as `{{ creds.NAME }}`, redacted from every record. See [010](010_workflows.md) and [080](080_credentials.md).
 - **Everyone does their own job.** Each node execution runs in its own process, saves its own record, and broadcasts when it's done. The run only decides what starts next. See [030](030_runs.md).
 - **Fail loud, no retries.** A failure stops the run and leaves a full record. Retries and rollback come later, once real use shows what's needed.
 - **Light docs in code.** Module docs and comments are short and plain, like these specs. Someone who doesn't know Elixir should be able to follow them: say what it does and why, and explain Elixir/OTP terms in a few words when they come up.
@@ -53,7 +53,6 @@ Order matters. Nothing should accept a trigger until everything a run needs is a
 | HTTP node | `req` |
 | Cron | `quantum` |
 | JSON | `jason` |
-| `.env` loading | `dotenvy` |
 
 Check current versions on Hex before adding them.
 
@@ -75,11 +74,10 @@ purple_goo is not a dependency. Running purple_goo's pipeline as a PurpleFlow wo
 - A step that waits for *all* of its parallel branches before running once.
 - Referencing the *matching item* of an earlier step (like n8n's `$('Fetch').item`), using `from_item`.
 - Depth limit for workflows that call themselves.
-- Auth for the UI and webhooks.
-- A proper credential store (like n8n's) instead of `.env`.
 - Auto-reload when TOML files change.
 - Visual workflow builder (canvas → TOML).
-- Multi-tenant hosting, which would need a sandboxed Code node.
+- Per-credential allowed-host locks on the HTTP/Postgres nodes. See [080](080_credentials.md).
+- Multi-tenant hosting.
 
 ## Specs
 
@@ -89,3 +87,5 @@ purple_goo is not a dependency. Running purple_goo's pipeline as a PurpleFlow wo
 - [040 — Triggers](040_triggers.md)
 - [050 — Storage](050_storage.md)
 - [060 — UI](060_ui.md)
+- [070 — Code node sandbox](070_code_sandbox.md)
+- [080 — Credentials](080_credentials.md)

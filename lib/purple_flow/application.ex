@@ -7,8 +7,6 @@ defmodule PurpleFlow.Application do
 
   @impl true
   def start(_type, _args) do
-    PurpleFlow.Env.load()
-
     children =
       [
         PurpleFlowWeb.Telemetry,

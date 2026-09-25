@@ -71,8 +71,7 @@ defmodule PurpleFlow.MixProject do
       {:bandit, "~> 1.5"},
       {:req, "~> 0.5"},
       {:toml_elixir, "~> 3.1"},
-      {:quantum, "~> 3.5"},
-      {:dotenvy, "~> 1.2"}
+      {:quantum, "~> 3.5"}
     ]
   end
 

@@ -7,7 +7,7 @@ defmodule PurpleFlow.Workflow.Loader do
   loaded; other workflows still are.
   """
 
-  alias PurpleFlow.{Env, Template, Workflow}
+  alias PurpleFlow.{Credentials, Template, Workflow}
   alias PurpleFlow.Workflow.Step
 
   @doc """
@@ -270,8 +270,8 @@ defmodule PurpleFlow.Workflow.Loader do
     end
   end
 
-  defp template_problem(_step, {:env, name}) do
-    if Env.get(name) == nil, do: "env var #{name} isn't set (add it to .env)"
+  defp template_problem(_step, {:creds, name}) do
+    if Credentials.get(name) == nil, do: "credential #{name} isn't set (set it at /credentials)"
   end
 
   defp template_problem(step, {:steps, name, _}) do

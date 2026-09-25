@@ -83,7 +83,7 @@ mix phx.server      # http://localhost:4000
 ```
 
 - Workflows live in `workflows/`, mounted into the container as a volume so you can edit them on the host. Everything directly under `workflows/` is yours and gitignored — nothing you build there gets committed to this repo. Two annotated examples live in `workflows/samples/` (tracked, part of the repo): `hello` (webhook, per-item routes) and `users` (HTTP, per-item). Copy one into `workflows/` to try it — the app only loads workflows one level under `workflows/`, not `workflows/samples/` itself.
-- Credentials go in `.env` (see `.env.example`) and are used as `{{ env.NAME }}`.
+- Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See [specs/080](specs/080_credentials.md).
 - After editing workflow files, hit **Reload** on the home page.
 
 The design is in [specs/](specs/000_overview.md).

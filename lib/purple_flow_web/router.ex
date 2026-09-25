@@ -3,6 +3,7 @@ defmodule PurpleFlowWeb.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
+    plug PurpleFlowWeb.Plugs.RequireLogin
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {PurpleFlowWeb.Layouts, :root}
@@ -20,6 +21,7 @@ defmodule PurpleFlowWeb.Router do
     live "/", WorkflowsLive
     live "/workflows/:name", RunsLive
     live "/runs/:id", RunLive
+    live "/credentials", CredentialsLive
   end
 
   scope "/hooks", PurpleFlowWeb do

@@ -90,7 +90,7 @@ defmodule PurpleFlow.NodesTest do
     test "can't reach this app's modules" do
       dir = Path.join(System.tmp_dir!(), "pf_code_#{System.unique_integer([:positive])}")
       File.mkdir_p!(dir)
-      File.write!(Path.join(dir, "s.exs"), "Code.ensure_loaded?(PurpleFlow.Env)")
+      File.write!(Path.join(dir, "s.exs"), "Code.ensure_loaded?(PurpleFlow.Credentials)")
 
       {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir)
       assert {:ok, false} = Code.execute(nil, config, %{})

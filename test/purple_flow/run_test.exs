@@ -308,7 +308,8 @@ defmodule PurpleFlow.RunTest do
   end
 
   test "credentials are redacted from saved records" do
-    System.put_env("PF_RUN_TEST_TOKEN", "super-secret-value")
+    {:ok, cred} = PurpleFlow.Credentials.create("PF_RUN_TEST_TOKEN", "")
+    {:ok, _} = PurpleFlow.Credentials.update(cred.id, %{key: "super-secret-value"})
 
     workflow =
       load_workflow!(
@@ -319,7 +320,7 @@ defmodule PurpleFlow.RunTest do
         name = "a"
         node = "a.toml"
         """,
-        %{"a.toml" => fake_node(%{"return" => "token is {{ env.PF_RUN_TEST_TOKEN }}"})}
+        %{"a.toml" => fake_node(%{"return" => "token is {{ creds.PF_RUN_TEST_TOKEN }}"})}
       )
 
     result = run!(workflow, nil)
