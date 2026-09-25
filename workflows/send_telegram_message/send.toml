@@ -1,0 +1,9 @@
+module = "PurpleFlow.Nodes.Http"
+
+[config]
+method = "POST"
+url = "https://api.telegram.org/bot{{ env.TELEGRAM_BOT_TOKEN }}/sendMessage"
+
+[config.body]
+chat_id = "1722677531"
+text = "{{ input.body.message }}"

@@ -31,13 +31,13 @@ Most n8n nodes are convenience wrappers for APIs. Many of them don't cover every
   - postgres - only one db for now; but http can cover anything with a REST interface
   - code - just a reference to an actual .exs code script
   - workflow - calls sub-workflows to keep things tidy and reusable
-  - if/else - Except not really a node; Flow control is a natural part of workflows
+  - if/else - except not really a node; flow control is a natural part of workflows
 
 ---
 
 Because you own everything, you can build full workflows for distribution to clients. And you can manage version control however you like.
 
-Because this is built on the BEAM VM, you can scale your workflows to thousands of simultaneous executions. That means you can turn a convenient personal tool into paid SaaS with just a little elbow grease.
+Because this is built on the BEAM VM, you can scale your workflows to thousands of simultaneous executions. (And that's conservative if you're careful.) That means you can turn a convenient personal tool into paid SaaS with just a little elbow grease.
 
 ## AI written intro
 
@@ -64,8 +64,24 @@ You need Elixir and Postgres (dev login `postgres` / `postgres` on localhost).
 
 ```sh
 mix setup          # install deps, create the database
-mix phx.server     # http://localhost:4000
 mix test
+```
+
+Start the server with `bin/start.sh` instead of a bare `mix phx.server` — it
+waits for Postgres to be reachable before booting and auto-restarts the
+server if it crashes or wedges (process alive but not responding on the
+port). Stop it with `bin/stop.sh`.
+
+```sh
+nohup bin/start.sh > /root/purple_flow/phx_server.log 2>&1 &   # http://localhost:4000
+bin/stop.sh
+```
+
+If Postgres lives in a separate container (e.g. the `db` service in
+goo_home/docker-compose.yml), set `POSTGRES_HOST` before starting:
+
+```sh
+POSTGRES_HOST=db nohup bin/start.sh > /root/purple_flow/phx_server.log 2>&1 &
 ```
 
 - Workflows live in `workflows/`. Two examples are included: `hello` (webhook, per-item routes) and `users` (HTTP, per-item).

@@ -1,0 +1,12 @@
+# Send a Telegram message. POST {"message": "..."} to /hooks/send-telegram-message.
+# Bare bones: webhook in, Telegram API out.
+
+[workflow]
+name = "send_telegram_message"
+
+[trigger.webhook]
+path = "send-telegram-message"
+
+[[steps]]
+name = "send"
+node = "send.toml"
