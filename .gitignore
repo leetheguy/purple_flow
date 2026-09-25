@@ -45,3 +45,5 @@ npm-debug.log
 
 # Local server log
 phx_server.log
+
+/memories/
