@@ -4,7 +4,7 @@ import Config
 config :purple_flow, PurpleFlow.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "localhost",
+  hostname: System.get_env("POSTGRES_HOST", "localhost"),
   database: "purple_flow_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,

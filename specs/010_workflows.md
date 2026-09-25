@@ -25,7 +25,7 @@ A node file can be shared between workflows by pointing at it with a relative pa
 name = "sync_records"
 
 [trigger.webhook]
-path = "sync-records"
+path = "sync-records"      # replies with the run's output; see 040
 
 [trigger.cron]
 schedule = "0 * * * *"

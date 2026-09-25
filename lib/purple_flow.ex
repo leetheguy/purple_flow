@@ -46,7 +46,7 @@ defmodule PurpleFlow do
   `{:error, message}`. Used by the Workflow node.
   """
   def run_and_wait(workflow_name, input, opts \\ []) do
-    id = Id.generate()
+    id = Keyword.get(opts, :id) || Id.generate()
 
     # Subscribe *before* starting, so the "finished" message can't be missed.
     Phoenix.PubSub.subscribe(PurpleFlow.PubSub, topic(id))

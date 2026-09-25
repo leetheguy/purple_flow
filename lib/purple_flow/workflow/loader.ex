@@ -56,6 +56,7 @@ defmodule PurpleFlow.Workflow.Loader do
         name: name,
         dir: dir,
         webhook: get_in(toml, ["trigger", "webhook", "path"]),
+        respond: respond_mode(get_in(toml, ["trigger", "webhook", "respond"])),
         cron: get_in(toml, ["trigger", "cron", "schedule"]),
         steps: steps
       }
@@ -157,6 +158,11 @@ defmodule PurpleFlow.Workflow.Loader do
     end
   end
 
+  defp respond_mode(nil), do: :result
+  defp respond_mode("result"), do: :result
+  defp respond_mode("immediately"), do: :immediately
+  defp respond_mode(other), do: {:bad, other}
+
   defp run_mode("each", _), do: {:ok, :each}
   defp run_mode("all", _), do: {:ok, :all}
 
@@ -189,9 +195,17 @@ defmodule PurpleFlow.Workflow.Loader do
 
   # -- whole-workflow checks --
 
-  defp check_triggers(%Workflow{cron: nil}), do: []
+  defp check_triggers(workflow), do: check_respond(workflow) ++ check_cron(workflow)
 
-  defp check_triggers(%Workflow{cron: schedule}) do
+  defp check_respond(%Workflow{respond: {:bad, value}}) do
+    [~s(webhook respond must be "result" or "immediately", not #{inspect(value)})]
+  end
+
+  defp check_respond(_workflow), do: []
+
+  defp check_cron(%Workflow{cron: nil}), do: []
+
+  defp check_cron(%Workflow{cron: schedule}) do
     case Crontab.CronExpression.Parser.parse(schedule) do
       {:ok, _} -> []
       {:error, _} -> ["cron schedule \"#{schedule}\" isn't valid"]

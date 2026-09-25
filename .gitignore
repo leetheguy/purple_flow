@@ -38,3 +38,6 @@ npm-debug.log
 
 # Credentials. Never commit.
 .env
+
+# Local server log
+phx_server.log

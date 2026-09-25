@@ -70,7 +70,6 @@ purple_goo is not a dependency. Running purple_goo's pipeline as a PurpleFlow wo
 
 ## Later (not v1)
 
-- Webhook that replies with the run's result instead of just the run ID. This is needed to run purple_goo as a workflow.
 - Agent node, wrapping purple_goo's ReAct-based agent call.
 - Retries, rollback.
 - A step that waits for *all* of its parallel branches before running once.

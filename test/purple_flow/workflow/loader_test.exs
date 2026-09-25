@@ -46,6 +46,7 @@ defmodule PurpleFlow.Workflow.LoaderTest do
 
     assert workflow.name == "good"
     assert workflow.webhook == "good"
+    assert workflow.respond == :result
     assert workflow.cron == "0 * * * *"
 
     [a, b, c] = workflow.steps
@@ -61,6 +62,10 @@ defmodule PurpleFlow.Workflow.LoaderTest do
         """
         [workflow]
         name = "bad"
+
+        [trigger.webhook]
+        path = "bad"
+        respond = "later"
 
         [trigger.cron]
         schedule = "not a schedule"
@@ -97,6 +102,7 @@ defmodule PurpleFlow.Workflow.LoaderTest do
     assert text =~ "`when` needs exactly one `after`"
     assert text =~ ~s(run must be "each" or "all")
     assert text =~ ~s(cron schedule "not a schedule" isn't valid)
+    assert text =~ ~s(webhook respond must be "result" or "immediately")
   end
 
   test "unknown after names and cycles" do

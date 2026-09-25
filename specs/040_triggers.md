@@ -15,14 +15,15 @@ It generates a UUIDv7, starts a `PurpleFlow.Run` under `RunSupervisor`, and retu
 ```toml
 [trigger.webhook]
 path = "sync-records"
+respond = "result"   # default; or "immediately"
 ```
 
 - One catch-all route, `/hooks/*path` (GET and POST), looks the path up in `PurpleFlow.Workflows`.
 - Input: `%{"body" => ..., "query" => ..., "headers" => ...}`. The first step usually wants `input["body"]`.
 - The caller's `authorization`, `proxy-authorization`, and `cookie` headers are dropped, so they're never saved.
-- Reply: `202 {"run_id": "..."}`. An unknown path gets a 404.
-
-Replying with the run's result instead is a "later" item ([000](000_overview.md)).
+- **`respond = "result"` (default):** the reply waits for the run. `200` with the run's output as JSON, or `500 {"error", "run_id"}` if it failed.
+- **`respond = "immediately"`:** replies right away with `202 {"run_id": "..."}`. Use it for workflows that can take longer than ~100 seconds, since Cloudflare gives up on requests after that.
+- The run ID is always in the `x-run-id` response header. An unknown path gets a 404.
 
 ## Cron
 

@@ -1,0 +1,4 @@
+module = "PurpleFlow.Test.FakeNode"
+
+[config]
+raise = true

@@ -1,0 +1,9 @@
+[workflow]
+name = "boom"
+
+[trigger.webhook]
+path = "boom"
+
+[[steps]]
+name = "boom"
+node = "boom.toml"

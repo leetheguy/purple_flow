@@ -1,0 +1,10 @@
+[workflow]
+name = "echo_later"
+
+[trigger.webhook]
+path = "echo-later"
+respond = "immediately"
+
+[[steps]]
+name = "echo"
+node = "../echo/echo.toml"
