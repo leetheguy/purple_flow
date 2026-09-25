@@ -1,0 +1,13 @@
+# Fetches fake users from a public test API, then keeps a few fields per user.
+
+[workflow]
+name = "users"
+
+[[steps]]
+name = "fetch"
+node = "fetch.toml"
+
+[[steps]]
+name = "slim"
+node = "slim.toml"
+after = ["fetch"]

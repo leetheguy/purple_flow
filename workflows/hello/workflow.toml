@@ -1,0 +1,32 @@
+# A tiny workflow that needs nothing external.
+# Try it: POST a JSON list of numbers to /hooks/hello, e.g.
+#   curl -X POST localhost:4000/hooks/hello -H 'content-type: application/json' -d '[3, 42, 7]'
+# or use the Run button with {"body": [3, 42, 7]}.
+
+[workflow]
+name = "hello"
+
+[trigger.webhook]
+path = "hello"
+
+[[steps]]
+name = "numbers"
+node = "numbers.toml"
+
+[[steps]]
+name = "is_big"
+node = "is_big.toml"
+after = ["numbers"]
+
+[[steps]]
+name = "big"
+node = "shout.toml"
+after = ["is_big"]
+when = "big"
+
+[[steps]]
+name = "small"
+node = "whisper.toml"
+after = ["is_big"]
+when = "small"
+

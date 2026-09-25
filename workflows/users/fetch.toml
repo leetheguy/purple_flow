@@ -1,0 +1,5 @@
+module = "PurpleFlow.Nodes.Http"
+
+[config]
+method = "GET"
+url = "https://jsonplaceholder.typicode.com/users"

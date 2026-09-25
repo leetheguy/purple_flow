@@ -1,0 +1,4 @@
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "numbers.exs"

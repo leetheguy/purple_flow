@@ -1,0 +1,6 @@
+[workflow]
+name = "double"
+
+[[steps]]
+name = "double"
+node = "double.toml"

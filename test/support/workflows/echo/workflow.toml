@@ -1,0 +1,9 @@
+[workflow]
+name = "echo"
+
+[trigger.webhook]
+path = "echo"
+
+[[steps]]
+name = "echo"
+node = "echo.toml"

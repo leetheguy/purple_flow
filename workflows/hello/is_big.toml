@@ -1,0 +1,4 @@
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "is_big.exs"
