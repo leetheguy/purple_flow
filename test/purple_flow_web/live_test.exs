@@ -15,10 +15,14 @@ defmodule PurpleFlowWeb.LiveTest do
     |> render_submit()
 
     {path, _flash} = assert_redirect(view)
-    assert path =~ "/runs/"
+    assert "/runs/" <> run_id = path
 
     # Let the run finish before the test (and its database sandbox) ends.
-    assert_receive {:run_finished, _id, "complete"}, 5_000
+    assert_receive {:run_finished, ^run_id, "complete"}, 5_000
+
+    # The box is just the body; the run's input is shaped like a webhook's.
+    assert %{run: %{input: input}} = PurpleFlow.Runs.get(run_id)
+    assert input == %{"body" => %{"a" => 1}, "query" => %{}, "headers" => %{}}
   end
 
   @tag :capture_log

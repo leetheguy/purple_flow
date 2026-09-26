@@ -136,7 +136,7 @@ defmodule PurpleFlowWeb.RunLive do
   @impl true
   def render(%{run: nil} = assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} active={:workflows}>
       <p id="not-found">Run not found.</p>
     </Layouts.app>
     """
@@ -144,7 +144,7 @@ defmodule PurpleFlowWeb.RunLive do
 
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} active={:workflows}>
       <div class="space-y-1">
         <.link
           navigate={~p"/workflows/#{@run.workflow}"}

@@ -48,6 +48,13 @@ if runner_subnet = System.get_env("PURPLEFLOW_RUNNER_SUBNET") do
   config :purple_flow, :runner_subnet, runner_subnet
 end
 
+# The files service (dufs), as a base URL like "http://files:5000". The app
+# passes /fs/* through to it, behind its own sign-in. Without it (dev and
+# test), there's no /fs/ and the Files page says so.
+if files_url = System.get_env("PURPLEFLOW_FILES_URL") do
+  config :purple_flow, :files_url, String.trim_trailing(files_url, "/")
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :purple_flow, PurpleFlowWeb.Endpoint,

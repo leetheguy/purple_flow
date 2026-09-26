@@ -99,6 +99,9 @@
 /* Use the data attribute for dark mode  */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* The sidebar's collapsed state (set on <html> by root.html.heex), only inside the sidebar */
+@custom-variant sidebar-collapsed (&:where([data-sidebar=collapsed] #sidebar, [data-sidebar=collapsed] #sidebar *));
+
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 

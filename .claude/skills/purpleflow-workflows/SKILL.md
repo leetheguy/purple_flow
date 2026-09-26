@@ -26,17 +26,17 @@ The folder name doesn't matter; `[workflow] name` does. Node files can be shared
 
 The workflows folder is its own git repo, separate from the app. Nobody commits for you; commit when a change works, if you're managing its history.
 
-- **On a Docker install**, edit it through the files service (dufs), default `http://localhost:5000`, with the files login (`PURPLEFLOW_FILES_USERNAME` / `PURPLEFLOW_FILES_PASSWORD`, which the user gives you). You never need the app's checkout or the admin login.
+- **On a Docker install**, edit it through the files service (dufs), which the app serves at `/fs/`, with `Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>` (the user gives you the token; the same one checks your changes, below). You never need the app's checkout or the admin login. People see the same files at `/files` in the UI.
 
   ```sh
-  F="curl -s -u $FILES_USER:$FILES_PASS http://localhost:5000"
-  $F/?json                                   # list workflow folders
-  $F/sync_records/workflow.toml              # read a file
-  $F/sync_records/fetch.toml -T fetch.toml   # write one (PUT; makes folders as needed)
-  $F/sync_records/old.toml -X DELETE         # delete one
+  F() { curl -s -H "Authorization: Bearer $AGENT_TOKEN" "http://localhost:4000/fs$1" "${@:2}"; }
+  F /?json                                   # list workflow folders
+  F /sync_records/workflow.toml              # read a file
+  F /sync_records/fetch.toml -T fetch.toml   # write one (PUT; makes folders as needed)
+  F /sync_records/old.toml -X DELETE         # delete one
   ```
 
-  WebDAV works too (`MKCOL`, `MOVE` with a `Destination` header), so tools like rclone can mount it.
+  WebDAV works too (`MKCOL`, `MOVE` with a `Destination` header), so tools like rclone can mount `http://localhost:4000/fs/` with the token as a bearer token.
 - **In a dev checkout** (`mix phx.server`), it's just `workflows/` in the repo; edit the files directly.
 
 ### workflow.toml
@@ -131,7 +131,7 @@ Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
 - Webhook calls wait for the result by default. For runs that can take longer than ~100s (Cloudflare's limit), use `respond = "immediately"`.
 - A list output from an HTTP or Postgres node makes the next step run per item. That's usually what you want. If not, use `run = "all"`.
 - **Edits load on their own**, about two seconds after the last save. There's no reload step. If an edit breaks a workflow, **its previous version keeps running**, so a webhook that still answers doesn't prove your change loaded. Check (below).
-- The UI's Run button makes a real run. HTTP and Postgres steps really call out.
+- The UI's Run button makes a real run. HTTP and Postgres steps really call out. Its box takes just the **body**: the run's input is `{"body": <what you typed>, "query": {}, "headers": {}}`, the same shape as a webhook's, so one workflow works from both.
 
 ## Check that a change loaded
 

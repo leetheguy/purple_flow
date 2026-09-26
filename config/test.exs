@@ -42,7 +42,8 @@ config :purple_flow,
   # The app's own Workflows process doesn't watch in tests: tests that need
   # watching start their own on a temp folder and tick it by hand.
   workflows_watch: [interval: :manual, credentials: false],
-  http_req_options: [plug: {Req.Test, PurpleFlow.Nodes.Http}]
+  http_req_options: [plug: {Req.Test, PurpleFlow.Nodes.Http}],
+  files_req_options: [plug: {Req.Test, PurpleFlowWeb.Plugs.FilesProxy}]
 
 # Requests from here are refused, as from the Code node runner's network.
 config :purple_flow, :runner_subnet, "10.250.250.0/24"

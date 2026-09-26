@@ -3,12 +3,16 @@ defmodule PurpleFlowWeb.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
-    plug PurpleFlowWeb.Plugs.RequireLogin
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {PurpleFlowWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+  end
+
+  # The one sign-in (see PurpleFlowWeb.Auth). Everything under it needs it.
+  pipeline :signed_in do
+    plug PurpleFlowWeb.Plugs.RequireLogin
   end
 
   # Webhooks take whatever the caller sends; no browser session, no CSRF check.
@@ -21,10 +25,22 @@ defmodule PurpleFlowWeb.Router do
   scope "/", PurpleFlowWeb do
     pipe_through :browser
 
-    live "/", WorkflowsLive
-    live "/workflows/:name", RunsLive
-    live "/runs/:id", RunLive
-    live "/credentials", CredentialsLive
+    get "/login", SessionController, :new
+    post "/login", SessionController, :create
+    delete "/logout", SessionController, :delete
+  end
+
+  scope "/", PurpleFlowWeb do
+    pipe_through [:browser, :signed_in]
+
+    live_session :signed_in, on_mount: {PurpleFlowWeb.Auth, :require_login} do
+      live "/", WorkflowsLive
+      live "/workflows/:name", RunsLive
+      live "/runs/:id", RunLive
+      live "/files", FilesLive
+      live "/files/*path", FilesLive
+      live "/credentials", CredentialsLive
+    end
   end
 
   # For agents, with their own token instead of the browser login.

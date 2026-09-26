@@ -20,7 +20,7 @@ defmodule PurpleFlowWeb.RunsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} active={:workflows}>
       <div>
         <.link navigate={~p"/"} class="text-sm text-base-content/60 hover:underline">← Workflows</.link>
         <h1 class="text-xl font-semibold">{@name}</h1>
