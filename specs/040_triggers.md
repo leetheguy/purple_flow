@@ -1,6 +1,7 @@
 # 040 — Triggers
 
 Status: draft
+Created: 2026-09-25
 
 Every trigger ends up calling the same function:
 

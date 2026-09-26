@@ -1,6 +1,7 @@
 # 010 — Workflows (TOML)
 
 Status: draft
+Created: 2026-09-25
 
 ## Layout
 
@@ -116,3 +117,7 @@ A workflow that fails a check is logged and skipped. Other workflows still load.
 Parse good and bad fixtures. Each check above has a failing fixture that produces a clear error.
 
 Redaction: run a node that echoes a credential in its output and in an error, and assert that the saved rows only contain `[redacted]`.
+
+## Log
+
+- 2026-09-26 — [090](090_workflow_files.md) (draft): **Layout**: the workflows folder can live anywhere on the host (`WORKFLOWS_PATH`) and is meant to be its own git repo; the samples live in `samples/` at the repo root. Every `node` path must stay inside the workflows folder; absolute paths and paths that leave it fail to load. **Loading**: workflows reload on their own within about two seconds of a change, per workflow; a workflow that fails to reload keeps running its last good version.

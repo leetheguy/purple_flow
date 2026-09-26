@@ -1,6 +1,7 @@
 # 020 — Nodes
 
 Status: draft
+Created: 2026-09-25
 
 ## Contract
 
@@ -91,3 +92,7 @@ Each node is tested on its own by calling `execute/2` directly:
 - **Workflow:** with a small fixture workflow.
 
 No run machinery is needed.
+
+## Log
+
+- 2026-09-26 — [090](090_workflow_files.md) (draft): **Code**: edits to a `.exs` file take effect on their own within about two seconds, with no `reload/0`. A Code node's `file` must stay inside the workflows folder.

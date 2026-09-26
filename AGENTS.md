@@ -2,6 +2,14 @@ This is a web application written using the Phoenix web framework.
 
 **Working on workflows?** Read `.claude/skills/purpleflow-workflows/SKILL.md` first. It covers the workflow files, nodes, templates, credentials, and how to check and run them.
 
+**Writing or changing a spec?** Specs in `specs/` are a history, not a
+description of the current app. A new spec gets the next number and a
+`Created: YYYY-MM-DD` line under its `Status:` line, and it says what it does,
+not what it changes. Never rewrite an existing spec. When a new spec changes
+what an older one says, append a dated entry to the older spec's `## Log`
+section (create it at the bottom if missing) naming what changed and linking
+the new spec. To know what's true now, read a spec and then its log.
+
 **Starting/restarting the server?** Use `docker compose up -d --build`, not a
 bare `mix phx.server`. Docker waits for Postgres to be healthy before
 starting the app, runs migrations automatically on boot, and restarts the

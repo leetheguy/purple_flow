@@ -1,6 +1,7 @@
 # 070 — Code node sandbox
 
 Status: implemented.
+Created: 2026-09-25
 
 ## Why
 
