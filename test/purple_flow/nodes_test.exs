@@ -74,27 +74,6 @@ defmodule PurpleFlow.NodesTest do
       {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir)
       assert {:ok, 20} = Code.execute(2, config, %{})
     end
-
-    test "can't read this app's environment variables" do
-      System.put_env("PF_TEST_SECRET", "shh")
-      on_exit(fn -> System.delete_env("PF_TEST_SECRET") end)
-
-      dir = Path.join(System.tmp_dir!(), "pf_code_#{System.unique_integer([:positive])}")
-      File.mkdir_p!(dir)
-      File.write!(Path.join(dir, "s.exs"), ~s|System.get_env("PF_TEST_SECRET")|)
-
-      {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir)
-      assert {:ok, nil} = Code.execute(nil, config, %{})
-    end
-
-    test "can't reach this app's modules" do
-      dir = Path.join(System.tmp_dir!(), "pf_code_#{System.unique_integer([:positive])}")
-      File.mkdir_p!(dir)
-      File.write!(Path.join(dir, "s.exs"), "Code.ensure_loaded?(PurpleFlow.Credentials)")
-
-      {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir)
-      assert {:ok, false} = Code.execute(nil, config, %{})
-    end
   end
 
   describe "Workflow" do

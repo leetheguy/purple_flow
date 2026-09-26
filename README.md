@@ -67,12 +67,17 @@ docker compose up -d --build   # http://localhost:4000
 docker compose down
 ```
 
-This starts PurpleFlow and Postgres together. Postgres has a health check, and
-the app container only starts once it passes; migrations run automatically on
-boot, and the container restarts on its own if the app dies. See
+This starts PurpleFlow, Postgres, and the Code node runner together. Postgres
+has a health check, and the app container only starts once it passes;
+migrations run automatically on boot, and the container restarts on its own if
+the app dies. Code node scripts run in the `runner` container, which has no
+secrets, no database, no internet, and no way to reach the app (see
+[specs/070](specs/070_code_sandbox.md)). See
 `docker-compose.yml` and `.env.example` for the environment variables to set
 (`SECRET_KEY_BASE`, `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
-`PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST` and `DATABASE_URL`).
+`PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`, and
+`PURPLEFLOW_RUNNER_SUBNET` if the runner's default network, `10.250.250.0/24`,
+collides with one of yours).
 
 For local development without Docker, you need Elixir and Postgres (dev login
 `postgres` / `postgres` on localhost):
@@ -82,6 +87,9 @@ mix setup          # install deps, create the database
 mix test
 mix phx.server      # http://localhost:4000
 ```
+
+Outside Docker there's no runner container, so Code node scripts run inside
+the app's own VM, with no isolation. The app logs a warning at boot saying so.
 
 - Workflows live in `workflows/`, mounted into the container as a volume so you can edit them on the host. Everything directly under `workflows/` is yours and gitignored — nothing you build there gets committed to this repo. Two annotated examples live in `workflows/samples/` (tracked, part of the repo): `hello` (webhook, per-item routes) and `users` (HTTP, per-item). Copy one into `workflows/` to try it — the app only loads workflows one level under `workflows/`, not `workflows/samples/` itself.
 - Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See [specs/080](specs/080_credentials.md).
