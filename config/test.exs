@@ -40,3 +40,6 @@ config :purple_flow,
   workflows_dir: "test/support/workflows",
   mark_interrupted_on_boot: false,
   http_req_options: [plug: {Req.Test, PurpleFlow.Nodes.Http}]
+
+# Requests from here are refused, as from the Code node runner's network.
+config :purple_flow, :runner_subnet, "10.250.250.0/24"

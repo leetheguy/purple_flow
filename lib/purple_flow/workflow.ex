@@ -4,13 +4,24 @@ defmodule PurpleFlow.Workflow do
   `workflows/<name>/workflow.toml`. See `PurpleFlow.Workflow.Loader`.
   """
 
-  defstruct [:name, :dir, webhook: nil, respond: :result, cron: nil, steps: []]
+  defstruct [
+    :name,
+    :dir,
+    webhook: nil,
+    respond: :result,
+    auth: nil,
+    auth_header: nil,
+    cron: nil,
+    steps: []
+  ]
 
   @type t :: %__MODULE__{
           name: String.t(),
           dir: String.t(),
           webhook: String.t() | nil,
           respond: :result | :immediately,
+          auth: String.t() | nil,
+          auth_header: String.t() | nil,
           cron: String.t() | nil,
           steps: [PurpleFlow.Workflow.Step.t()]
         }

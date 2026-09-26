@@ -26,13 +26,13 @@ defmodule PurpleFlow.Nodes.Code do
   The file is read and checked when the workflow loads, so a syntax error
   shows up then, not mid-run.
 
-  The script runs on a separate, throwaway BEAM node: no access to this
-  app's modules, database, or environment variables, so it can't reach
-  credentials or other state it wasn't handed as `input`/`steps`. See
-  `specs/070_code_sandbox.md`.
+  The script runs in the runner (`PurpleFlow.Runner.Server`), which in
+  Docker is its own container with no secrets, no database, and no network
+  beyond answering this app, so it can't reach credentials or other state
+  it wasn't handed as `input`/`steps`. See `specs/070_code_sandbox.md`.
   """
 
-  alias PurpleFlow.Nodes.Code.Sandbox
+  alias PurpleFlow.Runner.Client
 
   @behaviour PurpleFlow.Node
 
@@ -41,23 +41,16 @@ defmodule PurpleFlow.Nodes.Code do
     with {:ok, file} <- fetch_file(config),
          path = Path.expand(file, node_dir),
          {:ok, source} <- read(path),
-         {:ok, quoted} <- parse(source, path) do
-      # Stored as a tuple so the template filler leaves the parsed code alone.
-      {:ok, Map.put(config, "code", {:quoted, quoted, path})}
+         :ok <- parse(source, path) do
+      # Stored as a tuple so the template filler leaves the source alone.
+      {:ok, Map.put(config, "code", {:source, source, path})}
     end
   end
 
   @impl true
   def execute(input, config, steps) do
-    {:quoted, quoted, path} = Map.fetch!(config, "code")
-    {result, _bindings} = Sandbox.eval_quoted(quoted, [input: input, steps: steps], file: path)
-
-    case result do
-      {:ok, _} -> result
-      {:ok, _, _} -> result
-      {:error, _} -> result
-      value -> {:ok, value}
-    end
+    {:source, source, path} = Map.fetch!(config, "code")
+    Client.run(source, path, input, steps)
   end
 
   defp fetch_file(%{"file" => file}) when is_binary(file), do: {:ok, file}
@@ -72,8 +65,8 @@ defmodule PurpleFlow.Nodes.Code do
 
   defp parse(source, path) do
     case Code.string_to_quoted(source, file: path) do
-      {:ok, quoted} ->
-        {:ok, quoted}
+      {:ok, _quoted} ->
+        :ok
 
       {:error, {meta, message, token}} ->
         line = if is_list(meta), do: meta[:line], else: meta

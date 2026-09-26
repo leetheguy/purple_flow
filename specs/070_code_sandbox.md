@@ -1,6 +1,6 @@
 # 070 — Code node sandbox
 
-Status: designed, not yet implemented.
+Status: implemented.
 
 ## Why
 
@@ -50,9 +50,13 @@ and send back the result.
 - **Nowhere to go.** It's attached to one network, `runner`, which is
   `internal: true` (no internet) and shared only with the app. It isn't on
   the network the database is on.
+- **No Erlang distribution.** The app and the runner are the same release
+  with the same baked-in cookie, so both run with
+  `RELEASE_DISTRIBUTION=none`: there's no node for a script to connect to.
 - **Locked down.** `read_only: true`, `cap_drop: [ALL]`,
   `security_opt: [no-new-privileges:true]`, the image's non-root user, and
-  memory/CPU limits. `restart: unless-stopped`, so if a script manages to
+  memory/CPU/process-count limits. The release writes its runtime config at
+  boot, so `/tmp` is a tmpfs and `RELEASE_TMP` points there. `restart: unless-stopped`, so if a script manages to
   take the whole VM down, it comes back on its own.
 
 ## Talking to it: one direction only

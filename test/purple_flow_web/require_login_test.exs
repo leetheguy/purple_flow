@@ -23,6 +23,10 @@ defmodule PurpleFlowWeb.RequireLoginTest do
     assert html_response(conn, 200)
   end
 
+  test "GET /health needs no login and says only ok", %{conn: conn} do
+    assert conn |> get(~p"/health") |> response(200) == "ok"
+  end
+
   test "GET /credentials requires basic auth", %{conn: conn} do
     conn = get(conn, ~p"/credentials")
     assert conn.status == 401

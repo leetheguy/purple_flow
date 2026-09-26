@@ -57,6 +57,8 @@ defmodule PurpleFlow.Workflow.Loader do
         dir: dir,
         webhook: get_in(toml, ["trigger", "webhook", "path"]),
         respond: respond_mode(get_in(toml, ["trigger", "webhook", "respond"])),
+        auth: blank_to_nil(get_in(toml, ["trigger", "webhook", "auth"])),
+        auth_header: auth_header(get_in(toml, ["trigger", "webhook", "auth_header"])),
         cron: get_in(toml, ["trigger", "cron", "schedule"]),
         steps: steps
       }
@@ -158,6 +160,13 @@ defmodule PurpleFlow.Workflow.Loader do
     end
   end
 
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
+
+  # Header names are matched case-insensitively; Plug keeps them lowercase.
+  defp auth_header(value) when is_binary(value), do: value |> String.downcase() |> blank_to_nil()
+  defp auth_header(value), do: value
+
   defp respond_mode(nil), do: :result
   defp respond_mode("result"), do: :result
   defp respond_mode("immediately"), do: :immediately
@@ -195,13 +204,31 @@ defmodule PurpleFlow.Workflow.Loader do
 
   # -- whole-workflow checks --
 
-  defp check_triggers(workflow), do: check_respond(workflow) ++ check_cron(workflow)
+  defp check_triggers(workflow),
+    do: check_respond(workflow) ++ check_auth(workflow) ++ check_cron(workflow)
 
   defp check_respond(%Workflow{respond: {:bad, value}}) do
     [~s(webhook respond must be "result" or "immediately", not #{inspect(value)})]
   end
 
   defp check_respond(_workflow), do: []
+
+  defp check_auth(%Workflow{auth: nil, auth_header: nil}), do: []
+
+  defp check_auth(%Workflow{auth: nil}),
+    do: ["webhook auth_header needs auth, the credential to check it against"]
+
+  defp check_auth(%Workflow{auth: auth}) when not is_binary(auth),
+    do: ["webhook auth must be a credential name, not #{inspect(auth)}"]
+
+  defp check_auth(%Workflow{auth_header: header}) when not (is_nil(header) or is_binary(header)),
+    do: ["webhook auth_header must be a header name, not #{inspect(header)}"]
+
+  defp check_auth(%Workflow{auth: name}) do
+    if Credentials.set?(name),
+      do: [],
+      else: ["webhook auth credential #{name} isn't set (set it at /credentials)"]
+  end
 
   defp check_cron(%Workflow{cron: nil}), do: []
 

@@ -1,0 +1,7 @@
+#!/bin/sh
+# Starts this release as the Code node runner instead of the app. See
+# specs/070_code_sandbox.md.
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+PURPLEFLOW_ROLE=runner exec ./purple_flow start

@@ -48,4 +48,13 @@ defmodule PurpleFlowWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug PurpleFlowWeb.Router
+
+  # Ahead of every plug above, and of the LiveView socket: a request from the
+  # Code node runner's network is refused before anything else sees it.
+  def call(conn, opts) do
+    case PurpleFlowWeb.Plugs.RejectRunner.call(conn, []) do
+      %Plug.Conn{halted: true} = conn -> conn
+      conn -> super(conn, opts)
+    end
+  end
 end

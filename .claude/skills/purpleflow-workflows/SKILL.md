@@ -31,6 +31,8 @@ name = "sync_records"          # unique
 [trigger.webhook]              # optional
 path = "sync-records"          # POST/GET /hooks/sync-records
 respond = "result"             # default: reply with the run's output. "immediately" = reply 202 + run_id
+auth = "SYNC_HOOK_TOKEN"       # optional: callers must send `Authorization: Bearer <credential value>`, else 401
+auth_header = "x-telegram-bot-api-secret-token"  # optional, needs auth: read the bare token from this header instead
 
 [trigger.cron]                 # optional
 schedule = "0 * * * *"
@@ -97,7 +99,7 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 
 **Postgres:** values always go in `params` as `$1`, `$2`, …, never pasted into `query`. Params arrive as text or numbers, so cast in SQL when needed: `$1::text::timestamptz`.
 
-**Code scripts** get `input` and `steps` (`steps["fetch"]["output"]`). Return `{:ok, value}`, `{:ok, value, "route"}`, `{:error, "why"}`, or just a plain value. Maps use **string keys**: `input["amount"]`, not `input.amount`.
+**Code scripts** get `input` and `steps` (`steps["fetch"]["output"]`). Return `{:ok, value}`, `{:ok, value, "route"}`, `{:error, "why"}`, or just a plain value. Maps use **string keys**: `input["amount"]`, not `input.amount`. Scripts run in an isolated runner with no network, no credentials, and no environment variables: fetch with an HTTP step and hand the result to the script through `input`/`steps`. What a script returns must be JSON-shaped.
 
 ```elixir
 # is_big.exs

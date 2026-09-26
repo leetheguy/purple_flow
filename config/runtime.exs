@@ -23,6 +23,31 @@ end
 config :purple_flow, PurpleFlowWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# The same release runs as either the app or the Code node runner (see
+# specs/070_code_sandbox.md). The runner is started with no secrets at all,
+# so nothing below that requires one applies to it.
+role = if System.get_env("PURPLEFLOW_ROLE") == "runner", do: :runner, else: :app
+config :purple_flow, :role, role
+
+if role == :runner do
+  config :purple_flow,
+         :runner_port,
+         String.to_integer(System.get_env("PURPLEFLOW_RUNNER_PORT", "4100"))
+end
+
+# Where the app sends Code node scripts, as "host:port". Without it (dev and
+# test), the app runs them in its own VM instead; a release requires it.
+if runner_address = System.get_env("PURPLEFLOW_RUNNER_ADDRESS") do
+  [host, port] = String.split(runner_address, ":", parts: 2)
+  config :purple_flow, :runner_address, {host, String.to_integer(port)}
+end
+
+# The runner's network, as a CIDR like "10.250.250.0/24". The app refuses
+# every web request from it, so a script can't call the app's webhooks or UI.
+if runner_subnet = System.get_env("PURPLEFLOW_RUNNER_SUBNET") do
+  config :purple_flow, :runner_subnet, runner_subnet
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :purple_flow, PurpleFlowWeb.Endpoint,
@@ -38,7 +63,21 @@ if config_env() == :dev do
     ]
 end
 
-if config_env() == :prod do
+if config_env() == :prod and role == :app do
+  System.get_env("PURPLEFLOW_RUNNER_ADDRESS") ||
+    raise """
+    environment variable PURPLEFLOW_RUNNER_ADDRESS is missing.
+    Code node scripts run in a separate runner container, for example
+    PURPLEFLOW_RUNNER_ADDRESS=runner:4100. See docker-compose.yml.
+    """
+
+  System.get_env("PURPLEFLOW_RUNNER_SUBNET") ||
+    raise """
+    environment variable PURPLEFLOW_RUNNER_SUBNET is missing.
+    It's the runner's network, which the app refuses web requests from,
+    for example PURPLEFLOW_RUNNER_SUBNET=10.250.250.0/24. See docker-compose.yml.
+    """
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

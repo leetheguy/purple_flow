@@ -15,6 +15,9 @@ defmodule PurpleFlowWeb.Router do
   pipeline :webhook do
   end
 
+  # For Docker's healthcheck, which has no login. Says only "ok".
+  get "/health", PurpleFlowWeb.HealthController, :show
+
   scope "/", PurpleFlowWeb do
     pipe_through :browser
 
