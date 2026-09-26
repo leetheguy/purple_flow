@@ -1,6 +1,6 @@
 # 030 — Runs
 
-Status: draft
+Status: implemented
 Created: 2026-09-25
 
 ## Who does what

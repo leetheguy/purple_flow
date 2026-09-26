@@ -1,6 +1,6 @@
 # 010 — Workflows (TOML)
 
-Status: draft
+Status: implemented
 Created: 2026-09-25
 
 ## Layout

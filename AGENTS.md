@@ -5,7 +5,10 @@ This is a web application written using the Phoenix web framework.
 **Writing or changing a spec?** Specs in `specs/` are a history, not a
 description of the current app. A new spec gets the next number and a
 `Created: YYYY-MM-DD` line under its `Status:` line, and it says what it does,
-not what it changes. A draft can be edited until it's implemented; after that
+not what it changes. `Status:` is one of `draft`, `implemented`, or
+`superseded by [NNN](...)`. A new spec starts as `draft`. The commit that
+finishes implementing a spec also sets it to `implemented`; never leave a
+shipped spec marked `draft`. A draft can be edited until it's implemented; after that
 it's set in stone, and only its `Status:` line and its `## Log` change. When
 something changes what an implemented spec says, append a dated entry to its
 `## Log` section (create it at the bottom if missing) naming what changed and

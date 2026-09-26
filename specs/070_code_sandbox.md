@@ -1,6 +1,6 @@
 # 070 — Code node sandbox
 
-Status: superseded by [100](100_runner_container.md).
+Status: superseded by [100](100_runner_container.md)
 Created: 2026-09-25
 
 ## Why

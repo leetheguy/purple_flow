@@ -1,6 +1,6 @@
 # 000 — Overview
 
-Status: draft
+Status: implemented
 Created: 2026-09-25
 
 ## What this is

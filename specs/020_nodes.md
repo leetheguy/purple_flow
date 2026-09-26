@@ -1,6 +1,6 @@
 # 020 — Nodes
 
-Status: draft
+Status: implemented
 Created: 2026-09-25
 
 ## Contract

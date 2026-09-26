@@ -1,6 +1,6 @@
 # 100 — Code runner container
 
-Status: implemented.
+Status: implemented
 Created: 2026-09-26
 Replaces: [070](070_code_sandbox.md)
 
