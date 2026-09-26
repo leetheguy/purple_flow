@@ -1,7 +1,7 @@
 defmodule PurpleFlow.Runner.Server do
   @moduledoc """
   The Code node runner: accepts a script and its `input`/`steps` over TCP,
-  evaluates it, and sends back the result. See `specs/070_code_sandbox.md`.
+  evaluates it, and sends back the result. See `specs/100_runner_container.md`.
 
   In Docker this runs alone in the `runner` container, which has no secrets,
   no database, and no network except the app's connections to it. Outside

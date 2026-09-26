@@ -27,6 +27,17 @@ defmodule PurpleFlowWeb.Router do
     live "/credentials", CredentialsLive
   end
 
+  # For agents, with their own token instead of the browser login.
+  pipeline :api do
+    plug :accepts, ["json"]
+  end
+
+  scope "/api", PurpleFlowWeb do
+    pipe_through :api
+
+    get "/workflows", WorkflowStatusController, :index
+  end
+
   scope "/hooks", PurpleFlowWeb do
     pipe_through :webhook
 

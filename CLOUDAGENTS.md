@@ -86,7 +86,7 @@ mix test          # or: mix precommit, before committing
 ```
 
 Expect one warning line at boot: without `PURPLEFLOW_RUNNER_ADDRESS`, Code
-node scripts run in the test VM itself (specs/070). A `[error] GenServer
+node scripts run in the test VM itself (specs/100). A `[error] GenServer
 ... killed` log line during the run is from a test that kills a script on
 purpose.
 
@@ -161,8 +161,16 @@ PORT=4000
 PURPLEFLOW_SECRET_KEY=$(openssl rand -base64 32)
 PURPLEFLOW_ADMIN_USERNAME=admin
 PURPLEFLOW_ADMIN_PASSWORD=$(openssl rand -hex 12)
+PURPLEFLOW_FILES_USERNAME=files
+PURPLEFLOW_FILES_PASSWORD=$(openssl rand -hex 12)
+PURPLEFLOW_AGENT_TOKEN=$(openssl rand -hex 24)
 EOF
+mkdir -p workflows && git init -q workflows   # before `up`, or Docker makes it root-owned
 ```
+
+The `files` service (dufs) runs a published image, not the Dockerfile, so it
+needs nothing from the patched build; compose pulls it through the proxy like
+any base image.
 
 Build the two images one at a time. In parallel, Docker Hub rate-limits the
 base image lookups (`429 Too Many Requests`); retrying after a short wait
@@ -186,11 +194,11 @@ the admin login from `.env`.
 
 - **Two roles, one release.** The same image runs as the app
   (`bin/server`) or as the Code node runner (`bin/runner`, which sets
-  `PURPLEFLOW_ROLE=runner`). See specs/070.
+  `PURPLEFLOW_ROLE=runner`). See specs/100.
 - **`RELEASE_DISTRIBUTION=none`** on both containers is deliberate. They
   share a release cookie, so with distribution on, a script in the runner
   could connect into the app's VM. As a result, `bin/purple_flow remote`
-  doesn't work; use the UI's Reload button to reload workflows.
+  doesn't work. Nothing needs it: workflows reload on their own (specs/090).
 - **The runner's isolation can only be checked on the real stack**, not in
   `mix test`. The way to check it is a throwaway Code step that tries to
   read env vars, list `/proc`, and connect to `db:5432`, `app:4000`,

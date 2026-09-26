@@ -1,7 +1,7 @@
 defmodule PurpleFlow.Runner.Client do
   @moduledoc """
   Sends a Code node's script to the runner (`PurpleFlow.Runner.Server`) and
-  waits for the result. See `specs/070_code_sandbox.md`.
+  waits for the result. See `specs/100_runner_container.md`.
 
   The runner's address is `config :purple_flow, :runner_address` (a
   `{host, port}`, set from `PURPLEFLOW_RUNNER_ADDRESS`). Without one, the

@@ -1,6 +1,6 @@
 # 050 — Storage
 
-Status: draft
+Status: implemented
 Created: 2026-09-25
 
 Postgres through Ecto. There are two tables. Records are written as things happen, not at the end, so a crash never loses what already ran.

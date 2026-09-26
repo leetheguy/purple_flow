@@ -39,9 +39,9 @@ npm-debug.log
 # Credentials. Never commit.
 .env
 
-# Workflows are user data — only the bundled samples are part of the distro.
-/workflows/*
-!/workflows/samples/
+# Workflows are user data, and the folder can be its own git repo. The
+# samples live in samples/.
+/workflows/
 
 # Local server log
 phx_server.log

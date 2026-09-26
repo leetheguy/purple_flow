@@ -44,13 +44,15 @@ defmodule PurpleFlow.Node do
 
   @doc """
   Optional. Runs once when the workflow loads, so mistakes show up early.
-  Gets the config and the folder the node file is in. Returns the config to
-  use from then on, or an error message.
+  Gets the config, the folder the node file is in, and the workflows folder
+  (`root`). Returns the config to use from then on, or an error message. A
+  node that reads a file named in its config resolves it with
+  `PurpleFlow.Workflow.Paths.resolve/3`, so it can't leave `root`.
   """
-  @callback prepare(config :: map(), node_dir :: String.t()) ::
+  @callback prepare(config :: map(), node_dir :: String.t(), root :: String.t()) ::
               {:ok, map()} | {:error, String.t()}
 
-  @optional_callbacks execute: 2, execute: 3, prepare: 2
+  @optional_callbacks execute: 2, execute: 3, prepare: 3
 
   @doc "True if `module` is a real module that says it's a `PurpleFlow.Node`."
   def node_module?(module) do

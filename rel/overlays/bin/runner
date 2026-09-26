@@ -1,6 +1,6 @@
 #!/bin/sh
 # Starts this release as the Code node runner instead of the app. See
-# specs/070_code_sandbox.md.
+# specs/100_runner_container.md.
 set -eu
 
 cd -P -- "$(dirname -- "$0")"

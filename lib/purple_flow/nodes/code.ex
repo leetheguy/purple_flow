@@ -29,17 +29,18 @@ defmodule PurpleFlow.Nodes.Code do
   The script runs in the runner (`PurpleFlow.Runner.Server`), which in
   Docker is its own container with no secrets, no database, and no network
   beyond answering this app, so it can't reach credentials or other state
-  it wasn't handed as `input`/`steps`. See `specs/070_code_sandbox.md`.
+  it wasn't handed as `input`/`steps`. See `specs/100_runner_container.md`.
   """
 
   alias PurpleFlow.Runner.Client
+  alias PurpleFlow.Workflow.Paths
 
   @behaviour PurpleFlow.Node
 
   @impl true
-  def prepare(config, node_dir) do
+  def prepare(config, node_dir, root) do
     with {:ok, file} <- fetch_file(config),
-         path = Path.expand(file, node_dir),
+         {:ok, path} <- resolve(file, node_dir, root),
          {:ok, source} <- read(path),
          :ok <- parse(source, path) do
       # Stored as a tuple so the template filler leaves the source alone.
@@ -55,6 +56,13 @@ defmodule PurpleFlow.Nodes.Code do
 
   defp fetch_file(%{"file" => file}) when is_binary(file), do: {:ok, file}
   defp fetch_file(_), do: {:error, "Code node needs `file` in its [config]"}
+
+  defp resolve(file, node_dir, root) do
+    case Paths.resolve(file, node_dir, root) do
+      {:ok, path} -> {:ok, path}
+      :error -> {:error, "Code file #{inspect(file)} leaves the workflows folder"}
+    end
+  end
 
   defp read(path) do
     case File.read(path) do

@@ -24,7 +24,7 @@ config :purple_flow, PurpleFlowWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 # The same release runs as either the app or the Code node runner (see
-# specs/070_code_sandbox.md). The runner is started with no secrets at all,
+# specs/100_runner_container.md). The runner is started with no secrets at all,
 # so nothing below that requires one applies to it.
 role = if System.get_env("PURPLEFLOW_ROLE") == "runner", do: :runner, else: :app
 config :purple_flow, :role, role

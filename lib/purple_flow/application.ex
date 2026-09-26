@@ -4,7 +4,7 @@ defmodule PurpleFlow.Application do
   # trigger until everything a run needs is already up.
   #
   # The same release also runs as the Code node runner (PURPLEFLOW_ROLE=runner,
-  # see specs/070_code_sandbox.md), which starts nothing but the runner.
+  # see specs/100_runner_container.md), which starts nothing but the runner.
 
   use Application
 

@@ -39,6 +39,9 @@ config :phoenix,
 config :purple_flow,
   workflows_dir: "test/support/workflows",
   mark_interrupted_on_boot: false,
+  # The app's own Workflows process doesn't watch in tests: tests that need
+  # watching start their own on a temp folder and tick it by hand.
+  workflows_watch: [interval: :manual, credentials: false],
   http_req_options: [plug: {Req.Test, PurpleFlow.Nodes.Http}]
 
 # Requests from here are refused, as from the Code node runner's network.

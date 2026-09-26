@@ -53,11 +53,19 @@ defmodule PurpleFlow.Credentials do
     )
   end
 
+  @doc """
+  The PubSub topic that hears `:credentials_changed` after every create,
+  update, and archive. `PurpleFlow.Workflows` reloads on it, so a workflow
+  that failed only because a credential wasn't set starts working.
+  """
+  def topic, do: "credentials"
+
   @doc "Creates a new, active, unset credential."
   def create(name, description) do
     %Credential{}
     |> changeset(%{name: name, description: description})
     |> Repo.insert()
+    |> announce()
   end
 
   @doc """
@@ -69,6 +77,7 @@ defmodule PurpleFlow.Credentials do
     Repo.get!(Credential, id)
     |> changeset(attrs)
     |> Repo.update()
+    |> announce()
   end
 
   @doc """
@@ -80,7 +89,15 @@ defmodule PurpleFlow.Credentials do
     Repo.get!(Credential, id)
     |> Ecto.Changeset.change(name: random_name(), archived_at: DateTime.utc_now())
     |> Repo.update()
+    |> announce()
   end
+
+  defp announce({:ok, _} = result) do
+    Phoenix.PubSub.broadcast(PurpleFlow.PubSub, topic(), :credentials_changed)
+    result
+  end
+
+  defp announce(result), do: result
 
   defp changeset(credential, attrs) do
     attrs = normalize_key(attrs)
