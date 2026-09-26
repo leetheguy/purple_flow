@@ -1,6 +1,7 @@
 # 080 — Credentials
 
 Status: implemented
+Created: 2026-09-25
 
 ## Why
 
@@ -306,3 +307,7 @@ breaking change to how the container is configured.
     leaking it without a test noticing.
   - archiving a row removes it from the list and frees its name for reuse.
   - the search box filters rows by name and description.
+
+## Log
+
+- 2026-09-26 — [090](090_workflow_files.md) (draft): setting a credential reloads workflows, so one that failed only because its `creds.NAME` wasn't set starts working without anyone touching a file.

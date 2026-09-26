@@ -1,6 +1,7 @@
 # 000 — Overview
 
 Status: draft
+Created: 2026-09-25
 
 ## What this is
 
@@ -89,4 +90,7 @@ purple_goo is not a dependency. Running purple_goo's pipeline as a PurpleFlow wo
 - [060 — UI](060_ui.md)
 - [070 — Code node sandbox](070_code_sandbox.md)
 - [080 — Credentials](080_credentials.md)
-- [090 — Workflow files](090_workflow_files.md)
+
+## Log
+
+- 2026-09-26 — [090](090_workflow_files.md) (draft): workflow files, isolated and live. The workflows folder is exposed to agents and people through a `files` service (dufs); the app mounts it read-only and reloads on every change, so "Auto-reload when TOML files change" is no longer a "Later" item. Spec 090 joins the list above.

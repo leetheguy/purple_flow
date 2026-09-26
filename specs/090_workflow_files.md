@@ -1,14 +1,14 @@
 # 090 — Workflow files: isolated, live, shared through dufs
 
 Status: draft
+Created: 2026-09-26
 
 ## Why
 
-Workflows are meant to be built by agents. Today an agent that edits a
-workflow edits it inside this repo's checkout, next to `.env`, the app's
-source, and everything else. That's far more reach than writing a workflow
-needs, and nothing tells the agent whether its change worked short of
-`mix run`, which nobody should have to run.
+Workflows are meant to be built by agents. Writing a workflow needs the
+workflow files and nothing else: not `.env`, not the app's source, not the
+database. And an agent needs to know whether its change worked without
+running `mix` or anything else in the app's checkout.
 
 This spec gives workflows their own home:
 
@@ -56,17 +56,16 @@ $WORKFLOWS_PATH/  (default ./workflows)
 
 - The workflows folder is a plain folder on the host, bind-mounted into two
   containers. `WORKFLOWS_PATH` in `.env` points it anywhere; the default
-  stays `./workflows` so existing installs keep working.
+  is `./workflows`.
 - **dufs mounts it read-write. The app mounts it read-only.** The app never
-  needed to write workflows, and now it can't, even by accident or through a
-  bug.
+  writes workflows, so it can't, even by accident or through a bug.
 - **The runner doesn't mount it at all.** The app reads each `.exs` file and
-  sends the source to the runner, as it does now.
-- **The folder is entirely yours.** The two sample workflows move out of
-  `workflows/samples/` to `samples/` at the repo root, so nothing tracked by
-  this repo lives inside the workflows folder. That keeps the workflows
+  sends the source to the runner (see 070).
+- **The folder is entirely yours.** Nothing tracked by this repo lives
+  inside it: the sample workflows live in `samples/` at the repo root, and
+  `.gitignore` ignores `/workflows/` outright. That leaves the workflows
   folder free to be its own git repository with no files from this repo
-  mixed in. `.gitignore` ignores `/workflows/` outright.
+  mixed in.
 
 ## dufs
 
@@ -133,8 +132,8 @@ may only hide the folder from listings.
 ## The app watches the folder
 
 `PurpleFlow.Workflows` checks the workflows folder once a second and
-reloads when something changed. This replaces the Reload button and the
-"reload after editing" step everywhere.
+reloads when something changed. There's no Reload button and no reload
+step after editing.
 
 - **Polling, not file-system events.** Each tick lists every file under the
   folder with its size and modified time. The list is small, so the check is
@@ -148,8 +147,8 @@ reloads when something changed. This replaces the Reload button and the
 - **Also reload when credentials change.** A workflow that failed because a
   `creds.NAME` wasn't set should start working the moment someone sets it at
   `/credentials`, without anyone touching a file.
-- `reload/0` stays, for tests and anything else that wants a reload right
-  now.
+- `reload/0` reloads immediately, for tests and anything else that can't
+  wait for the next tick.
 
 ### A broken save doesn't break a running workflow
 
@@ -160,15 +159,15 @@ Reloading works workflow by workflow, keyed by the workflow's folder:
   version **keeps running**. The problems are recorded against the
   workflow, together with the fact that it's running an older version. The
   UI shows both.
-- **Fails to load, nothing was running:** it's listed with its problems, as
-  now.
+- **Fails to load, nothing was running:** it's listed with its problems.
 - **Folder deleted:** the workflow is unloaded and its cron job removed.
 
 Keeping the old version running has two exceptions, because keeping it
 would leave two workflows claiming the same thing: if the new version's
 `name` or webhook `path` collides with another loaded workflow, the new
 version is refused and the old one keeps running as before. That's the same
-rule as today's duplicate-name and duplicate-path checks.
+rule as the duplicate-name and duplicate-path checks in
+[010](010_workflows.md).
 
 Runs already in progress are unaffected by any reload. Each run holds its
 own copy of the workflow it started with and finishes on that version.
@@ -181,21 +180,20 @@ changed, so a reload never drops or doubles a scheduled run.
 Every path a workflow names (a step's `node = "..."` and a Code node's
 `file = "..."`) must resolve to somewhere inside the workflows folder.
 
-Today the loader expands those paths relative to the file that names them
-and reads whatever it finds. So `file = "../../../etc/passwd"` or an
-absolute path makes the **app** read a file outside the workflows folder,
-and the app's container is the one holding the secrets. Once workflow files
-come from agents through dufs, "a workflow can only reach the workflows
-folder" has to actually be true.
+Without this rule, `file = "../../../etc/passwd"` or an absolute path
+would make the **app** read a file outside the workflows folder, and the
+app's container is the one holding the secrets. With workflow files coming
+from agents through dufs, "a workflow can only reach the workflows folder"
+has to actually be true.
 
-- Paths are resolved relative to the file that names them, as now, and
+- Paths are resolved relative to the file that names them, and
   symlinks are followed. If the result isn't inside the workflows folder,
   the workflow fails to load with `step "x": node path leaves the workflows
   folder`.
 - Absolute paths are refused outright, with the same message.
-- `../shared/slack.toml` keeps working: it stays inside the folder.
+- `../shared/slack.toml` is fine: it stays inside the folder.
 - Only folders directly under the workflows folder that contain a
-  `workflow.toml` are workflows (unchanged). Dot-folders like `.git` are
+  `workflow.toml` are workflows. Dot-folders like `.git` are
   never read.
 
 ## Telling an agent whether its change loaded
@@ -240,23 +238,19 @@ Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>
 ## Outside Docker
 
 `mix phx.server` and `mix test` have no dufs. The app reads
-`WORKFLOWS_DIR` (default `workflows`) exactly as now, and the watcher runs
+`WORKFLOWS_DIR` (default `workflows`), and the watcher runs
 there too, so editing a file in your editor is live in dev as well. Tests
 point `workflows_dir` at a temporary folder per test that needs to write
 files, and drive the watcher with an explicit tick rather than waiting on
 the clock.
 
-## Docs to update
+## Docs
 
-- The workflow skill (`.claude/skills/purpleflow-workflows/SKILL.md`):
-  remove the `mix run` check and the "after editing, reload" gotcha. Add the
-  dufs requests above and the save → poll `/api/workflows` → run loop.
-- README: the new `files` service and its `.env` settings, `git init` in
-  the workflows folder, where the samples went, and that edits are live.
-- [010](010_workflows.md) "Loading", [020](020_nodes.md) (Code node edits
-  take effect on reload), [060](060_ui.md) (Reload button gone; UI shows
-  "running an older version"), and [000](000_overview.md) (auto-reload
-  leaves "Later"; `files` joins the picture).
+- The workflow skill (`.claude/skills/purpleflow-workflows/SKILL.md`)
+  covers the dufs requests above and the save → poll `/api/workflows` → run
+  loop. It has no `mix` commands.
+- The README covers the `files` service and its `.env` settings, `git init`
+  in the workflows folder, and where the samples are.
 
 ## Verified
 
