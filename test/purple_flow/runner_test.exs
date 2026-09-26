@@ -1,7 +1,7 @@
 defmodule PurpleFlow.RunnerTest do
   # End to end against the in-VM runner: same protocol and timeouts as the
   # runner container, without the isolation (that's checked against the
-  # compose stack, see specs/070_code_sandbox.md).
+  # compose stack, see specs/100_runner_container.md).
   use PurpleFlow.DataCase, async: false
 
   import PurpleFlow.WorkflowHelpers

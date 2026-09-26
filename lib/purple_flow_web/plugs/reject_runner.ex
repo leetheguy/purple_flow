@@ -6,7 +6,7 @@ defmodule PurpleFlowWeb.Plugs.RejectRunner do
   The app and the runner share that network so the app can reach the
   runner, but a script must never reach the app back: not its webhooks, not
   its UI, not its LiveView socket. `PurpleFlowWeb.Endpoint` calls this before
-  anything else, sockets included. See `specs/070_code_sandbox.md`.
+  anything else, sockets included. See `specs/100_runner_container.md`.
 
   Without a configured subnet (dev and test, where the runner is in-VM),
   nothing is refused.

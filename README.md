@@ -72,7 +72,7 @@ has a health check, and the app container only starts once it passes;
 migrations run automatically on boot, and the container restarts on its own if
 the app dies. Code node scripts run in the `runner` container, which has no
 secrets, no database, no internet, and no way to reach the app (see
-[specs/070](specs/070_code_sandbox.md)). See
+[specs/100](specs/100_runner_container.md)). See
 `docker-compose.yml` and `.env.example` for the environment variables to set
 (`SECRET_KEY_BASE`, `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
 `PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`, and

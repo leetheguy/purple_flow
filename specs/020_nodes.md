@@ -36,7 +36,7 @@ Uses `Req`. Config: `method`, `url`, `headers`, `body`, `query`. Output is the d
 
 ### `PurpleFlow.Nodes.Postgres`
 
-Uses `Postgrex`. Config: `query` and `params`, plus `database_url` (usually `{{ creds.SOME_DB_URL }}`). Values go in `params` (`$1`, `$2`, …), **never** templated into `query`. That prevents SQL injection. Output is a list of row maps, so the next step runs per row.
+Uses `Postgrex`. Config: `query` and `params`, plus `database_url` (usually `{{ env.SOME_DB_URL }}`). Values go in `params` (`$1`, `$2`, …), **never** templated into `query`. That prevents SQL injection. Output is a list of row maps, so the next step runs per row.
 
 Connections are pooled, with one pool per `database_url` (default size 10), so a step running 1,000 items at once doesn't open 1,000 connections.
 
@@ -67,7 +67,7 @@ The file is read and parsed when the workflow loads, so a syntax error fails the
 
 If the script returns `{:ok, _}`, `{:ok, _, route}`, or `{:error, _}`, that result is used as-is. Any other value `v` becomes `{:ok, v}`.
 
-This runs arbitrary code, but not in this app's own container — it runs in a separate runner container with no secrets, no database, and no network access beyond answering the app. See [070](070_code_sandbox.md).
+This runs arbitrary code. It's fine as long as only you write the workflow files.
 
 ### `PurpleFlow.Nodes.Workflow`
 
@@ -95,4 +95,7 @@ No run machinery is needed.
 
 ## Log
 
+- 2026-09-25 — [070](070_code_sandbox.md): **Code** scripts no longer run in the app's own process. They run on an isolated peer node with no access to the app's modules, database, or environment variables.
+- 2026-09-25 — [080](080_credentials.md): **Postgres**: `database_url` is usually `{{ creds.SOME_DB_URL }}`, not `{{ env.SOME_DB_URL }}`.
+- 2026-09-26 — [100](100_runner_container.md): **Code** scripts run in a separate runner container with no secrets, no database, and no network access beyond answering the app, replacing the peer node.
 - 2026-09-26 — [090](090_workflow_files.md) (draft): **Code**: edits to a `.exs` file take effect on their own within about two seconds, with no `reload/0`. A Code node's `file` must stay inside the workflows folder.

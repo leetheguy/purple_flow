@@ -49,7 +49,7 @@ follow-up.
 | Field | Type | Notes |
 |---|---|---|
 | `name` | text, unique | how workflows reference it: `{{ creds.NAME }}` |
-| `key` | binary, encrypted, nullable | the secret value itself |
+| `key` | text, encrypted, nullable | the secret value itself |
 | `description` | text | free text, shown in the UI so a human remembers what it's for |
 | `archived_at` | utc_datetime_usec, nullable | set when the credential is trashed; `nil` means active |
 
@@ -127,8 +127,8 @@ able to, to fill them into a workflow's config and actually call the API in
 question. That's an intentional, unavoidable property of any system that
 uses the credential, not a gap in this one. What actually stops an
 unauthorized *reader* of a credential is the login gate (below) and the
-[Code node sandbox](070_code_sandbox.md), which runs scripts in a separate
-container with no secrets, no database, and no route back to the app.
+[Code node sandbox](070_code_sandbox.md), which has no code path to
+`PurpleFlow.Credentials` at all.
 
 ## Reading a credential: `{{ creds.NAME }}`
 
@@ -154,10 +154,6 @@ The module a template lookup and the UI both go through:
   are indistinguishable from here on purpose (see "Archiving" above). This
   is the one function that ever produces a plaintext value, and it's called
   from exactly one place: `PurpleFlow.Template`'s `{:creds, name}` lookup.
-- `set?(name)`: whether an active credential named `name` exists and has a
-  value — without decrypting anything. `PurpleFlow.Workflow.Loader` uses
-  this to fail a workflow's checks at load time when it references a
-  credential that isn't set.
 - `create(name, description)`: makes a new, active, unset credential.
 - `update(id, attrs)`: changes `name`, `description`, and/or `key` (`attrs`
   may include any of the three) on an existing row. Setting `key` here goes
@@ -170,16 +166,15 @@ The module a template lookup and the UI both go through:
   observe a half-archived row with the old name and a set `archived_at`, or
   vice versa.
 
-Nothing here is usable from a Code node script (see
-[070](070_code_sandbox.md)): scripts run in the runner container, which has
-no `PURPLEFLOW_SECRET_KEY` to decrypt with and no network route to the
-database.
+No function here is reachable from a Code node's sandboxed peer (see
+[070](070_code_sandbox.md)) — that peer has no code path to
+`PurpleFlow.Credentials` at all, same as it has none to `PurpleFlow.Repo`.
 
 ## UI: `/credentials`
 
 One page, one LiveView. A search box at the top filters the rows below it by
-name or description as you type (filtered in the LiveView over the full
-list — this is never going to be a list with pagination-scale row counts). Below the search box: an
+name or description as you type (client-side — this is never going to be a
+list with pagination-scale row counts). Below the search box: an
 always-present add row, then one row per active credential, newest first.
 
 ### The secret field: what the browser is allowed to know
@@ -310,4 +305,6 @@ breaking change to how the container is configured.
 
 ## Log
 
+- 2026-09-26 — Fixes found in review: the `key` column is `binary`, not `text`. `set?(name)` is added: it says whether an active credential named `name` has a value, without decrypting anything, and `PurpleFlow.Workflow.Loader` uses it to check `creds.NAME` references at load time (decrypting every referenced credential just to check it was set crashed on a wrong key). The `/credentials` search filters in the LiveView over the full list, not client-side.
+- 2026-09-26 — [100](100_runner_container.md): the Code node sandbox this spec relies on is the runner container: scripts run in a separate container with no `PURPLEFLOW_SECRET_KEY` to decrypt with, no database, and no route back to the app. That's what keeps `PurpleFlow.Credentials` out of a script's reach, not a restricted code path.
 - 2026-09-26 — [090](090_workflow_files.md) (draft): setting a credential reloads workflows, so one that failed only because its `creds.NAME` wasn't set starts working without anyone touching a file.

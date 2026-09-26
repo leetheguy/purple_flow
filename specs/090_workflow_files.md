@@ -22,7 +22,7 @@ This spec gives workflows their own home:
   repository. Nothing commits automatically; whoever manages the workflows
   manages the history.
 
-It's the same pattern as [070](070_code_sandbox.md): give each job its own
+It's the same pattern as [100](100_runner_container.md): give each job its own
 container with only what that job needs.
 
 ## What this spec covers, and what it doesn't
@@ -38,7 +38,7 @@ authors away from the app, not away from the credentials. Per-credential
 allowed-host locks close that; they're still in "Later" (see
 [080](080_credentials.md)).
 
-**Doesn't cover:** a Docker or Linux kernel exploit, as in 070.
+**Doesn't cover:** a Docker or Linux kernel exploit, as in 100.
 
 ## The layout
 
@@ -60,7 +60,7 @@ $WORKFLOWS_PATH/  (default ./workflows)
 - **dufs mounts it read-write. The app mounts it read-only.** The app never
   writes workflows, so it can't, even by accident or through a bug.
 - **The runner doesn't mount it at all.** The app reads each `.exs` file and
-  sends the source to the runner (see 070).
+  sends the source to the runner (see 100).
 - **The folder is entirely yours.** Nothing tracked by this repo lives
   inside it: the sample workflows live in `samples/` at the repo root, and
   `.gitignore` ignores `/workflows/` outright. That leaves the workflows
@@ -233,7 +233,7 @@ Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>
   UI.
 - Problems are the same messages the UI shows. They name credentials that
   aren't set, never credential values.
-- Rejected from the runner's subnet like every other request (see 070).
+- Rejected from the runner's subnet like every other request (see 100).
 
 ## Outside Docker
 

@@ -44,7 +44,7 @@ services:
 
   # Runs every Code node script. Same image as the app, started as the
   # runner: no secrets, no database, no internet, and no route to anything
-  # but answering the app. See specs/070_code_sandbox.md.
+  # but answering the app. See specs/100_runner_container.md.
   runner:
     build: .
     container_name: purple_flow-runner

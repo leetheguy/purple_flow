@@ -29,7 +29,7 @@ defmodule PurpleFlow.Nodes.Code do
   The script runs in the runner (`PurpleFlow.Runner.Server`), which in
   Docker is its own container with no secrets, no database, and no network
   beyond answering this app, so it can't reach credentials or other state
-  it wasn't handed as `input`/`steps`. See `specs/070_code_sandbox.md`.
+  it wasn't handed as `input`/`steps`. See `specs/100_runner_container.md`.
   """
 
   alias PurpleFlow.Runner.Client
