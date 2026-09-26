@@ -26,6 +26,7 @@ See the README's "Running it" section for details.
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
+- CI (`.github/workflows/ci.yml`) runs the same checks on every push and pull request, in check mode (`mix format --check-formatted`, `mix deps.unlock --check-unused`), so run `mix precommit` before pushing and a red CI check is yours to fix
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 
 ### Phoenix v1.8 guidelines

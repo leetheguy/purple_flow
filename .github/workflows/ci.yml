@@ -1,0 +1,71 @@
+# Runs on every push and pull request: the same checks as `mix precommit`,
+# in their checking forms, so nothing is fixed silently here.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A newer push to the same branch or PR cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    env:
+      MIX_ENV: test
+      LANG: C.UTF-8
+
+    # The test database, on localhost as config/test.exs expects. `trust`
+    # accepts its login without checking the password, so no password (not
+    # even a throwaway one) has to live in this file.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same versions as the Dockerfile.
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29.0.3"
+          elixir-version: "1.20.2"
+          version-type: strict
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-otp29.0.3-elixir1.20.2-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-otp29.0.3-elixir1.20.2-
+
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - run: mix deps.unlock --check-unused
+      - run: mix format --check-formatted
+
+      # The credential tests need a key; any random one will do.
+      - name: mix test
+        run: |
+          export PURPLEFLOW_SECRET_KEY="$(openssl rand -base64 32)"
+          mix test
