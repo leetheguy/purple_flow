@@ -14,6 +14,11 @@ defmodule PurpleFlowWeb.WebhookController do
   about 100 seconds, since Cloudflare gives up on requests after that.
 
   Unknown path: 404.
+
+  With `auth = "NAME"`, the caller must send `Authorization: Bearer <value>`,
+  where `<value>` is credential NAME's value, or, with `auth_header`, that
+  header holding the value itself. Otherwise: `401`, no body, no run. The
+  token's header is never saved in the run's input. See `specs/040_triggers.md`.
   """
 
   use PurpleFlowWeb, :controller
@@ -26,9 +31,39 @@ defmodule PurpleFlowWeb.WebhookController do
 
     case PurpleFlow.Workflows.find_webhook(path) do
       nil -> conn |> put_status(404) |> json(%{error: "no workflow listens on /hooks/#{path}"})
-      workflow -> respond(conn, workflow, input(conn))
+      workflow -> authorize(conn, workflow)
     end
   end
+
+  defp authorize(conn, workflow) do
+    if authorized?(conn, workflow),
+      do: respond(conn, workflow, input(conn, workflow)),
+      else: send_resp(conn, 401, "")
+  end
+
+  defp authorized?(_conn, %{auth: nil}), do: true
+
+  # An unset or archived credential never falls back to open: `get` is nil,
+  # and nothing matches.
+  defp authorized?(conn, %{auth: name, auth_header: header}) do
+    with expected when is_binary(expected) <- PurpleFlow.Credentials.get(name),
+         [value] <- get_req_header(conn, header || "authorization"),
+         {:ok, token} <- token(value, header) do
+      Plug.Crypto.secure_compare(token, expected)
+    else
+      _ -> false
+    end
+  end
+
+  # The default header carries `Bearer <token>`; a custom one, the token alone.
+  defp token(value, nil) do
+    case String.split(value, " ", parts: 2) do
+      [scheme, token] -> if String.downcase(scheme) == "bearer", do: {:ok, token}, else: :error
+      _ -> :error
+    end
+  end
+
+  defp token(value, _header), do: {:ok, value}
 
   defp respond(conn, %{respond: :immediately} = workflow, input) do
     case PurpleFlow.run(workflow.name, input, trigger: "webhook") do
@@ -50,12 +85,13 @@ defmodule PurpleFlowWeb.WebhookController do
     end
   end
 
-  defp input(conn) do
+  defp input(conn, workflow) do
+    dropped = [workflow.auth_header | @dropped_headers]
+
     %{
       "body" => body(conn.body_params),
       "query" => conn.query_params,
-      "headers" =>
-        conn.req_headers |> Enum.reject(fn {k, _} -> k in @dropped_headers end) |> Map.new()
+      "headers" => conn.req_headers |> Enum.reject(fn {k, _} -> k in dropped end) |> Map.new()
     }
   end
 

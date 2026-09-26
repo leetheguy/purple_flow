@@ -158,6 +158,52 @@ defmodule PurpleFlow.Workflow.LoaderTest do
     assert text =~ ~s("a" isn't an ancestor of this step)
   end
 
+  describe "webhook auth" do
+    defp auth_workflow(webhook) do
+      """
+      [workflow]
+      name = "guarded"
+
+      [trigger.webhook]
+      path = "guarded"
+      #{webhook}
+
+      [[steps]]
+      name = "a"
+      node = "n.toml"
+      """
+    end
+
+    test "auth naming a set credential loads, with auth_header lowercased" do
+      {:ok, cred} = PurpleFlow.Credentials.create("HOOK_TOKEN", "")
+      {:ok, _} = PurpleFlow.Credentials.update(cred.id, %{key: "t"})
+
+      workflow =
+        load_workflow!(
+          auth_workflow(~s(auth = "HOOK_TOKEN"\nauth_header = "X-Secret-Token")),
+          %{"n.toml" => fake_node()}
+        )
+
+      assert workflow.auth == "HOOK_TOKEN"
+      assert workflow.auth_header == "x-secret-token"
+    end
+
+    test "auth naming an unset credential fails" do
+      assert problems(auth_workflow(~s(auth = "PF_UNSET_HOOK")), %{"n.toml" => fake_node()}) =~
+               "webhook auth credential PF_UNSET_HOOK isn't set"
+    end
+
+    test "auth_header without auth fails" do
+      assert problems(auth_workflow(~s(auth_header = "x-token")), %{"n.toml" => fake_node()}) =~
+               "webhook auth_header needs auth"
+    end
+
+    test "auth = \"\" means no auth" do
+      workflow = load_workflow!(auth_workflow(~s(auth = "")), %{"n.toml" => fake_node()})
+      assert workflow.auth == nil
+    end
+  end
+
   test "a Code node's script is checked at load time" do
     text =
       problems(

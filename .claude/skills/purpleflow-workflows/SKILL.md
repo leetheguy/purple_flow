@@ -31,6 +31,8 @@ name = "sync_records"          # unique
 [trigger.webhook]              # optional
 path = "sync-records"          # POST/GET /hooks/sync-records
 respond = "result"             # default: reply with the run's output. "immediately" = reply 202 + run_id
+auth = "SYNC_HOOK_TOKEN"       # optional: callers must send `Authorization: Bearer <credential value>`, else 401
+auth_header = "x-telegram-bot-api-secret-token"  # optional, needs auth: read the bare token from this header instead
 
 [trigger.cron]                 # optional
 schedule = "0 * * * *"
