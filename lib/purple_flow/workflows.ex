@@ -71,6 +71,9 @@ defmodule PurpleFlow.Workflows do
   @doc "Checks the folder for changes once, as the timer does."
   def tick(server \\ __MODULE__), do: GenServer.call(server, :tick)
 
+  @doc "The PubSub topic that hears `:workflows_reloaded` after every reload."
+  def topic, do: "workflows"
+
   @doc "The folder workflows are read from."
   def dir, do: Application.get_env(:purple_flow, :workflows_dir, "workflows")
 
@@ -209,6 +212,7 @@ defmodule PurpleFlow.Workflows do
 
     folders = settle(results, state.folders, now)
     log_problems(folders, state.folders)
+    Phoenix.PubSub.broadcast(PurpleFlow.PubSub, topic(), :workflows_reloaded)
 
     %{
       state

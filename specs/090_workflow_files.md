@@ -220,7 +220,8 @@ Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>
   "reloaded_at": "2026-09-26T15:04:05.123Z",
   "workflows": [
     {"name": "sync_records", "folder": "sync_records", "webhook": "sync-records",
-     "cron": "0 * * * *", "loaded_at": "2026-09-26T15:04:05.123Z", "problems": []},
+     "cron": "0 * * * *", "loaded_at": "2026-09-26T15:04:05.123Z", "problems": [],
+     "running_older_version": false},
     {"name": "hello", "folder": "hello", "webhook": "hello", "cron": null,
      "loaded_at": "2026-09-26T09:12:00.000Z",
      "problems": ["hello/numbers.exs line 3: syntax error before: ')'"],
