@@ -159,5 +159,5 @@ end
 ```
 
 - Config arrives with templates already filled in.
-- Optional: `execute/3` also gets `steps`, and `prepare/2` checks config when the workflow loads.
+- Optional: `execute/3` also gets `steps`, and `prepare/3` (`config, node_dir, root`) checks config when the workflow loads. A file named in config is resolved with `PurpleFlow.Workflow.Paths.resolve/3`, so it can't leave the workflows folder.
 - Keep docs short and plain. Add a test that calls `execute/2` directly, then run `mix precommit`.

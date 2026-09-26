@@ -191,6 +191,15 @@ has to actually be true.
   the workflow fails to load with `step "x": node path leaves the workflows
   folder`.
 - Absolute paths are refused outright, with the same message.
+- Symlinks must be relative. One with an absolute target is refused even
+  when it points inside the folder: the folder is at a different absolute
+  path on the host than in the containers, so an absolute link can't mean
+  the same thing everywhere.
+- A workflow folder that's itself a symlink pointing out doesn't load.
+- All of it goes through one function, `PurpleFlow.Workflow.Paths.resolve/3`.
+  A node's optional `prepare` callback is `prepare(config, node_dir, root)`,
+  so a node that reads a file named in its config (the Code node's `file`)
+  resolves it the same way.
 - `../shared/slack.toml` is fine: it stays inside the folder.
 - Only folders directly under the workflows folder that contain a
   `workflow.toml` are workflows. Dot-folders like `.git` are

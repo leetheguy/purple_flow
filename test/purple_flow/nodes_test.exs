@@ -62,7 +62,7 @@ defmodule PurpleFlow.NodesTest do
       File.mkdir_p!(dir)
       File.write!(Path.join(dir, "s.exs"), ~s|{:ok, input + steps["a"]["output"], "route"}|)
 
-      {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir)
+      {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir, dir)
       assert {:ok, 5, "route"} = Code.execute(2, config, %{"a" => %{"output" => 3}})
     end
 
@@ -71,7 +71,7 @@ defmodule PurpleFlow.NodesTest do
       File.mkdir_p!(dir)
       File.write!(Path.join(dir, "s.exs"), "input * 10")
 
-      {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir)
+      {:ok, config} = Code.prepare(%{"file" => "s.exs"}, dir, dir)
       assert {:ok, 20} = Code.execute(2, config, %{})
     end
   end

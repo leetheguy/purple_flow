@@ -8,20 +8,21 @@ defmodule PurpleFlow.Workflow.Loader do
   """
 
   alias PurpleFlow.{Credentials, Template, Workflow}
-  alias PurpleFlow.Workflow.Step
+  alias PurpleFlow.Workflow.{Paths, Step}
 
   @doc """
   Loads every `*/workflow.toml` under `dir`.
 
   Returns `{workflows, errors}`: loaded workflows by name, and a list of
-  `{path, [problem]}` for the ones that didn't load.
+  `{path, [problem]}` for the ones that didn't load. `dir` is the workflows
+  folder: nothing a workflow names may be outside it.
   """
   def load_all(dir) do
     results =
       Path.join(dir, "*/workflow.toml")
       |> Path.wildcard()
       |> Enum.sort()
-      |> Enum.map(fn path -> {path, load(path)} end)
+      |> Enum.map(fn path -> {path, load(path, dir)} end)
 
     {loaded, errors} =
       Enum.reduce(results, {%{}, []}, fn
@@ -44,13 +45,21 @@ defmodule PurpleFlow.Workflow.Loader do
     {loaded, Enum.reverse(errors)}
   end
 
-  @doc "Loads one `workflow.toml`. Returns `{:ok, workflow}` or `{:error, [problem]}`."
-  def load(path) do
-    dir = Path.dirname(path)
+  @doc """
+  Loads one `workflow.toml`. Returns `{:ok, workflow}` or `{:error, [problem]}`.
 
-    with {:ok, toml} <- read_toml(path),
+  `root` is the workflows folder; it defaults to the folder the workflow's
+  own folder is in.
+  """
+  def load(path, root \\ nil) do
+    dir = Path.dirname(path)
+    root = root || Path.dirname(dir)
+
+    # The workflow's folder itself could be a symlink pointing out.
+    with {:ok, _} <- inside(Path.basename(path), dir, root, "the workflow folder"),
+         {:ok, toml} <- read_toml(path),
          {:ok, name} <- fetch_string(toml, ["workflow", "name"], "[workflow] name") do
-      {steps, step_problems} = load_steps(toml, dir)
+      {steps, step_problems} = load_steps(toml, dir, root)
 
       workflow = %Workflow{
         name: name,
@@ -85,12 +94,12 @@ defmodule PurpleFlow.Workflow.Loader do
 
   # -- steps --
 
-  defp load_steps(toml, dir) do
+  defp load_steps(toml, dir, root) do
     raw_steps = Map.get(toml, "steps", [])
 
     {steps, problems} =
       Enum.map_reduce(raw_steps, [], fn raw, problems ->
-        case load_step(raw, dir) do
+        case load_step(raw, dir, root) do
           {:ok, step} -> {step, problems}
           {:error, step_problems} -> {nil, problems ++ step_problems}
         end
@@ -104,16 +113,16 @@ defmodule PurpleFlow.Workflow.Loader do
     {Enum.reject(steps, &is_nil/1), problems ++ dupe_problems ++ empty}
   end
 
-  defp load_step(raw, dir) do
+  defp load_step(raw, dir, root) do
     name = raw["name"]
     label = "step \"#{name}\""
 
     with {:ok, name} <- fetch_string(raw, ["name"], "a step's name"),
          {:ok, node_file} <- fetch_string(raw, ["node"], "#{label}: node"),
-         node_path = Path.expand(node_file, dir),
+         {:ok, node_path} <- inside(node_file, dir, root, "#{label}: node path"),
          {:ok, node} <- read_toml(node_path),
          {:ok, module} <- node_module(node, label),
-         {:ok, config} <- prepare(module, Map.get(node, "config", %{}), node_path, label),
+         {:ok, config} <- prepare(module, Map.get(node, "config", %{}), node_path, root, label),
          {:ok, options} <- step_options(raw, label) do
       {:ok,
        struct!(
@@ -137,9 +146,9 @@ defmodule PurpleFlow.Workflow.Loader do
     end
   end
 
-  defp prepare(module, config, node_path, label) do
-    if function_exported?(module, :prepare, 2) do
-      case module.prepare(config, Path.dirname(node_path)) do
+  defp prepare(module, config, node_path, root, label) do
+    if function_exported?(module, :prepare, 3) do
+      case module.prepare(config, Path.dirname(node_path), root) do
         {:ok, config} -> {:ok, config}
         {:error, message} -> {:error, "#{label}: #{message}"}
       end
@@ -334,6 +343,13 @@ defmodule PurpleFlow.Workflow.Loader do
     case get_in(map, keys) do
       value when is_binary(value) and value != "" -> {:ok, value}
       _ -> {:error, "#{label} is missing"}
+    end
+  end
+
+  defp inside(name, from_dir, root, label) do
+    case Paths.resolve(name, from_dir, root) do
+      {:ok, path} -> {:ok, path}
+      :error -> {:error, "#{label} leaves the workflows folder"}
     end
   end
 

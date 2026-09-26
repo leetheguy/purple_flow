@@ -222,4 +222,84 @@ defmodule PurpleFlow.Workflow.LoaderTest do
 
     assert text =~ "broken.exs line"
   end
+
+  describe "paths stay inside the workflows folder" do
+    # root/wf/workflow.toml, root/shared/, and a folder outside root.
+    setup do
+      base = Path.join(System.tmp_dir!(), "pf_paths_#{System.unique_integer([:positive])}")
+      root = Path.join(base, "root")
+      outside = Path.join(base, "outside")
+
+      for dir <- [Path.join(root, "wf"), Path.join(root, "shared"), outside],
+          do: File.mkdir_p!(dir)
+
+      File.write!(Path.join([root, "shared", "n.toml"]), fake_node())
+      File.write!(Path.join(outside, "n.toml"), fake_node())
+      File.write!(Path.join(outside, "s.exs"), "input")
+      %{root: root, outside: outside}
+    end
+
+    defp load_with_node(root, node, files \\ %{}) do
+      for {name, contents} <- files, do: File.write!(Path.join([root, "wf", name]), contents)
+
+      path = Path.join([root, "wf", "workflow.toml"])
+
+      File.write!(path, """
+      [workflow]
+      name = "paths"
+      [[steps]]
+      name = "a"
+      node = "#{node}"
+      """)
+
+      Loader.load(path, root)
+    end
+
+    test "a node file elsewhere in the workflows folder loads", %{root: root} do
+      assert {:ok, _} = load_with_node(root, "../shared/n.toml")
+    end
+
+    test "climbing out, absolute paths, and symlinks out all fail", %{
+      root: root,
+      outside: outside
+    } do
+      File.ln_s!(outside, Path.join([root, "wf", "link"]))
+
+      for node <- ["../../outside/n.toml", Path.join(outside, "n.toml"), "link/n.toml"] do
+        assert {:error, [problem]} = load_with_node(root, node)
+        assert problem == ~s(step "a": node path leaves the workflows folder)
+      end
+    end
+
+    test "a relative symlink that stays inside the folder is fine", %{root: root} do
+      File.ln_s!("../shared", Path.join([root, "wf", "link"]))
+      assert {:ok, _} = load_with_node(root, "link/n.toml")
+    end
+
+    # Its target is a different path on the host than in the containers.
+    test "an absolute symlink is refused, even pointing inside", %{root: root} do
+      File.ln_s!(Path.join(root, "shared"), Path.join([root, "wf", "link"]))
+      assert {:error, [_]} = load_with_node(root, "link/n.toml")
+    end
+
+    test "a Code node's file can't leave the folder either", %{root: root, outside: outside} do
+      code = fn file -> ~s(module = "PurpleFlow.Nodes.Code"\n[config]\nfile = "#{file}") end
+
+      for file <- ["../../outside/s.exs", Path.join(outside, "s.exs")] do
+        assert {:error, [problem]} =
+                 load_with_node(root, "code.toml", %{"code.toml" => code.(file)})
+
+        assert problem =~ "leaves the workflows folder"
+      end
+    end
+
+    test "a workflow folder that's a symlink out doesn't load", %{root: root, outside: outside} do
+      File.write!(Path.join(outside, "workflow.toml"), "[workflow]\nname = \"sneaky\"")
+      File.ln_s!(outside, Path.join(root, "sneaky"))
+
+      {loaded, errors} = Loader.load_all(root)
+      refute Map.has_key?(loaded, "sneaky")
+      assert [{_, ["the workflow folder leaves the workflows folder"]}] = errors
+    end
+  end
 end
