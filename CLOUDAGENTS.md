@@ -86,7 +86,7 @@ mix test          # or: mix precommit, before committing
 ```
 
 Expect one warning line at boot: without `PURPLEFLOW_RUNNER_ADDRESS`, Code
-node scripts run in the test VM itself (specs/070). A `[error] GenServer
+node scripts run in the test VM itself (specs/100). A `[error] GenServer
 ... killed` log line during the run is from a test that kills a script on
 purpose.
 
@@ -186,7 +186,7 @@ the admin login from `.env`.
 
 - **Two roles, one release.** The same image runs as the app
   (`bin/server`) or as the Code node runner (`bin/runner`, which sets
-  `PURPLEFLOW_ROLE=runner`). See specs/070.
+  `PURPLEFLOW_ROLE=runner`). See specs/100.
 - **`RELEASE_DISTRIBUTION=none`** on both containers is deliberate. They
   share a release cookie, so with distribution on, a script in the runner
   could connect into the app's VM. As a result, `bin/purple_flow remote`
