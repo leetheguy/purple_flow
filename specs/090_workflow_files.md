@@ -1,6 +1,6 @@
 # 090 — Workflow files: isolated, live, shared through dufs
 
-Status: draft
+Status: implemented
 Created: 2026-09-26
 
 ## Why
@@ -136,8 +136,11 @@ reloads when something changed. There's no Reload button and no reload
 step after editing.
 
 - **Polling, not file-system events.** Each tick lists every file under the
-  folder with its size and modified time. The list is small, so the check is
-  cheap. Polling needs no native helper (`inotify-tools`) in the image and
+  folder with its size, modified time, and a hash of its contents (files
+  over 1 MB skip the hash). Modified times only have one-second resolution,
+  so without the hash, a same-size edit within a second of the last one
+  would go unseen. The folder is small, so the check is cheap. Dot-folders
+  are skipped, and symlinks aren't followed, so a link loop can't hang it. Polling needs no native helper (`inotify-tools`) in the image and
   works the same on every kind of mount, including Docker Desktop's, where
   change events from the host are unreliable.
 - **Wait for saves to settle.** An agent often writes several files in a
@@ -279,7 +282,12 @@ the clock.
   - a file PUT through dufs is live in the app within about two seconds
   - the app can't write to `/app/workflows`
   - `PUT /.git/hooks/pre-commit` through dufs fails, and the host's real
-    `.git/hooks/` is unchanged
+    `.git/hooks/` is unchanged. Without the cover mount, dufs wrote both
+    `.git/hooks/pre-commit` and `.git/config` (`201`) and listed the real
+    `.git/` despite `--hidden`, so the mount is the part doing the work
+  - a broken edit through dufs keeps the old version answering its
+    webhook, and `/api/workflows` reports `running_older_version: true`
+  - a `node` path pointing into the app's own files fails to load
   - dufs's environment holds none of the app's secrets, and it can't reach
     the database, the app, or the runner
   - files saved through dufs are owned by the host user

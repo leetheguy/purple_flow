@@ -20,7 +20,24 @@ workflows/
     is_big.exs        # Code nodes point at an .exs script
 ```
 
-The folder name doesn't matter; `[workflow] name` does. Node files can be shared: `node = "../shared/slack.toml"`.
+The folder name doesn't matter; `[workflow] name` does. Node files can be shared: `node = "../shared/slack.toml"`. Every `node` and `file` path must stay inside the workflows folder: no absolute paths, no `..` that climbs out of it, and only relative symlinks. A path that leaves it fails to load.
+
+### Where the files live, and how to edit them
+
+The workflows folder is its own git repo, separate from the app. Nobody commits for you; commit when a change works, if you're managing its history.
+
+- **On a Docker install**, edit it through the files service (dufs), default `http://localhost:5000`, with the files login (`PURPLEFLOW_FILES_USERNAME` / `PURPLEFLOW_FILES_PASSWORD`, which the user gives you). You never need the app's checkout or the admin login.
+
+  ```sh
+  F="curl -s -u $FILES_USER:$FILES_PASS http://localhost:5000"
+  $F/?json                                   # list workflow folders
+  $F/sync_records/workflow.toml              # read a file
+  $F/sync_records/fetch.toml -T fetch.toml   # write one (PUT; makes folders as needed)
+  $F/sync_records/old.toml -X DELETE         # delete one
+  ```
+
+  WebDAV works too (`MKCOL`, `MOVE` with a `Destination` header), so tools like rclone can mount it.
+- **In a dev checkout** (`mix phx.server`), it's just `workflows/` in the repo; edit the files directly.
 
 ### workflow.toml
 
@@ -110,26 +127,30 @@ Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
 
 ## Gotchas
 
-- **Webhook input is wrapped**: `%{"body" => ..., "query" => ..., "headers" => ...}`. Most webhook workflows start with a tiny Code step that returns `input["body"]` (see `workflows/samples/hello/numbers.exs`).
+- **Webhook input is wrapped**: `%{"body" => ..., "query" => ..., "headers" => ...}`. Most webhook workflows start with a tiny Code step that returns `input["body"]` (see `samples/hello/numbers.exs`).
 - Webhook calls wait for the result by default. For runs that can take longer than ~100s (Cloudflare's limit), use `respond = "immediately"`.
 - A list output from an HTTP or Postgres node makes the next step run per item. That's usually what you want. If not, use `run = "all"`.
-- Workflows are loaded when the server starts. **After editing, reload**: the Reload button on the home page, or restart the server.
+- **Edits load on their own**, about two seconds after the last save. There's no reload step. If an edit breaks a workflow, **its previous version keeps running**, so a webhook that still answers doesn't prove your change loaded. Check (below).
 - The UI's Run button makes a real run. HTTP and Postgres steps really call out.
 
-## Check a workflow before reloading
+## Check that a change loaded
 
-This loads every workflow and prints the problems, without starting the app (only its database connection, to check `creds.NAME` references are set):
+Save, then ask the app. `GET /api/workflows` needs `Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>` (the user gives you the token; without one configured, the route is a 404):
 
 ```sh
-mix run --no-start -e '
-Application.ensure_all_started(:ecto_sql)
-PurpleFlow.Repo.start_link()
-{ok, errors} = PurpleFlow.Workflow.Loader.load_all("workflows")
-IO.puts("loaded: #{ok |> Map.keys() |> Enum.join(", ")}")
-for {path, problems} <- errors, do: IO.puts("#{path}:\n  - " <> Enum.join(problems, "\n  - "))'
+curl -s -H "Authorization: Bearer $AGENT_TOKEN" localhost:4000/api/workflows
 ```
 
-It catches bad TOML, missing files, unknown modules, unknown `after` names, loops, `when` misuse, unset credentials, references to non-ancestors, and Code script syntax errors.
+```json
+{"reloaded_at": "...",
+ "workflows": [{"name": "sync_records", "folder": "sync_records", "webhook": "sync-records", "cron": null,
+                "loaded_at": "...", "problems": [], "running_older_version": false}],
+ "not_loaded": [{"folder": "draft", "problems": ["step \"fetch\": can't read draft/fetch.toml"]}]}
+```
+
+Poll it until `reloaded_at` is later than your last save (about two seconds). Then your workflow should be in `workflows` with `problems: []` and `running_older_version: false`. If it's `running_older_version: true`, the problems say what's wrong with your edit, and the old version is what's answering. A brand-new workflow that fails shows up under `not_loaded`.
+
+Loading catches bad TOML, missing files, paths that leave the workflows folder, unknown modules, unknown `after` names, loops, `when` misuse, unset credentials, references to non-ancestors, and Code script syntax errors. Without a token, the same problems show on the UI's home page.
 
 ## Run and inspect
 

@@ -63,11 +63,13 @@ The UI is an execution history viewer (Phoenix LiveView). Pick a run and see eve
 The supported way to run PurpleFlow is Docker Compose:
 
 ```sh
-docker compose up -d --build   # http://localhost:4000
+mkdir -p workflows && git init workflows   # once, before the first `up`
+docker compose up -d --build   # http://localhost:4000, files on http://localhost:5000
 docker compose down
 ```
 
-This starts PurpleFlow, Postgres, and the Code node runner together. Postgres
+This starts PurpleFlow, Postgres, the Code node runner, and the files service
+together. Postgres
 has a health check, and the app container only starts once it passes;
 migrations run automatically on boot, and the container restarts on its own if
 the app dies. Code node scripts run in the `runner` container, which has no
@@ -75,9 +77,37 @@ secrets, no database, no internet, and no way to reach the app (see
 [specs/100](specs/100_runner_container.md)). See
 `docker-compose.yml` and `.env.example` for the environment variables to set
 (`SECRET_KEY_BASE`, `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
-`PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`, and
+`PURPLEFLOW_ADMIN_PASSWORD`, `PURPLEFLOW_FILES_USERNAME`,
+`PURPLEFLOW_FILES_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`,
+`WORKFLOWS_PATH`, `FILES_PORT`, `PUID`/`PGID`, `PURPLEFLOW_AGENT_TOKEN`, and
 `PURPLEFLOW_RUNNER_SUBNET` if the runner's default network, `10.250.250.0/24`,
 collides with one of yours).
+
+### Workflow files
+
+Workflows live in their own folder, `workflows/` by default (`WORKFLOWS_PATH`
+points it anywhere). It's yours: this repo ignores it, and it's meant to be
+its own git repository. Nothing commits automatically; you manage its history.
+
+- **The app only reads it** (mounted read-only) and picks up every change on
+  its own within about two seconds. There's no reload step. If an edit breaks
+  a workflow, the last version that loaded keeps running, and the home page
+  says so.
+- **People and agents edit it through the files service** (dufs), with its
+  own login (`PURPLEFLOW_FILES_USERNAME` / `PURPLEFLOW_FILES_PASSWORD`): a web
+  UI at `http://localhost:5000`, plain HTTP (`PUT` to write a file, `DELETE`,
+  `GET /folder/?json` to list), and WebDAV for mounting it as a folder. It
+  never sees the folder's `.git`.
+- **Agents check their changes** at `GET /api/workflows` on the app, with
+  `Authorization: Bearer $PURPLEFLOW_AGENT_TOKEN`: what loaded, what didn't,
+  and why.
+- A step's `node` and a Code node's `file` must stay inside the folder:
+  relative paths only, and relative symlinks only.
+
+Create the folder and run `git init` in it before the first `docker compose
+up`. Otherwise Docker creates it, and its empty `.git`, owned by root.
+
+See [specs/090](specs/090_workflow_files.md).
 
 For local development without Docker, you need Elixir and Postgres (dev login
 `postgres` / `postgres` on localhost):
@@ -91,9 +121,8 @@ mix phx.server      # http://localhost:4000
 Outside Docker there's no runner container, so Code node scripts run inside
 the app's own VM, with no isolation. The app logs a warning at boot saying so.
 
-- Workflows live in `workflows/`, mounted into the container as a volume so you can edit them on the host. Everything directly under `workflows/` is yours and gitignored — nothing you build there gets committed to this repo. Two annotated examples live in `workflows/samples/` (tracked, part of the repo): `hello` (webhook, per-item routes) and `users` (HTTP, per-item). Copy one into `workflows/` to try it — the app only loads workflows one level under `workflows/`, not `workflows/samples/` itself.
+- Workflows live in `workflows/` (see "Workflow files" above), and edits there load on their own in dev too. Two annotated examples live in `samples/`: `hello` (webhook, per-item routes) and `users` (HTTP, per-item). Copy one into `workflows/` to try it.
 - Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See [specs/080](specs/080_credentials.md).
-- After editing workflow files, hit **Reload** on the home page.
 
 The design is in [specs/](specs/000_overview.md).
 

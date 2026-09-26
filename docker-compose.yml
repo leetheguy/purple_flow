@@ -23,8 +23,10 @@ services:
       - RELEASE_DISTRIBUTION=none
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
+    # Read-only: the app never writes workflows. People and agents edit
+    # them through the files service, below. See specs/090_workflow_files.md.
     volumes:
-      - ./workflows:/app/workflows
+      - ${WORKFLOWS_PATH:-./workflows}:/app/workflows:ro
     networks:
       - purple_flow
       - runner
@@ -69,6 +71,43 @@ services:
     cpus: 1.0
     pids_limit: 256
 
+  # The workflows folder, over HTTP and WebDAV for agents and as a web UI
+  # for people, behind its own login. Nothing secret in here, and on no
+  # network but its own. See specs/090_workflow_files.md.
+  files:
+    image: sigoden/dufs:v0.46.0
+    container_name: purple_flow-files
+    restart: unless-stopped
+    # Deliberately no env_file: only dufs's own settings.
+    environment:
+      - DUFS_SERVE_PATH=/data
+      - DUFS_BIND=0.0.0.0
+      - DUFS_AUTH=${PURPLEFLOW_FILES_USERNAME:?PURPLEFLOW_FILES_USERNAME is required}:${PURPLEFLOW_FILES_PASSWORD:?PURPLEFLOW_FILES_PASSWORD is required}@/:rw
+      - DUFS_ALLOW_ALL=true
+      # Cosmetic: keeps the empty folder below out of listings.
+      - DUFS_HIDDEN=.git
+    # Files saved through dufs belong to you on the host.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "${FILES_PORT:-5000}:5000"
+    volumes:
+      - ${WORKFLOWS_PATH:-./workflows}:/data
+      # An empty, read-only folder over the real .git, so nothing written
+      # through dufs can reach git hooks, which run on the host.
+      - type: tmpfs
+        target: /data/.git
+        read_only: true
+    networks:
+      - files
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
+
   # Bundled Postgres, for a self-contained install. If you're connecting to
   # an existing Postgres instead, delete this service and the app's
   # `depends_on: db` block, then point DATABASE_URL at your own database
@@ -93,6 +132,8 @@ services:
 
 networks:
   purple_flow:
+  # Only the files service.
+  files:
   # Only the app and the runner. `internal`: no route to the internet.
   runner:
     internal: true
