@@ -227,6 +227,9 @@ defmodule PurpleFlow.Workflow.LoaderTest do
     # root/wf/workflow.toml, root/shared/, and a folder outside root.
     setup do
       base = Path.join(System.tmp_dir!(), "pf_paths_#{System.unique_integer([:positive])}")
+      # unique_integer repeats across test runs, and /tmp doesn't get cleared.
+      File.rm_rf!(base)
+      on_exit(fn -> File.rm_rf!(base) end)
       root = Path.join(base, "root")
       outside = Path.join(base, "outside")
 

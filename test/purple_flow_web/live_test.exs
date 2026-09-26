@@ -24,6 +24,7 @@ defmodule PurpleFlowWeb.LiveTest do
   @tag :capture_log
   test "home follows reloads: a broken edit and a folder that won't load", %{conn: conn} do
     dir = Path.join(System.tmp_dir!(), "pf_live_#{System.unique_integer([:positive])}")
+    File.rm_rf!(dir)
     File.mkdir_p!(dir)
     File.cp_r!("test/support/workflows/echo", Path.join(dir, "echo"))
 
@@ -34,6 +35,7 @@ defmodule PurpleFlowWeb.LiveTest do
     on_exit(fn ->
       Application.put_env(:purple_flow, :workflows_dir, original)
       PurpleFlow.Workflows.reload()
+      File.rm_rf!(dir)
     end)
 
     {:ok, view, _html} = live(conn, ~p"/")
