@@ -30,7 +30,7 @@ defmodule PurpleFlowWeb.CredentialsLive do
   end
 
   @impl true
-  def handle_event("search", %{"q" => query}, socket) do
+  def handle_event("search", %{"value" => query}, socket) do
     {:noreply, socket |> assign(:search, query) |> load()}
   end
 

@@ -116,17 +116,18 @@ Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
 
 ## Check a workflow before reloading
 
-This loads every workflow and prints the problems, without starting the app:
+This loads every workflow and prints the problems, without starting the app (only its database connection, to check `creds.NAME` references are set):
 
 ```sh
 mix run --no-start -e '
-PurpleFlow.Env.load()
+Application.ensure_all_started(:ecto_sql)
+PurpleFlow.Repo.start_link()
 {ok, errors} = PurpleFlow.Workflow.Loader.load_all("workflows")
 IO.puts("loaded: #{ok |> Map.keys() |> Enum.join(", ")}")
 for {path, problems} <- errors, do: IO.puts("#{path}:\n  - " <> Enum.join(problems, "\n  - "))'
 ```
 
-It catches bad TOML, missing files, unknown modules, unknown `after` names, loops, `when` misuse, unset env vars, references to non-ancestors, and Code script syntax errors.
+It catches bad TOML, missing files, unknown modules, unknown `after` names, loops, `when` misuse, unset credentials, references to non-ancestors, and Code script syntax errors.
 
 ## Run and inspect
 

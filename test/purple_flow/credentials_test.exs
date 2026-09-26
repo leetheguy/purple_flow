@@ -26,7 +26,29 @@ defmodule PurpleFlow.CredentialsTest do
     end
   end
 
+  describe "set?/1" do
+    test "is true only for an active credential with a value" do
+      {:ok, cred} = Credentials.create("A", "")
+      refute Credentials.set?("A")
+
+      {:ok, _} = Credentials.update(cred.id, %{key: "v"})
+      assert Credentials.set?("A")
+
+      {:ok, _} = Credentials.archive(cred.id)
+      refute Credentials.set?("A")
+      refute Credentials.set?("NOPE")
+    end
+  end
+
   describe "update/2" do
+    test "accepts string-keyed attrs, as from raw form params" do
+      {:ok, cred} = Credentials.create("A", "")
+      {:ok, _} = Credentials.update(cred.id, %{"description" => "d", "key" => "v"})
+
+      assert Credentials.get("A") == "v"
+      assert [%{description: "d"}] = Credentials.list()
+    end
+
     test "changes name, description, and key independently" do
       {:ok, cred} = Credentials.create("A", "first")
 

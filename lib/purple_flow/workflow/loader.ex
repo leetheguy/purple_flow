@@ -271,7 +271,7 @@ defmodule PurpleFlow.Workflow.Loader do
   end
 
   defp template_problem(_step, {:creds, name}) do
-    if Credentials.get(name) == nil, do: "credential #{name} isn't set (set it at /credentials)"
+    if not Credentials.set?(name), do: "credential #{name} isn't set (set it at /credentials)"
   end
 
   defp template_problem(step, {:steps, name, _}) do

@@ -71,7 +71,8 @@ This starts PurpleFlow and Postgres together. Postgres has a health check, and
 the app container only starts once it passes; migrations run automatically on
 boot, and the container restarts on its own if the app dies. See
 `docker-compose.yml` and `.env.example` for the environment variables to set
-(`SECRET_KEY_BASE`, `PHX_HOST`, Postgres credentials).
+(`SECRET_KEY_BASE`, `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
+`PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST` and `DATABASE_URL`).
 
 For local development without Docker, you need Elixir and Postgres (dev login
 `postgres` / `postgres` on localhost):

@@ -106,7 +106,7 @@ Each workflow is checked when it's loaded:
 - `after` names exist
 - no cycles
 - `when` is only used with a single `after`
-- every `creds.NAME` used is set
+- every `creds.NAME` used is set, including a webhook's `auth` credential
 - every `steps.NAME` used in a template is an ancestor of that step
 
 A workflow that fails a check is logged and skipped. Other workflows still load.

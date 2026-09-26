@@ -66,7 +66,7 @@ The file is read and parsed when the workflow loads, so a syntax error fails the
 
 If the script returns `{:ok, _}`, `{:ok, _, route}`, or `{:error, _}`, that result is used as-is. Any other value `v` becomes `{:ok, v}`.
 
-This runs arbitrary code, but not in this app's own process — it runs on an isolated peer node with no access to this app's modules, database, or environment variables. See [070](070_code_sandbox.md).
+This runs arbitrary code, but not in this app's own container — it runs in a separate runner container with no secrets, no database, and no network access beyond answering the app. See [070](070_code_sandbox.md).
 
 ### `PurpleFlow.Nodes.Workflow`
 

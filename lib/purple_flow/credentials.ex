@@ -41,6 +41,18 @@ defmodule PurpleFlow.Credentials do
     end
   end
 
+  @doc """
+  Whether an active credential named `name` exists and has a value set.
+  Never decrypts anything; used to check a workflow when it loads.
+  """
+  @spec set?(String.t()) :: boolean()
+  def set?(name) do
+    Repo.exists?(
+      from c in Credential,
+        where: c.name == ^name and is_nil(c.archived_at) and not is_nil(c.key)
+    )
+  end
+
   @doc "Creates a new, active, unset credential."
   def create(name, description) do
     %Credential{}
@@ -83,16 +95,15 @@ defmodule PurpleFlow.Credentials do
   # A plaintext `key` in attrs (atom or string key, since this takes both
   # internal calls and raw LiveView form params) gets encrypted before it's
   # cast into the changeset. Callers never pass an already-encrypted value.
-  # An empty or missing key means "leave the stored value alone."
+  # An empty or missing key means "leave the stored value alone." The
+  # encrypted value goes back under the same kind of key it came in under,
+  # since Ecto rejects a map mixing atom and string keys.
   defp normalize_key(attrs) do
-    case Map.get(attrs, :key) || Map.get(attrs, "key") do
-      value when is_binary(value) and value != "" ->
-        attrs
-        |> Map.delete("key")
-        |> Map.put(:key, Cipher.encrypt(value))
+    field = if Map.has_key?(attrs, "key"), do: "key", else: :key
 
-      _ ->
-        Map.delete(attrs, "key") |> Map.delete(:key)
+    case Map.get(attrs, field) do
+      value when is_binary(value) and value != "" -> Map.put(attrs, field, Cipher.encrypt(value))
+      _ -> Map.delete(attrs, field)
     end
   end
 

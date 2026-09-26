@@ -125,11 +125,11 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
 
     {:ok, view, _html} = live(conn, ~p"/credentials")
 
-    html = view |> element("#credentials-search") |> render_keyup(%{"q" => "stripe"})
+    html = view |> element("#credentials-search") |> render_keyup(%{"value" => "stripe"})
     assert html =~ "STRIPE_KEY"
     refute html =~ "TELEGRAM_TOKEN"
 
-    html = view |> element("#credentials-search") |> render_keyup(%{"q" => "bot"})
+    html = view |> element("#credentials-search") |> render_keyup(%{"value" => "bot"})
     assert html =~ "TELEGRAM_TOKEN"
     refute html =~ "STRIPE_KEY"
   end
