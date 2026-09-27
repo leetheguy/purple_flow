@@ -88,4 +88,45 @@ defmodule PurpleFlow.StreamingTest do
     assert [%{status: "error", error: %{"message" => "emitted isn't JSON" <> _}}] =
              rows(run!(workflow, nil), "a")
   end
+
+  test "an SSH step's lines move on to the next step" do
+    server =
+      PurpleFlow.Test.SshServer.start!(fn "shout", stdin ->
+        [{:out, String.upcase(stdin) <> "\n"}, {:out, "done\n"}]
+      end)
+
+    ssh =
+      TomlElixir.encode!(%{
+        "module" => "PurpleFlow.Nodes.Ssh",
+        "config" => %{
+          "host" => "127.0.0.1",
+          "port" => server.port,
+          "user" => "deploy",
+          "password" => "hunter2",
+          "host_key" => server.host_key_fingerprint,
+          "command" => "shout",
+          "stdin" => "{{ input.name }}",
+          "stream" => "lines"
+        }
+      })
+
+    workflow =
+      steps!(
+        "ssh_stream",
+        """
+        [[steps]]
+        name = "remote"
+        node = "remote.toml"
+        [[steps]]
+        name = "hear"
+        node = "n.toml"
+        after = ["remote"]
+        """,
+        %{"remote.toml" => ssh, "n.toml" => fake_node()}
+      )
+
+    result = run!(workflow, %{"name" => "ada"}, 10_000)
+    assert [%{status: "ok", output: ["ADA", "done"]}] = rows(result, "remote")
+    assert result |> rows("hear") |> Enum.map(& &1.input) |> Enum.sort() == ["ADA", "done"]
+  end
 end

@@ -118,7 +118,7 @@ Webhook options:
 
 ## Step files
 
-A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are five kinds.
+A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are six kinds.
 
 **HTTP request**
 
@@ -136,6 +136,25 @@ body = { name = "{{ input.name }}" }     # sent as JSON
 The output is the response body. A response that isn't a success (anything outside 200–299) fails the step.
 
 Add `stream = "sse"` (server-sent events), `"ndjson"` (one JSON value per line), or `"lines"` (plain text lines) to read a streamed response as it arrives. Each event or line becomes its own item and moves on right away, while the rest is still coming. A server-sent event arrives as `{"event": "message", "data": ..., "id": "..."}`, with `data` already decoded if it's JSON. Streams from AI APIs usually want `stream = "sse"`.
+
+**Command on another machine (SSH)**
+
+```toml
+module = "PurpleFlow.Nodes.Ssh"
+
+[config]
+host = "server.example.com"
+user = "deploy"
+private_key = "{{ creds.DEPLOY_SSH_KEY }}"   # or: password = "{{ creds.DEPLOY_PASSWORD }}"
+host_key = "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
+command = "df -h /"
+stdin = "{{ input.text }}"                   # optional
+connect_timeout = 30                         # optional: seconds to connect; 0 = no limit
+```
+
+The output is `{"stdout": "...", "stderr": "...", "exit_status": 0}`. A command that exits with anything but 0 fails the step. `port` defaults to 22. `host_key` is the server's fingerprint (`ssh-keyscan server.example.com | ssh-keygen -lf -` prints it); with it set, a different server is refused before it sees the password or key; without it, any server key is accepted. `command` can use `{{ }}` like any other value, so one SSH step can run whatever command the workflow builds. It runs in the server's shell, so whatever ends up in it runs there too.
+
+Add `stream = "lines"` (plain text lines) or `"ndjson"` (one JSON value per line) to hand on each line the command prints as it arrives. With `command = "tail -f /var/log/app.log"`, that follows a log until the step is killed or times out.
 
 **Database query (Postgres)**
 
@@ -230,6 +249,7 @@ You can't create secrets or see their values. A person adds them in the app. If 
 Two things stream:
 
 - **An HTTP step with `stream`** hands on each message of the response as it arrives (see HTTP request above).
+- **An SSH step with `stream`** hands on each line the command prints as it arrives (see SSH above).
 - **A webhook with `respond = "stream"`** replies as a server-sent event stream. Every item the last step produces is sent as `data: <item as JSON>` as soon as it exists, and the stream ends with `event: end` and `data: {"status": "complete", "run_id": "..."}`.
 
 Together: a webhook that streams an AI's answer back to its caller is a workflow whose last step is an HTTP step with `stream = "sse"` and whose webhook has `respond = "stream"`. Items stream back as they arrive.

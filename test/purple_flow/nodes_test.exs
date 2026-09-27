@@ -82,8 +82,8 @@ defmodule PurpleFlow.NodesTest do
       chunks = ["data: {\"a\"", ": 1}\n", "\nda", "ta: two\n\n"]
 
       {items, _parser} =
-        Enum.flat_map_reduce(chunks, Http.new_parser(), fn chunk, parser ->
-          Http.parse("sse", parser, chunk)
+        Enum.flat_map_reduce(chunks, PurpleFlow.StreamParser.new(), fn chunk, parser ->
+          PurpleFlow.StreamParser.parse("sse", parser, chunk)
         end)
 
       assert items == [

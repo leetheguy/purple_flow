@@ -96,7 +96,7 @@ See `specs/120_flow.md` for the whole story.
 - **Branches:** a node returns `{:ok, output, "route"}`, and steps with `when = "route"` get those items. A step without `when` gets every item except `failed`/`overflow` ones.
 - **Branches meeting again:** a step with several `after` steps gets items from all of them, one execution per item.
 - **The run's output** comes from the last steps (nothing after them): a step that ran once gives its output; more than once, all its items as a list, in start order. Several last steps: `%{"step" => output}`.
-- **Streaming:** a node can hand items on while still running (`PurpleFlow.Node.emit/2`); the HTTP node does with `stream = "sse" | "ndjson" | "lines"`. See `specs/150_streaming.md`.
+- **Streaming:** a node can hand items on while still running (`PurpleFlow.Node.emit/2`); the HTTP node does with `stream = "sse" | "ndjson" | "lines"`, the SSH node with `stream = "lines" | "ndjson"`. See `specs/150_streaming.md` and `specs/170_ssh.md`.
 - There's no item cap and no default timeout. A stuck run is stopped with Kill on its page, or `PurpleFlow.kill(run_id)`.
 
 ## Design guidelines
@@ -133,10 +133,13 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 | module | config | output |
 |---|---|---|
 | `PurpleFlow.Nodes.Http` | `url`, `method` (GET), `headers`, `query`, `body` (maps are sent as JSON), `stream` (`"sse"`, `"ndjson"`, `"lines"`) | response body. Non-2xx is an error. No retries. With `stream`: one item per event/line as it arrives (SSE: `{"event", "data", "id"}`), and returns `[]` |
+| `PurpleFlow.Nodes.Ssh` | `host`, `port` (22), `user`, `password` or `private_key`, `host_key` (optional `SHA256:...` fingerprint), `command`, `stdin`, `connect_timeout` (seconds, 30; 0 = no limit), `stream` (`"lines"`, `"ndjson"`) | `{"stdout", "stderr", "exit_status"}`. Non-zero exit is an error. With `stream`: one item per stdout line as it arrives, and returns `[]` |
 | `PurpleFlow.Nodes.Postgres` | `database_url`, `query`, `params` | list of row maps, so the next step runs per row |
 | `PurpleFlow.Nodes.Code` | `file` (an `.exs` next to the node file) | whatever the script returns |
 | `PurpleFlow.Nodes.Batch` | `size`, `wait` (ms, optional) | `{"items": [...]}`, one per batch. The last partial batch goes when nothing more can reach it |
 | `PurpleFlow.Nodes.Workflow` | `workflow` (name) | that workflow's output. Waits for it |
+
+**SSH:** keys and passwords come from credentials (`private_key = "{{ creds.DEPLOY_SSH_KEY }}"`). Set `host_key` to the server's fingerprint so a different server is refused; without it any key is accepted. `command` takes templates like anything else, so one step can run any command the workflow builds; it runs in the server's shell, templates and all.
 
 **Postgres:** values always go in `params` as `$1`, `$2`, …, never pasted into `query`. Params arrive as text or numbers, so cast in SQL when needed: `$1::text::timestamptz`.
 
@@ -186,7 +189,7 @@ Loading catches bad TOML, missing files, paths that leave the workflows folder, 
 
 ## A new node type
 
-Only when HTTP, Postgres, and Code really can't do it. Add a module under `lib/purple_flow/nodes/`:
+Only when HTTP, SSH, Postgres, and Code really can't do it. Add a module under `lib/purple_flow/nodes/`:
 
 ```elixir
 defmodule PurpleFlow.Nodes.Slack do
