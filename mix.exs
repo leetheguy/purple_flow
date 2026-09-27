@@ -21,7 +21,7 @@ defmodule PurpleFlow.MixProject do
   def application do
     [
       mod: {PurpleFlow.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :ssh]
     ]
   end
 

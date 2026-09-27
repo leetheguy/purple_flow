@@ -76,3 +76,7 @@ The run ID is in the `x-run-id` header, as always. If the caller hangs up, the r
 - HTTP with `stream = "sse"`, `"ndjson"`, and `"lines"`, including a message split across chunks and a last line with no newline
 - HTTP streaming with a non-2xx status is an error and emits nothing
 - `respond = "stream"` sends each last-step item as an event, then `end`
+
+## Log
+
+- 2026-09-27 — [170](170_ssh.md): the SSH node streams too: `stream = "lines"` or `"ndjson"` hands on each line of a command's standard output as it arrives. The HTTP node's line splitting moved to `PurpleFlow.StreamParser`, which both use.
