@@ -1,0 +1,97 @@
+{
+ "id": "stressWorker0001",
+ "name": "stress worker",
+ "active": false,
+ "settings": {
+  "executionOrder": "v1"
+ },
+ "connections": {
+  "Webhook": {
+   "main": [
+    [
+     {
+      "node": "Wait",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Wait": {
+   "main": [
+    [
+     {
+      "node": "Done",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "nodes": [
+  {
+   "id": "11111111-0000-4000-8000-000000000001",
+   "name": "Webhook",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    0
+   ],
+   "webhookId": "11111111-0000-4000-8000-0000000000aa",
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "work",
+    "responseMode": "lastNode",
+    "options": {}
+   }
+  },
+  {
+   "id": "11111111-0000-4000-8000-000000000002",
+   "name": "Wait",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1.1,
+   "position": [
+    220,
+    0
+   ],
+   "webhookId": "11111111-0000-4000-8000-0000000000bb",
+   "parameters": {
+    "amount": "={{ $json.body.sleep_ms / 1000 }}",
+    "unit": "seconds"
+   }
+  },
+  {
+   "id": "11111111-0000-4000-8000-000000000003",
+   "name": "Done",
+   "type": "n8n-nodes-base.set",
+   "typeVersion": 3.4,
+   "position": [
+    440,
+    0
+   ],
+   "parameters": {
+    "mode": "manual",
+    "includeOtherFields": false,
+    "options": {},
+    "assignments": {
+     "assignments": [
+      {
+       "id": "a1",
+       "name": "n",
+       "value": "={{ $('Webhook').item.json.body.n }}",
+       "type": "number"
+      },
+      {
+       "id": "a2",
+       "name": "done_at",
+       "value": "={{ Date.now() }}",
+       "type": "number"
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

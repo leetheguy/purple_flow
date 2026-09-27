@@ -109,6 +109,17 @@ The UI (Phoenix LiveView) is one site behind one sign-in, with a side menu (a me
 - **Files**: the workflows folder, to browse and edit in place.
 - **Credentials**: secrets that workflows use by name.
 
+### Under pressure
+
+The same stress and failure tests, run on PurpleFlow and on n8n 2.40.7:
+PurpleFlow ran 10,000 one-second jobs at once in 3.2 seconds with its Code
+runner under 512 MB, where n8n needed 2 GB to run 100. A run with 100
+failing branches completed on PurpleFlow in half a second; n8n stopped at
+the first failure, or with "continue on error" turned on, overflowed its call
+stack after 208 seconds. The write-up, every number cited to a test, is in
+[docs/n8n_case_study.md](docs/n8n_case_study.md); the tests themselves are
+in [samples/testing/](samples/testing/).
+
 ## Running it
 
 The supported way to run PurpleFlow is Docker Compose:
