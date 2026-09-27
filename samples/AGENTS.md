@@ -149,9 +149,10 @@ private_key = "{{ creds.DEPLOY_SSH_KEY }}"   # or: password = "{{ creds.DEPLOY_P
 host_key = "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
 command = "df -h /"
 stdin = "{{ input.text }}"                   # optional
+connect_timeout = 30                         # optional: seconds to connect; 0 = no limit
 ```
 
-The output is `{"stdout": "...", "stderr": "...", "exit_status": 0}`. A command that exits with anything but 0 fails the step. `port` defaults to 22. `host_key` is the server's fingerprint (`ssh-keyscan server.example.com | ssh-keygen -lf -` prints it); with it set, a different server is refused before it sees the password or key. Never put `{{ input... }}` inside `command`, since it runs in a shell; send data through `stdin`.
+The output is `{"stdout": "...", "stderr": "...", "exit_status": 0}`. A command that exits with anything but 0 fails the step. `port` defaults to 22. `host_key` is the server's fingerprint (`ssh-keyscan server.example.com | ssh-keygen -lf -` prints it); with it set, a different server is refused before it sees the password or key; without it, any server key is accepted. `command` can use `{{ }}` like any other value, so one SSH step can run whatever command the workflow builds. It runs in the server's shell, so whatever ends up in it runs there too.
 
 Add `stream = "lines"` (plain text lines) or `"ndjson"` (one JSON value per line) to hand on each line the command prints as it arrives. With `command = "tail -f /var/log/app.log"`, that follows a log until the step is killed or times out.
 

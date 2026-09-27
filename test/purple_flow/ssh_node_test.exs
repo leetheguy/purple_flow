@@ -61,6 +61,16 @@ defmodule PurpleFlow.SshNodeTest do
              Ssh.execute(nil, config(server, %{"command" => "x", "password" => "nope"}))
   end
 
+  test "connect_timeout gives up on a server that never answers" do
+    # Takes the connection but never speaks SSH.
+    {:ok, silent} = :gen_tcp.listen(0, ip: {127, 0, 0, 1})
+    {:ok, port} = :inet.port(silent)
+    config = %{"host" => "127.0.0.1", "port" => port, "user" => "u", "password" => "p"}
+
+    assert {:error, "SSH connection to 127.0.0.1 failed: " <> _} =
+             Ssh.execute(nil, Map.merge(config, %{"command" => "x", "connect_timeout" => 0.2}))
+  end
+
   test "a non-zero exit status is an error, with stderr" do
     server =
       SshServer.start!(fn "false", _ ->

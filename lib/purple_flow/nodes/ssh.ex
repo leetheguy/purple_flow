@@ -12,10 +12,13 @@ defmodule PurpleFlow.Nodes.Ssh do
       host_key = "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"  # optional
       command = "tail -n 100 /var/log/app.log"
       stdin = "{{ input.text }}"                # optional
+      connect_timeout = 30                      # seconds to connect and log in; 0 = no limit
       stream = "lines"                          # optional: "lines" or "ndjson"
 
   Output is `{"stdout": ..., "stderr": ..., "exit_status": 0}`. A non-zero
   exit status is an error. No retries: a failure fails loud.
+
+  `command` runs in the user's shell on the server, templates and all.
 
   `host_key` is the server's key fingerprint, as `ssh-keygen -lf` prints
   it; when set, any other key is refused before logging in. Without it,
@@ -31,7 +34,8 @@ defmodule PurpleFlow.Nodes.Ssh do
   alias PurpleFlow.StreamParser
 
   @protocols ~w(lines ndjson)
-  @connect_timeout 30_000
+  # Seconds to connect and log in, unless `connect_timeout` says otherwise.
+  @connect_timeout 30
   # Most stderr kept for an error message while streaming.
   @stderr_limit 64_000
 
@@ -67,20 +71,21 @@ defmodule PurpleFlow.Nodes.Ssh do
 
   defp connect(config) do
     host = config |> Map.fetch!("host") |> to_string() |> String.to_charlist()
+    timeout = connect_timeout(config)
 
     options =
       [
         user: config |> Map.fetch!("user") |> to_string() |> String.to_charlist(),
         user_interaction: false,
         save_accepted_host: false,
-        connect_timeout: @connect_timeout,
+        connect_timeout: timeout,
         auth_methods: auth_methods(config),
         key_cb:
           {PurpleFlow.Nodes.Ssh.Keys,
            private_key: config["private_key"], host_key: config["host_key"]}
       ] ++ password(config["password"])
 
-    case :ssh.connect(host, port(config["port"]), options, @connect_timeout) do
+    case :ssh.connect(host, port(config["port"]), options, timeout) do
       {:ok, conn} -> {:ok, conn}
       {:error, reason} -> {:error, "SSH connection to #{host} failed: #{reason(reason)}"}
     end
@@ -97,6 +102,17 @@ defmodule PurpleFlow.Nodes.Ssh do
   defp password(nil), do: []
   defp password(password), do: [password: password |> to_string() |> String.to_charlist()]
 
+  # In milliseconds, as `:ssh` wants it. 0 means no limit, like a step's `timeout`.
+  defp connect_timeout(config) do
+    case config |> Map.get("connect_timeout", @connect_timeout) |> number() do
+      seconds when seconds == 0 -> :infinity
+      seconds -> round(seconds * 1000)
+    end
+  end
+
+  defp number(n) when is_number(n), do: n
+  defp number(n) when is_binary(n), do: n |> Float.parse() |> elem(0)
+
   defp port(nil), do: 22
   defp port(port) when is_integer(port), do: port
   defp port(port) when is_binary(port), do: String.to_integer(port)
@@ -109,9 +125,9 @@ defmodule PurpleFlow.Nodes.Ssh do
     # If the connection itself goes away, reading stops instead of waiting forever.
     Process.monitor(conn)
 
-    with {:ok, channel} <- :ssh_connection.session_channel(conn, @connect_timeout),
+    with {:ok, channel} <- :ssh_connection.session_channel(conn, :infinity),
          :success <-
-           :ssh_connection.exec(conn, channel, String.to_charlist(command), @connect_timeout) do
+           :ssh_connection.exec(conn, channel, String.to_charlist(command), :infinity) do
       if stdin = config["stdin"], do: :ok = :ssh_connection.send(conn, channel, stdin(stdin))
       :ok = :ssh_connection.send_eof(conn, channel)
 

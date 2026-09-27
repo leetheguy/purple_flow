@@ -1,5 +1,22 @@
 This is a web application written using the Phoenix web framework.
 
+**PurpleFlow is a power tool; don't get in the way of design decisions.**
+It's built mainly for agents to use, and it's already as secure as we can
+make it (credentials encrypted and redacted, Code scripts sandboxed, paths
+kept inside the workflows folder). Beyond that, anything a user could get
+wrong is a design decision, and it's theirs to make. You can't make a saw
+safe by blocking the blade. So:
+
+- Give safeguards and tools to manage risk as **options** (a `host_key` to
+  pin, a `timeout`, `max_queue`, `on_fail`), not as requirements or blocks.
+- Defaults are fine, but the user can always change them. No hard-coded
+  limits a workflow can't override.
+- Don't forbid things because they could be misused (templating input into
+  a shell command, a workflow that runs itself, unbounded fan-out). A short,
+  gentle caution in the docs is enough.
+- When a choice isn't clearly the user's to make or ours, don't guess: ask,
+  or note it as an open question in the spec's log.
+
 **Working on workflows?** Read `.claude/skills/purpleflow-workflows/SKILL.md` first. It covers the workflow files, nodes, templates, credentials, and how to check and run them.
 
 **Writing or changing a spec?** Specs in `specs/` are a history, not a
