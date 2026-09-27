@@ -31,9 +31,41 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
   test "Clear blanks the add row without writing anything", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/credentials")
 
+    typed = %{"credential" => %{"name" => "DRAFT", "description" => "half", "key" => "typed"}}
+    view |> form("#add-credential-form", typed) |> render_change()
+
+    assert has_element?(
+             view,
+             ~s(#add-credential-form input[name="credential[name]"][value="DRAFT"])
+           )
+
     view |> element("#add-credential-form button", "Clear") |> render_click()
 
+    for field <- ~w(name description key) do
+      assert has_element?(
+               view,
+               ~s(#add-credential-form input[name="credential[#{field}]"][value=""])
+             )
+    end
+
     assert Credentials.list() == []
+  end
+
+  test "Save clears what was typed into the add row", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/credentials")
+
+    typed = %{"credential" => %{"name" => "TOKEN", "description" => "api", "key" => "t0k"}}
+    view |> form("#add-credential-form", typed) |> render_change()
+    view |> form("#add-credential-form", typed) |> render_submit()
+
+    assert Credentials.get("TOKEN") == "t0k"
+
+    for field <- ~w(name description key) do
+      assert has_element?(
+               view,
+               ~s(#add-credential-form input[name="credential[#{field}]"][value=""])
+             )
+    end
   end
 
   test "Edit switches the row to inputs, with the secret field empty", %{conn: conn} do

@@ -58,6 +58,33 @@ defmodule PurpleFlowWeb.LiveTest do
     assert has_element?(view, "#load-error-draft")
   end
 
+  test "search narrows the workflow list", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+    refute has_element?(view, "#no-matches")
+
+    view |> element("#workflows-search") |> render_keyup(%{"value" => "DOUB"})
+    assert has_element?(view, "#workflow-double")
+    refute has_element?(view, "#workflow-echo")
+
+    view |> element("#workflows-search") |> render_keyup(%{"value" => "nothing-like-this"})
+    assert has_element?(view, "#no-matches")
+
+    view |> element("#workflows-search") |> render_keyup(%{"value" => ""})
+    assert has_element?(view, "#workflow-echo")
+    assert has_element?(view, "#workflow-double")
+  end
+
+  test "each workflow links to its folder in Files", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+    refute has_element?(view, "#files-echo")
+
+    Application.put_env(:purple_flow, :files_url, "http://files:5000")
+    on_exit(fn -> Application.delete_env(:purple_flow, :files_url) end)
+
+    {:ok, view, _html} = live(conn, ~p"/")
+    assert has_element?(view, ~s(#files-echo[href="/files/echo/"]))
+  end
+
   test "bad JSON input shows an error", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/")
 

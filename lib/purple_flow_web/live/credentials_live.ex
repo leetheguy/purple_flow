@@ -48,6 +48,12 @@ defmodule PurpleFlowWeb.CredentialsLive do
     end
   end
 
+  # Keeps the server's copy of the add row in step with what's typed, so
+  # resetting it (Save, Clear) is a change the page actually applies.
+  def handle_event("change_add", %{"credential" => params}, socket) do
+    {:noreply, assign(socket, :add_form, to_form(params, as: :credential))}
+  end
+
   def handle_event("clear_add", _params, socket) do
     {:noreply, assign(socket, :add_form, empty_form())}
   end
@@ -129,6 +135,7 @@ defmodule PurpleFlowWeb.CredentialsLive do
         <.form
           for={@add_form}
           id="add-credential-form"
+          phx-change="change_add"
           phx-submit="add"
           class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center p-3"
         >
