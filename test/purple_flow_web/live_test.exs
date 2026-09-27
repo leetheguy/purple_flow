@@ -85,6 +85,111 @@ defmodule PurpleFlowWeb.LiveTest do
     assert has_element?(view, ~s(#files-echo[href="/files/echo/"]))
   end
 
+  describe "workflows in subfolders" do
+    setup do
+      dir = Path.join(System.tmp_dir!(), "pf_tree_#{System.unique_integer([:positive])}")
+      File.rm_rf!(dir)
+
+      for {folder, name} <- [
+            {"echo", "echo"},
+            {"billing/invoices", "invoices"},
+            {"billing/reports/monthly", "monthly"},
+            {"my stuff/notes", "notes"}
+          ] do
+        path = Path.join(dir, folder)
+        File.mkdir_p!(path)
+        File.cp!("test/support/workflows/echo/echo.toml", Path.join(path, "echo.toml"))
+
+        File.write!(Path.join(path, "workflow.toml"), """
+        [workflow]
+        name = "#{name}"
+
+        [[steps]]
+        name = "echo"
+        node = "echo.toml"
+        """)
+      end
+
+      File.mkdir_p!(Path.join(dir, "shared"))
+      File.write!(Path.join([dir, "shared", "n.toml"]), "")
+
+      original = Application.get_env(:purple_flow, :workflows_dir)
+      Application.put_env(:purple_flow, :workflows_dir, dir)
+      :ok = PurpleFlow.Workflows.reload()
+
+      on_exit(fn ->
+        Application.put_env(:purple_flow, :workflows_dir, original)
+        PurpleFlow.Workflows.reload()
+        File.rm_rf!(dir)
+      end)
+    end
+
+    # Group and workflow ids in page order.
+    defp listed(view) do
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#workflows [id^='group-'], #workflows [id^='workflow-']")
+      |> LazyHTML.attribute("id")
+    end
+
+    test "groups come before workflows, and start collapsed", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      assert listed(view) == ["group-billing", "group-my-stuff", "workflow-echo"]
+      refute has_element?(view, "#group-shared")
+
+      view |> element("#toggle-group-billing") |> render_click()
+      view |> element("#toggle-group-billing--reports") |> render_click()
+      view |> element("#toggle-group-my-stuff") |> render_click()
+
+      assert listed(view) == [
+               "group-billing",
+               "group-billing--reports",
+               "workflow-monthly",
+               "workflow-invoices",
+               "group-my-stuff",
+               "workflow-notes",
+               "workflow-echo"
+             ]
+
+      # Closing a group hides everything in it; reopening keeps what was open inside.
+      view |> element("#toggle-group-billing") |> render_click()
+      refute has_element?(view, "#workflow-invoices")
+      view |> element("#toggle-group-billing") |> render_click()
+      assert has_element?(view, "#workflow-monthly")
+    end
+
+    test "search opens the groups it matches in, and hides the rest", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element("#workflows-search") |> render_keyup(%{"value" => "month"})
+      assert listed(view) == ["group-billing", "group-billing--reports", "workflow-monthly"]
+
+      view |> element("#workflows-search") |> render_keyup(%{"value" => "billing"})
+
+      assert listed(view) -- ["group-billing", "group-billing--reports"] ==
+               ["workflow-monthly", "workflow-invoices"]
+
+      # Clearing the search collapses them again.
+      view |> element("#workflows-search") |> render_keyup(%{"value" => ""})
+      refute has_element?(view, "#workflow-monthly")
+    end
+
+    test "Files links open the nested folder", %{conn: conn} do
+      Application.put_env(:purple_flow, :files_url, "http://files:5000")
+      on_exit(fn -> Application.delete_env(:purple_flow, :files_url) end)
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      for group <- ["billing", "billing--reports", "my-stuff"],
+          do: view |> element("#toggle-group-#{group}") |> render_click()
+
+      assert has_element?(view, ~s(#files-invoices[href="/files/billing/invoices/"]))
+      assert has_element?(view, ~s(#files-monthly[href="/files/billing/reports/monthly/"]))
+      assert has_element?(view, ~s(#files-notes[href="/files/my%20stuff/notes/"]))
+    end
+  end
+
   test "bad JSON input shows an error", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/")
 

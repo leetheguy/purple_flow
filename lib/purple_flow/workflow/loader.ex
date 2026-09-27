@@ -11,7 +11,7 @@ defmodule PurpleFlow.Workflow.Loader do
   alias PurpleFlow.Workflow.{Paths, Step}
 
   @doc """
-  Loads every `*/workflow.toml` under `dir`.
+  Loads every workflow under `dir` (see `find/1`).
 
   Returns `{workflows, errors}`: loaded workflows by name, and a list of
   `{path, [problem]}` for the ones that didn't load. `dir` is the workflows
@@ -19,9 +19,8 @@ defmodule PurpleFlow.Workflow.Loader do
   """
   def load_all(dir) do
     results =
-      Path.join(dir, "*/workflow.toml")
-      |> Path.wildcard()
-      |> Enum.sort()
+      dir
+      |> find()
       |> Enum.map(fn path -> {path, load(path, dir)} end)
 
     {loaded, errors} =
@@ -43,6 +42,35 @@ defmodule PurpleFlow.Workflow.Loader do
       end)
 
     {loaded, Enum.reverse(errors)}
+  end
+
+  @doc """
+  Every `workflow.toml` under `dir`, sorted. A folder with one is a
+  workflow, at any depth, and isn't looked inside. A folder without one is
+  a group, and is. Dot-folders are skipped and symlinks aren't followed.
+  """
+  def find(dir), do: dir |> find_in() |> Enum.sort()
+
+  # The folders directly in `dir`: a workflow's toml, or what's inside a group.
+  defp find_in(dir) do
+    for name <- ls(dir),
+        not String.starts_with?(name, "."),
+        path = Path.join(dir, name),
+        match?({:ok, %{type: :directory}}, File.lstat(path)),
+        toml <- workflow_or_group(path),
+        do: toml
+  end
+
+  defp workflow_or_group(path) do
+    toml = Path.join(path, "workflow.toml")
+    if File.regular?(toml), do: [toml], else: find_in(path)
+  end
+
+  defp ls(dir) do
+    case File.ls(dir) do
+      {:ok, names} -> names
+      {:error, _} -> []
+    end
   end
 
   @doc """

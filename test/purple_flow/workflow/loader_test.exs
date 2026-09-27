@@ -296,13 +296,54 @@ defmodule PurpleFlow.Workflow.LoaderTest do
       end
     end
 
-    test "a workflow folder that's a symlink out doesn't load", %{root: root, outside: outside} do
+    test "a symlinked folder isn't searched for workflows", %{root: root, outside: outside} do
       File.write!(Path.join(outside, "workflow.toml"), "[workflow]\nname = \"sneaky\"")
       File.ln_s!(outside, Path.join(root, "sneaky"))
 
-      {loaded, errors} = Loader.load_all(root)
+      assert {loaded, []} = Loader.load_all(root)
       refute Map.has_key?(loaded, "sneaky")
-      assert [{_, ["the workflow folder leaves the workflows folder"]}] = errors
+    end
+
+    test "a nested workflow can reach shared files by climbing", %{root: root} do
+      File.mkdir_p!(Path.join([root, "billing", "invoices"]))
+      path = Path.join([root, "billing", "invoices", "workflow.toml"])
+
+      File.write!(path, """
+      [workflow]
+      name = "invoices"
+      [[steps]]
+      name = "a"
+      node = "../../shared/n.toml"
+      """)
+
+      assert {:ok, _} = Loader.load(path, root)
+    end
+  end
+
+  describe "find/1" do
+    setup do
+      root = Path.join(System.tmp_dir!(), "pf_find_#{System.unique_integer([:positive])}")
+      File.rm_rf!(root)
+      on_exit(fn -> File.rm_rf!(root) end)
+
+      for folder <- ["hello", "hello/tmp", "billing/invoices", "billing/reports/monthly"] do
+        File.mkdir_p!(Path.join(root, folder))
+        File.write!(Path.join([root, folder, "workflow.toml"]), "")
+      end
+
+      File.mkdir_p!(Path.join([root, "shared"]))
+      File.mkdir_p!(Path.join([root, ".git", "wf"]))
+      File.write!(Path.join([root, ".git", "wf", "workflow.toml"]), "")
+      File.write!(Path.join(root, "workflow.toml"), "")
+      %{root: root}
+    end
+
+    test "finds workflows at any depth, but not inside one or in dot-folders", %{root: root} do
+      assert Loader.find(root) ==
+               Enum.map(
+                 ["billing/invoices", "billing/reports/monthly", "hello"],
+                 &Path.join([root, &1, "workflow.toml"])
+               )
     end
   end
 end

@@ -60,6 +60,19 @@ A run works like this. Something starts it (a web request, a schedule, or a pers
 
 Only folders containing a `workflow.toml` are workflows. Other files are ignored.
 
+Workflows can go in subfolders to keep things organized, as deep as you like:
+
+```
+billing/
+  invoices/
+    workflow.toml
+  reports/
+    monthly/
+      workflow.toml
+```
+
+A folder without a `workflow.toml` is just a group, and the server looks inside it for more workflows. A folder with one is a workflow, and the server doesn't look inside it for others. Workflow names must be unique across every folder, and moving a workflow to another folder doesn't change its name. The `folder` in `/api/workflows` is the path from the top, like `billing/invoices`.
+
 ## workflow.toml
 
 ```toml

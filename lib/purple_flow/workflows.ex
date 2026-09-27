@@ -206,9 +206,9 @@ defmodule PurpleFlow.Workflows do
     dir = folder_dir(state)
 
     results =
-      Path.join(dir, "*/workflow.toml")
-      |> Path.wildcard()
-      |> Map.new(fn path -> {folder(path), {path, Loader.load(path, dir)}} end)
+      dir
+      |> Loader.find()
+      |> Map.new(fn path -> {folder(path, dir), {path, Loader.load(path, dir)}} end)
 
     folders = settle(results, state.folders, now)
     log_problems(folders, state.folders)
@@ -367,7 +367,8 @@ defmodule PurpleFlow.Workflows do
 
   # -- helpers --
 
-  defp folder(path), do: path |> Path.dirname() |> Path.basename()
+  # The workflow's folder relative to the workflows folder: "billing/invoices".
+  defp folder(path, dir), do: path |> Path.dirname() |> Path.relative_to(dir)
   defp running(state), do: for(%{workflow: %{} = wf} <- Map.values(state.folders), do: wf)
   defp sorted(state), do: state.folders |> Map.values() |> Enum.sort_by(& &1.folder)
 end

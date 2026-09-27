@@ -64,6 +64,8 @@ I like using this simple pattern:
 - AI calls endpoint with consistent params: {"body": {"endpoint": "list_all", "verb": "GET/POST/PUT, etc.", "parameters": {}}}
 - A normalizer code node deciphers the request body and returns the expected fields as variables for the http request to slot into place.
 
+Doing it this way avoids complex routing and building out 500 workflows/sub-workflows to match a single API.
+
 You can create credentials (useful for any data you want kept private) in the web interface. Pass your agent the credential name for it to use in your flows.
 
 ### Security
@@ -154,13 +156,17 @@ its own git repository. Nothing commits automatically; you manage its history.
   sees the folder's `.git`.
 - **Agents check their changes** at `GET /api/workflows` on the app, with
   the same token: what loaded, what didn't, and why.
+- **Subfolders are groups.** Any folder with a `workflow.toml` is a
+  workflow, at any depth, and the Workflows page lists them by folder.
+  Names stay unique across all of them.
 - A step's `node` and a Code node's `file` must stay inside the folder:
   relative paths only, and relative symlinks only.
 
 Create the folder and run `git init` in it before the first `docker compose
 up`. Otherwise Docker creates it, and its empty `.git`, owned by root.
 
-See [specs/090](specs/090_workflow_files.md).
+See [specs/090](specs/090_workflow_files.md) and
+[specs/110](specs/110_workflow_folders.md).
 
 ### Inviting an agent
 

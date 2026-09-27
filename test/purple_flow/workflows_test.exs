@@ -92,6 +92,35 @@ defmodule PurpleFlow.WorkflowsTest do
     assert Workflows.status(server).reloaded_at == reloaded_at
   end
 
+  test "workflows load from subfolders, keyed by their relative path", %{root: root} do
+    put(root, "billing/sync", "billing_sync")
+    put(root, "ops/sync", "ops_sync")
+    server = start(root)
+
+    assert names(server) == ["billing_sync", "ops_sync"]
+    assert entry(server, "billing/sync").workflow.name == "billing_sync"
+    assert entry(server, "ops/sync").workflow.name == "ops_sync"
+
+    # An edit deep down reloads, like any other.
+    put(root, "ops/sync", "ops_sync_2")
+    :ok = Workflows.tick(server)
+    :ok = Workflows.tick(server)
+    assert names(server) == ["billing_sync", "ops_sync_2"]
+  end
+
+  test "two nested workflows can't share a name", %{root: root} do
+    put(root, "billing/sync", "sync")
+    put(root, "ops/sync", "sync")
+    server = start(root)
+
+    assert names(server) == ["sync"]
+    loaded = Enum.filter(Workflows.status(server).folders, & &1.workflow)
+    assert [_] = loaded
+    refused = Enum.find(Workflows.status(server).folders, &(&1.workflow == nil))
+    assert [problem] = refused.problems
+    assert problem =~ "sync"
+  end
+
   test "a broken save keeps the old version running and says so", %{root: root} do
     put(root, "one", "one")
     server = start(root)
