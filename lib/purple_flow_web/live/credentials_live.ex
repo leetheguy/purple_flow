@@ -109,7 +109,7 @@ defmodule PurpleFlowWeb.CredentialsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} active={:credentials}>
       <div class="flex items-center justify-between">
         <h1 class="text-xl font-semibold">Credentials</h1>
       </div>

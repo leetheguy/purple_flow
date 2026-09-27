@@ -34,6 +34,18 @@
             document.documentElement.setAttribute("data-theme", systemTheme());
           }
         });
+
+        // The sidebar remembers whether it's collapsed, set before paint so it doesn't jump.
+        const setSidebar = (state) => {
+          document.documentElement.setAttribute("data-sidebar", state);
+          try { localStorage.setItem("pf:sidebar", state); } catch (_) {}
+        };
+        let sidebar = "expanded";
+        try { sidebar = localStorage.getItem("pf:sidebar") || sidebar; } catch (_) {}
+        document.documentElement.setAttribute("data-sidebar", sidebar);
+        window.addEventListener("pf:toggle-sidebar", () =>
+          setSidebar(document.documentElement.getAttribute("data-sidebar") === "collapsed" ? "expanded" : "collapsed")
+        );
       })();
     </script>
   </head>

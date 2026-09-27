@@ -8,7 +8,9 @@ defmodule PurpleFlowWeb.Endpoint do
     store: :cookie,
     key: "_purple_flow_key",
     signing_salt: "v4poxcQd",
-    same_site: "Lax"
+    same_site: "Lax",
+    # Stay signed in for 30 days rather than until the browser closes.
+    max_age: 30 * 24 * 60 * 60
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
@@ -39,6 +41,12 @@ defmodule PurpleFlowWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  plug Plug.Session, @session_options
+
+  # The files service, behind the app's sign-in. Ahead of Plug.Parsers, so
+  # request bodies reach it untouched.
+  plug PurpleFlowWeb.Plugs.FilesProxy
+
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
@@ -46,7 +54,6 @@ defmodule PurpleFlowWeb.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
-  plug Plug.Session, @session_options
   plug PurpleFlowWeb.Router
 
   # Ahead of every plug above, and of the LiveView socket: a request from the

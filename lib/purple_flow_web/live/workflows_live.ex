@@ -1,7 +1,8 @@
 defmodule PurpleFlowWeb.WorkflowsLive do
   @moduledoc """
   Home page: every loaded workflow, its triggers, its last run, and a Run
-  button with a JSON input box. Also lists workflows that failed to load,
+  button with a JSON box for the request body. A manual run's input has the
+  same shape as a webhook's: `%{"body" => ..., "query" => %{}, "headers" => %{}}`. Also lists workflows that failed to load,
   and flags ones whose latest edit failed and are still running an older
   version. Workflows reload on their own (`PurpleFlow.Workflows`), and the
   page follows.
@@ -30,8 +31,8 @@ defmodule PurpleFlowWeb.WorkflowsLive do
 
   @impl true
   def handle_event("run", %{"workflow" => name, "input" => text}, socket) do
-    with {:ok, input} <- decode(text),
-         {:ok, run_id} <- PurpleFlow.run(name, input, trigger: "manual") do
+    with {:ok, body} <- decode(text),
+         {:ok, run_id} <- PurpleFlow.run(name, manual_input(body), trigger: "manual") do
       {:noreply, push_navigate(socket, to: ~p"/runs/#{run_id}")}
     else
       {:error, message} -> {:noreply, put_flash(socket, :error, message)}
@@ -51,6 +52,9 @@ defmodule PurpleFlowWeb.WorkflowsLive do
     |> assign(:statuses, Runs.last_statuses())
   end
 
+  # Shaped like a webhook's input, so a workflow reads input["body"] either way.
+  defp manual_input(body), do: %{"body" => body, "query" => %{}, "headers" => %{}}
+
   defp decode(""), do: {:ok, %{}}
 
   defp decode(text) do
@@ -63,7 +67,7 @@ defmodule PurpleFlowWeb.WorkflowsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash}>
+    <Layouts.app flash={@flash} active={:workflows}>
       <div class="flex items-center justify-between">
         <h1 class="text-xl font-semibold">Workflows</h1>
         <p class="text-xs text-base-content/50">Edits to workflow files load on their own.</p>
@@ -129,7 +133,11 @@ defmodule PurpleFlowWeb.WorkflowsLive do
               name="input"
               id={"run-input-#{wf.name}"}
               rows="1"
-              class="flex-1 font-mono text-sm rounded-md border border-base-300 bg-base-100 px-2 py-1.5"
+              aria-label="Request body (JSON)"
+              title={
+                ~s(The request body, as JSON. Steps get it as input["body"], the same as from a webhook.)
+              }
+              class="flex-1 font-mono text-sm rounded-md border border-base-300 bg-base-100 px-2 py-1.5 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15"
             >{@run_form[:input].value}</textarea>
             <button
               type="submit"

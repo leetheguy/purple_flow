@@ -47,6 +47,7 @@ defmodule PurpleFlow.Application do
       {DynamicSupervisor, name: PurpleFlow.RunSupervisor},
       PurpleFlow.Scheduler,
       PurpleFlow.Workflows,
+      PurpleFlowWeb.LoginThrottle,
       # UI + webhooks, last.
       PurpleFlowWeb.Endpoint
     ]

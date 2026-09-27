@@ -1,36 +1,39 @@
 defmodule PurpleFlowWeb.Plugs.RequireLogin do
   @moduledoc """
-  HTTP Basic Auth for the whole browser UI (not `/hooks/*`, which can't
-  supply a login — see `PurpleFlowWeb.Router`).
+  Sends anyone who isn't signed in to `/login`, remembering where they were
+  going. Covers the whole browser UI (not `/hooks/*`, which can't sign in —
+  see `PurpleFlowWeb.Router`). See `PurpleFlowWeb.Auth`.
 
-  Only enforced when `PURPLEFLOW_ADMIN_USERNAME` and `PURPLEFLOW_ADMIN_PASSWORD`
-  are both set. In dev and test, where nothing sets them, the UI stays open.
-  A real deployment (see `docker-compose.yml`) requires both, so this is
-  effectively always on there.
+  Needs the session fetched first.
   """
 
   @behaviour Plug
+
+  import Plug.Conn
+
+  alias PurpleFlowWeb.Auth
 
   @impl true
   def init(opts), do: opts
 
   @impl true
   def call(conn, _opts) do
-    case credentials() do
-      {username, password} ->
-        Plug.BasicAuth.basic_auth(conn, username: username, password: password)
-
-      nil ->
-        conn
-    end
-  end
-
-  defp credentials do
-    with username when is_binary(username) <- System.get_env("PURPLEFLOW_ADMIN_USERNAME"),
-         password when is_binary(password) <- System.get_env("PURPLEFLOW_ADMIN_PASSWORD") do
-      {username, password}
+    if Auth.signed_in?(conn) do
+      conn
     else
-      _ -> nil
+      conn
+      |> Phoenix.Controller.redirect(to: login_path(conn))
+      |> halt()
     end
   end
+
+  @doc "`/login`, returning to `conn`'s page afterwards if it's a GET."
+  def login_path(%{method: "GET"} = conn) do
+    here =
+      conn.request_path <> if(conn.query_string == "", do: "", else: "?" <> conn.query_string)
+
+    if here == "/", do: "/login", else: "/login?" <> URI.encode_query(%{"return_to" => here})
+  end
+
+  def login_path(_conn), do: "/login"
 end

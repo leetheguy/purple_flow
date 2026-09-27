@@ -1,0 +1,316 @@
+/*
+  PurpleFlow's look for the files service's (dufs's) own UI, added to its
+  pages by PurpleFlowWeb.Plugs.FilesProxy. Plain CSS: it's loaded inside
+  dufs's pages, not built with the app's bundle. The colors mirror the
+  themes in assets/css/app.css; embed.js sets data-theme to match the app.
+*/
+
+:root {
+  --pf-bg: oklch(98% 0 0);
+  --pf-surface: oklch(96% 0.001 286.375);
+  --pf-border: oklch(92% 0.004 286.32);
+  --pf-text: oklch(21% 0.006 285.885);
+  --pf-muted: oklch(21% 0.006 285.885 / 0.55);
+  --pf-hover: oklch(92% 0.004 286.32 / 0.6);
+  --pf-accent: #7c3aed;
+  --pf-accent-soft: rgb(124 58 237 / 0.12);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --pf-bg: oklch(30.33% 0.016 252.42);
+    --pf-surface: oklch(25.26% 0.014 253.1);
+    --pf-border: oklch(37% 0.02 253);
+    --pf-text: oklch(97.807% 0.029 256.847);
+    --pf-muted: oklch(97.807% 0.029 256.847 / 0.55);
+    --pf-hover: oklch(20.15% 0.012 254.09 / 0.6);
+    --pf-accent: #a78bfa;
+    --pf-accent-soft: rgb(167 139 250 / 0.15);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme=dark] {
+  --pf-bg: oklch(30.33% 0.016 252.42);
+  --pf-surface: oklch(25.26% 0.014 253.1);
+  --pf-border: oklch(37% 0.02 253);
+  --pf-text: oklch(97.807% 0.029 256.847);
+  --pf-muted: oklch(97.807% 0.029 256.847 / 0.55);
+  --pf-hover: oklch(20.15% 0.012 254.09 / 0.6);
+  --pf-accent: #a78bfa;
+  --pf-accent-soft: rgb(167 139 250 / 0.15);
+  color-scheme: dark;
+}
+
+/* Everything below is scoped under html so it outranks dufs's own rules,
+   including its prefers-color-scheme ones. */
+
+html {
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 15px;
+  color: var(--pf-text);
+  background: var(--pf-bg);
+}
+
+html body {
+  min-width: 0;
+  background: var(--pf-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+html .head {
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: color-mix(in oklab, var(--pf-bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--pf-border);
+  z-index: 10;
+}
+
+html .breadcrumb {
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+html .breadcrumb > a,
+html .breadcrumb > b {
+  color: var(--pf-text);
+}
+
+html .breadcrumb > a {
+  color: var(--pf-muted);
+  transition: color 0.15s;
+}
+
+html .breadcrumb > a:hover {
+  color: var(--pf-accent);
+  text-decoration: none;
+}
+
+html .breadcrumb > .separator {
+  color: var(--pf-border);
+}
+
+html .breadcrumb svg,
+html svg,
+html .path svg {
+  fill: var(--pf-muted);
+}
+
+html .save-btn svg path {
+  fill: currentColor;
+}
+
+html .toolbox {
+  gap: 0.25rem;
+  align-items: center;
+}
+
+html .toolbox > a,
+html .toolbox > div,
+html .save-btn,
+html .logout-btn,
+html .login-btn {
+  height: auto;
+  display: grid;
+  place-items: center;
+  padding: 0.4rem;
+  border-radius: 0.5rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+html .toolbox .control {
+  padding: 0.4rem;
+}
+
+html .toolbox > a:hover,
+html .toolbox > div:hover,
+html .action-btn:hover,
+html .save-btn:hover {
+  background: var(--pf-hover);
+}
+
+html .toolbox > *:hover svg,
+html .action-btn:hover svg {
+  fill: var(--pf-accent);
+}
+
+html .save-btn {
+  color: #fff;
+  background: var(--pf-accent);
+  padding: 0.3rem 0.5rem;
+}
+
+html .save-btn:hover {
+  background: var(--pf-accent);
+  filter: brightness(1.1);
+}
+
+html .save-btn svg,
+html .save-btn:hover svg {
+  fill: #fff;
+  width: 20px;
+  height: 20px;
+}
+
+html .toolbox-right {
+  margin-right: 0;
+}
+
+html .searchbar {
+  height: 2rem;
+  width: 240px;
+  align-items: center;
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: 0.5rem;
+  margin: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+html .searchbar:focus-within {
+  border-color: var(--pf-accent);
+  box-shadow: 0 0 0 4px var(--pf-accent-soft);
+}
+
+html .searchbar #search {
+  color: var(--pf-text);
+  font-size: 14px;
+}
+
+html .searchbar .icon {
+  display: grid;
+  place-items: center;
+  padding: 0 0.4rem;
+}
+
+html .main {
+  padding: 1rem 1.5rem 2rem;
+}
+
+html .empty-folder {
+  color: var(--pf-muted);
+  padding: 2rem 0;
+}
+
+html .paths-table,
+html .uploaders-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+html .paths-table th,
+html .uploaders-table th {
+  color: var(--pf-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--pf-border);
+}
+
+html .paths-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--pf-border) 60%, transparent);
+}
+
+html .paths-table tbody tr {
+  transition: background 0.12s;
+}
+
+html .paths-table tbody tr:hover {
+  background: var(--pf-hover);
+}
+
+html .paths-table .cell-icon {
+  width: 1.5rem;
+  padding-right: 0;
+}
+
+html .paths-table .cell-mtime,
+html .paths-table .cell-size {
+  color: var(--pf-muted);
+}
+
+html .paths-table .cell-actions {
+  gap: 0.15rem;
+  align-items: center;
+}
+
+html .action-btn {
+  display: grid;
+  place-items: center;
+  padding: 0.3rem;
+  border-radius: 0.4rem;
+  transition: background 0.15s;
+}
+
+html .path a {
+  color: var(--pf-text);
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+html .path a:hover {
+  color: var(--pf-accent);
+  text-decoration: none;
+}
+
+html .editor {
+  box-sizing: border-box;
+  height: calc(100vh - 6rem);
+  padding: 1rem;
+  border: 1px solid var(--pf-border);
+  border-radius: 0.75rem;
+  background: var(--pf-surface);
+  color: var(--pf-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 2;
+  resize: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+html .editor:focus {
+  border-color: var(--pf-accent);
+  box-shadow: 0 0 0 4px var(--pf-accent-soft);
+}
+
+html .not-editable {
+  color: var(--pf-muted);
+}
+
+/* Framed in the app, which has its own sign-in and sign-out. */
+html .login-btn,
+html .logout-btn {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  html .head,
+  html .main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  html .searchbar {
+    width: 100%;
+    order: 10;
+  }
+
+  html .paths-table .cell-mtime {
+    display: none;
+  }
+
+  html .path a {
+    min-width: 0;
+    max-width: calc(100vw - 12rem);
+  }
+}

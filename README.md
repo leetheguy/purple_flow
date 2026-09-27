@@ -64,12 +64,15 @@ The supported way to run PurpleFlow is Docker Compose:
 
 ```sh
 mkdir -p workflows && git init workflows   # once, before the first `up`
-docker compose up -d --build   # http://localhost:4000, files on http://localhost:5000
+docker compose up -d --build   # http://localhost:4000
 docker compose down
 ```
 
 This starts PurpleFlow, Postgres, the Code node runner, and the files service
-together. Postgres
+together, all behind one site and one sign-in: open `http://localhost:4000`,
+sign in with `PURPLEFLOW_ADMIN_USERNAME` / `PURPLEFLOW_ADMIN_PASSWORD`, and
+the side menu has Workflows, Files, and Credentials. Three failed sign-ins
+lock that address out for four hours (a restart lifts it). Postgres
 has a health check, and the app container only starts once it passes;
 migrations run automatically on boot, and the container restarts on its own if
 the app dies. Code node scripts run in the `runner` container, which has no
@@ -77,9 +80,9 @@ secrets, no database, no internet, and no way to reach the app (see
 [specs/100](specs/100_runner_container.md)). See
 `docker-compose.yml` and `.env.example` for the environment variables to set
 (`SECRET_KEY_BASE`, `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
-`PURPLEFLOW_ADMIN_PASSWORD`, `PURPLEFLOW_FILES_USERNAME`,
-`PURPLEFLOW_FILES_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`,
-`WORKFLOWS_PATH`, `FILES_PORT`, `PUID`/`PGID`, `PURPLEFLOW_AGENT_TOKEN`, and
+`PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`,
+`WORKFLOWS_PATH`, `PUID`/`PGID`, `PURPLEFLOW_AGENT_TOKEN`,
+`PURPLEFLOW_CLIENT_IP_HEADER` if a reverse proxy sits in front, and
 `PURPLEFLOW_RUNNER_SUBNET` if the runner's default network, `10.250.250.0/24`,
 collides with one of yours).
 
@@ -93,14 +96,16 @@ its own git repository. Nothing commits automatically; you manage its history.
   its own within about two seconds. There's no reload step. If an edit breaks
   a workflow, the last version that loaded keeps running, and the home page
   says so.
-- **People and agents edit it through the files service** (dufs), with its
-  own login (`PURPLEFLOW_FILES_USERNAME` / `PURPLEFLOW_FILES_PASSWORD`): a web
-  UI at `http://localhost:5000`, plain HTTP (`PUT` to write a file, `DELETE`,
-  `GET /folder/?json` to list), and WebDAV for mounting it as a folder. It
-  never sees the folder's `.git`.
+- **People and agents edit it through the files service** (dufs), which the
+  app serves behind its own sign-in. People use the **Files** page in the UI
+  (click a file to edit it; Ctrl/Cmd+S saves). Agents use `/fs/` with
+  `Authorization: Bearer $PURPLEFLOW_AGENT_TOKEN`: plain HTTP (`PUT` to write
+  a file, `DELETE`, `GET /fs/folder/?json` to list) and WebDAV for mounting
+  it as a folder. WebDAV clients that only do Basic auth (Finder, Windows)
+  can use the admin login instead. dufs has no port of its own, and it never
+  sees the folder's `.git`.
 - **Agents check their changes** at `GET /api/workflows` on the app, with
-  `Authorization: Bearer $PURPLEFLOW_AGENT_TOKEN`: what loaded, what didn't,
-  and why.
+  the same token: what loaded, what didn't, and why.
 - A step's `node` and a Code node's `file` must stay inside the folder:
   relative paths only, and relative symlinks only.
 

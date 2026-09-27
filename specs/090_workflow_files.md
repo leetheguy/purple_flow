@@ -302,3 +302,13 @@ the clock.
   workflows.
 - An endpoint that starts a run and returns its result for agents, so they
   don't need a webhook on every workflow they want to test.
+
+## Log
+
+- 2026-09-26 — **dufs behind the app's sign-in.** dufs no longer has its own login (`PURPLEFLOW_FILES_USERNAME` / `PURPLEFLOW_FILES_PASSWORD` are gone) or its own published port (`FILES_PORT` is gone). The app is the only way in:
+  - dufs runs with `DUFS_PATH_PREFIX=/fs`, and the app passes every `/fs/*` request through to it (`PurpleFlowWeb.Plugs.FilesProxy`, at `PURPLEFLOW_FILES_URL`, `http://files:5000` in compose): any method, WebDAV included, with the body untouched. The caller's `cookie` and `authorization` headers aren't passed on.
+  - A request gets through with a signed-in session (not from another site), `Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>`, or the admin login as Basic auth (for WebDAV clients that support nothing else). A browser without one is sent to `/login`; anything else gets `401` asking for Basic auth. Without `PURPLEFLOW_FILES_URL` (dev, test), `/fs/*` is a 404.
+  - The agent token now grants `/fs/` as well as `/api/workflows`, so an agent needs one secret, and still nothing else: no UI, no runs, no credentials. The split this spec wanted still holds: a workflow author's access (the token) doesn't include `/credentials`.
+  - People use the **Files** page in the UI, which embeds dufs's own UI with the app's theme added to its pages (`priv/static/dufs/`). See 060's log.
+  - The `files` network is now shared by dufs and the app, and is `internal: true`, so dufs has no internet. The runner still can't reach dufs, and dufs still isn't on the database's network.
+  - Verified against the real compose stack: an agent's `PUT`, `MOVE`, and `DELETE` and a Basic-auth `PROPFIND` through `/fs/` work; no login gets `401`; nothing listens on port 5000; `PUT /fs/.git/hooks/pre-commit` fails and the host's `.git/hooks/` is unchanged; the runner can't resolve `files`.

@@ -161,8 +161,6 @@ PORT=4000
 PURPLEFLOW_SECRET_KEY=$(openssl rand -base64 32)
 PURPLEFLOW_ADMIN_USERNAME=admin
 PURPLEFLOW_ADMIN_PASSWORD=$(openssl rand -hex 12)
-PURPLEFLOW_FILES_USERNAME=files
-PURPLEFLOW_FILES_PASSWORD=$(openssl rand -hex 12)
 PURPLEFLOW_AGENT_TOKEN=$(openssl rand -hex 24)
 EOF
 mkdir -p workflows && git init -q workflows   # before `up`, or Docker makes it root-owned
@@ -187,8 +185,13 @@ curl -s --noproxy '*' localhost:4000/health   # "ok"
 ```
 
 `--noproxy '*'` matters: without it, curl sends localhost requests to the
-proxy. The whole UI (everything but `/health` and `/hooks/*`) asks for
-the admin login from `.env`.
+proxy. The whole UI (everything but `/health` and `/hooks/*`) redirects to
+`/login`, a form for the admin login from `.env`; with curl, `POST /login`
+with `-c`/`-b` a cookie jar. The files service is at `/fs/` on the app with
+`-H "Authorization: Bearer $PURPLEFLOW_AGENT_TOKEN"`; it has no port of its
+own. Builds of `app` and `runner` are the same image: if Docker Hub
+rate-limits one after the other succeeded, `docker tag purple_flow-runner
+purple_flow-app` works.
 
 ## 6. Project-specific notes
 

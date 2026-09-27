@@ -13,6 +13,9 @@ services:
       - PURPLEFLOW_SECRET_KEY=${PURPLEFLOW_SECRET_KEY:?PURPLEFLOW_SECRET_KEY is required, generate one with `openssl rand -base64 32`}
       - PURPLEFLOW_ADMIN_USERNAME=${PURPLEFLOW_ADMIN_USERNAME:?PURPLEFLOW_ADMIN_USERNAME is required}
       - PURPLEFLOW_ADMIN_PASSWORD=${PURPLEFLOW_ADMIN_PASSWORD:?PURPLEFLOW_ADMIN_PASSWORD is required}
+      # The files service, below. The app is its only way in: /files in the
+      # UI, /fs/ for agents and WebDAV, all behind the app's sign-in.
+      - PURPLEFLOW_FILES_URL=http://files:5000
       # Code node scripts run in the runner, below. The app refuses every web
       # request from the runner's network.
       - PURPLEFLOW_RUNNER_ADDRESS=runner:4100
@@ -30,6 +33,7 @@ services:
     networks:
       - purple_flow
       - runner
+      - files
     # Remove this block if you're pointing DATABASE_URL at an external
     # Postgres instead of the bundled "db" service — see README "Database".
     depends_on:
@@ -72,8 +76,10 @@ services:
     pids_limit: 256
 
   # The workflows folder, over HTTP and WebDAV for agents and as a web UI
-  # for people, behind its own login. Nothing secret in here, and on no
-  # network but its own. See specs/090_workflow_files.md.
+  # for people. No login and no published port of its own: only the app can
+  # reach it, and passes /fs/* through behind the app's sign-in. Nothing
+  # secret in here, and on no network but its own. See
+  # specs/090_workflow_files.md.
   files:
     image: sigoden/dufs:v0.46.0
     container_name: purple_flow-files
@@ -82,14 +88,13 @@ services:
     environment:
       - DUFS_SERVE_PATH=/data
       - DUFS_BIND=0.0.0.0
-      - DUFS_AUTH=${PURPLEFLOW_FILES_USERNAME:?PURPLEFLOW_FILES_USERNAME is required}:${PURPLEFLOW_FILES_PASSWORD:?PURPLEFLOW_FILES_PASSWORD is required}@/:rw
+      # Served under /fs, where the app passes it through.
+      - DUFS_PATH_PREFIX=/fs
       - DUFS_ALLOW_ALL=true
       # Cosmetic: keeps the empty folder below out of listings.
       - DUFS_HIDDEN=.git
     # Files saved through dufs belong to you on the host.
     user: "${PUID:-1000}:${PGID:-1000}"
-    ports:
-      - "${FILES_PORT:-5000}:5000"
     volumes:
       - ${WORKFLOWS_PATH:-./workflows}:/data
       # An empty, read-only folder over the real .git, so nothing written
@@ -132,8 +137,9 @@ services:
 
 networks:
   purple_flow:
-  # Only the files service.
+  # Only the files service and the app. `internal`: no route to the internet.
   files:
+    internal: true
   # Only the app and the runner. `internal`: no route to the internet.
   runner:
     internal: true
