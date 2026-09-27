@@ -1,0 +1,4 @@
+module = "PurpleFlow.Test.FakeNode"
+
+[config]
+emit = [{ word = "hello" }, { word = "world" }]

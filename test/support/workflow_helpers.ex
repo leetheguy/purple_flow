@@ -28,6 +28,14 @@ defmodule PurpleFlow.WorkflowHelpers do
     end
   end
 
+  @doc """
+  Loads a workflow named `name` from just its `[[steps]]` TOML, with
+  `files` as its node files.
+  """
+  def steps!(name, steps_toml, files) do
+    load_workflow!("[workflow]\nname = \"#{name}\"\n" <> steps_toml, files)
+  end
+
   @doc "A FakeNode node file with the given config."
   def fake_node(config \\ %{}) do
     TomlElixir.encode!(%{"module" => "PurpleFlow.Test.FakeNode", "config" => config})
@@ -38,6 +46,20 @@ defmodule PurpleFlow.WorkflowHelpers do
     id = PurpleFlow.Id.generate()
     Phoenix.PubSub.subscribe(PurpleFlow.PubSub, PurpleFlow.topic(id))
     {:ok, ^id} = PurpleFlow.start_run(workflow, input, id: id)
+    assert_receive {:run_finished, ^id, _status}, timeout
+    PurpleFlow.Runs.get(id)
+  end
+
+  @doc "Starts a run without waiting. Returns its ID; the test is subscribed to it."
+  def start!(workflow, input, opts \\ []) do
+    id = PurpleFlow.Id.generate()
+    Phoenix.PubSub.subscribe(PurpleFlow.PubSub, PurpleFlow.topic(id))
+    {:ok, ^id} = PurpleFlow.start_run(workflow, input, [id: id] ++ opts)
+    id
+  end
+
+  @doc "Waits for a started run to finish, returns `%{run: run, steps: rows}`."
+  def finish!(id, timeout \\ 5_000) do
     assert_receive {:run_finished, ^id, _status}, timeout
     PurpleFlow.Runs.get(id)
   end

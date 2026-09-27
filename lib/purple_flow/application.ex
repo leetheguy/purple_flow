@@ -43,7 +43,8 @@ defmodule PurpleFlow.Application do
       in_vm_runner(),
       # Every node execution runs as a task under here.
       {Task.Supervisor, name: PurpleFlow.StepSupervisor},
-      # One PurpleFlow.Run per run.
+      # One PurpleFlow.Run per run, found by run ID (to kill it).
+      {Registry, keys: :unique, name: PurpleFlow.RunRegistry},
       {DynamicSupervisor, name: PurpleFlow.RunSupervisor},
       PurpleFlow.Scheduler,
       PurpleFlow.Workflows,

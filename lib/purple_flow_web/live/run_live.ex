@@ -2,11 +2,14 @@ defmodule PurpleFlowWeb.RunLive do
   @moduledoc """
   One run, step by step, like n8n's execution view.
 
-  One row per step, in workflow order. Click a row to see its input and
-  output. A step that ran per item expands into one row per item. Colors:
-  green ok, red failed, blue running, gray didn't run.
+  One row per step, in workflow order, showing ok / total executions and,
+  while the run is going, what's queued and running. Click a row to see its
+  input and output; a step that ran more than once expands into one row
+  per execution. Dots: green all ok, yellow some not, red none ok (or it
+  ended the run), blue busy, gray didn't run. See `specs/160_live_runs.md`.
 
-  While the run is going, rows update live from the run's broadcasts.
+  While the run is going, it updates from the run's `run_progress`
+  messages, and a Kill button stops it.
   """
 
   use PurpleFlowWeb, :live_view
@@ -15,8 +18,8 @@ defmodule PurpleFlowWeb.RunLive do
 
   alias PurpleFlow.{Runs, Workflow, Workflows}
 
-  # Many items can finish at once; refresh at most this often.
-  @refresh_ms 200
+  # Reload rows from the database at most this often.
+  @refresh_ms 250
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -38,7 +41,7 @@ defmodule PurpleFlowWeb.RunLive do
          socket
          |> assign(:page_title, run.workflow)
          |> assign(:workflow, workflow)
-         |> assign(:running, %{})
+         |> assign(:progress, %{})
          |> assign(:expanded, MapSet.new())
          |> assign(:refresh_scheduled, false)
          |> assign_data(data)}
@@ -55,17 +58,29 @@ defmodule PurpleFlowWeb.RunLive do
     {:noreply, assign(socket, :expanded, expanded)}
   end
 
+  def handle_event("kill", _params, socket) do
+    socket =
+      case PurpleFlow.kill(socket.assigns.run.id) do
+        :ok -> socket
+        {:error, message} -> put_flash(socket, :error, message)
+      end
+
+    {:noreply, socket}
+  end
+
   @impl true
-  def handle_info({:step_started, _, step, _item}, socket) do
-    {:noreply, update(socket, :running, &Map.update(&1, step, 1, fn n -> n + 1 end))}
+  def handle_info({:run_progress, _, progress}, socket) do
+    socket = assign(socket, :progress, progress)
+    names = socket.assigns.step_names
+    names = names ++ (progress |> Map.keys() |> Enum.sort() |> Kernel.--(names))
+    {:noreply, socket |> assign(:step_names, names) |> schedule_refresh()}
   end
 
-  def handle_info({:step_finished, _, step, _item, _result}, socket) do
-    socket = update(socket, :running, &Map.update(&1, step, 0, fn n -> max(n - 1, 0) end))
-    {:noreply, schedule_refresh(socket)}
+  # The final state shows right away: it's one message, never a flood.
+  def handle_info({:run_finished, _, _}, socket) do
+    socket = assign(socket, :progress, %{})
+    {:noreply, assign_data(socket, Runs.get(socket.assigns.run.id))}
   end
-
-  def handle_info({:run_finished, _, _}, socket), do: {:noreply, schedule_refresh(socket)}
 
   def handle_info(:refresh, socket) do
     socket = assign(socket, :refresh_scheduled, false)
@@ -96,21 +111,58 @@ defmodule PurpleFlowWeb.RunLive do
 
   # -- per-step summary --
 
-  defp step_status(rows, running) do
+  # Executions that succeeded, didn't, and items that overflowed its queue.
+  defp tally(rows) do
+    Enum.reduce(rows, %{ok: 0, failed: 0, overflow: 0}, fn row, tally ->
+      key =
+        case row.status do
+          "ok" -> :ok
+          "overflow" -> :overflow
+          _ -> :failed
+        end
+
+      Map.update!(tally, key, &(&1 + 1))
+    end)
+  end
+
+  defp step_status(name, rows, progress, run) do
+    %{ok: ok, failed: failed, overflow: overflow} = tally(rows)
+    busy = progress[name] && progress[name].queued + progress[name].running > 0
+
     cond do
-      Enum.any?(rows, &(&1.status != "ok")) -> "failed"
-      running > 0 -> "running"
-      rows != [] -> "ok"
-      true -> "didn't run"
+      busy -> "running"
+      rows == [] -> "didn't run"
+      ok == 0 or (run.error && run.error["step"] == name) -> "failed"
+      failed > 0 or overflow > 0 -> "partial"
+      true -> "ok"
     end
   end
 
-  defp per_item?(rows), do: Enum.any?(rows, &(&1.item != nil))
+  defp multiple?(rows), do: length(rows) > 1
 
-  defp summary(rows) do
-    ok = Enum.count(rows, &(&1.status == "ok"))
-    failed = length(rows) - ok
-    if failed > 0, do: "×#{length(rows)} — #{ok} ok, #{failed} failed", else: "×#{length(rows)}"
+  attr :name, :string, required: true
+  attr :rows, :list, required: true
+  attr :progress, :any, required: true
+
+  defp counters(assigns) do
+    assigns = assign(assigns, :tally, tally(assigns.rows))
+
+    ~H"""
+    <span
+      :if={@rows != []}
+      id={"step-#{@name}-counts"}
+      class="text-base-content/70 tabular-nums"
+      title="succeeded / executions"
+    >
+      {@tally.ok}/{@tally.ok + @tally.failed}
+    </span>
+    <span :if={@tally.overflow > 0} class="text-xs text-amber-600 dark:text-amber-400">
+      {@tally.overflow} overflowed
+    </span>
+    <span :if={@progress} id={"step-#{@name}-live"} class="text-xs text-base-content/60 tabular-nums">
+      queue {@progress.queued} · running {@progress.running}/{@progress.concurrency}
+    </span>
+    """
   end
 
   defp step_duration([]), do: nil
@@ -155,6 +207,15 @@ defmodule PurpleFlowWeb.RunLive do
         <div class="flex items-center gap-3">
           <h1 class="text-xl font-semibold">Run</h1>
           <.status_badge id="run-status" status={@run.status} />
+          <button
+            :if={@run.status == "running"}
+            id="kill-run"
+            phx-click="kill"
+            data-confirm="Kill this run? Running steps are stopped now."
+            class="ml-auto rounded-lg border border-red-500/40 px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-500/10 active:scale-95 transition dark:text-red-400"
+          >
+            Kill
+          </button>
         </div>
         <p class="text-xs text-base-content/60 space-x-3">
           <span class="font-mono">{@run.id}</span>
@@ -173,6 +234,14 @@ defmodule PurpleFlowWeb.RunLive do
         {@run.error["message"]}
       </div>
 
+      <p
+        :if={@run.status == "killed"}
+        id="run-killed"
+        class="rounded-lg border border-base-300 bg-base-200/60 p-3 text-sm text-base-content/70"
+      >
+        Killed. Steps that were running are marked killed.
+      </p>
+
       <div id="steps" class="rounded-lg border border-base-300 divide-y divide-base-300">
         <.data_block
           key="trigger-input"
@@ -183,22 +252,26 @@ defmodule PurpleFlowWeb.RunLive do
 
         <div :for={name <- @step_names} id={"step-#{name}"}>
           <% rows = Map.get(@rows_by_step, name, []) %>
-          <% status = step_status(rows, Map.get(@running, name, 0)) %>
+          <% status = step_status(name, rows, @progress, @run) %>
           <button
             phx-click="toggle"
             phx-value-key={"step:" <> name}
             disabled={rows == []}
             class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-base-200 disabled:hover:bg-transparent transition"
           >
-            <span class={["size-2.5 rounded-full shrink-0", dot_class(status)]}></span>
+            <span
+              id={"step-#{name}-dot"}
+              data-status={status}
+              class={["size-2.5 rounded-full shrink-0", dot_class(status)]}
+            ></span>
             <span class={["font-medium", status == "didn't run" && "text-base-content/40"]}>{name}</span>
-            <span :if={per_item?(rows)} class="text-base-content/60">{summary(rows)}</span>
+            <.counters name={name} rows={rows} progress={@progress[name]} />
             <span class="text-xs text-base-content/40">{after_text(@workflow, name)}</span>
             <span class="ml-auto text-xs text-base-content/60">{step_duration(rows)}</span>
           </button>
 
           <div :if={("step:" <> name) in @expanded} class="px-4 pb-3">
-            <%= if per_item?(rows) do %>
+            <%= if multiple?(rows) do %>
               <div class="border-l-2 border-base-300 ml-1 pl-3 divide-y divide-base-300/60">
                 <div :for={row <- Enum.sort_by(rows, & &1.item)} id={"step-#{name}-item-#{row.item}"}>
                   <button
@@ -207,8 +280,8 @@ defmodule PurpleFlowWeb.RunLive do
                     class="w-full flex items-center gap-3 py-1.5 text-left text-sm hover:bg-base-200 transition"
                   >
                     <span class={["size-2 rounded-full", dot_class(row.status)]}></span>
-                    <span>item {row.item}</span>
-                    <span :if={row.from_item != nil} class="text-xs text-base-content/40">from item {row.from_item}</span>
+                    <span>{if row.status == "overflow", do: "overflowed", else: "##{row.item}"}</span>
+                    <span :if={row.from_item != nil} class="text-xs text-base-content/40">from #{row.from_item}</span>
                     <span :if={row.route} class="text-xs text-base-content/60">→ {row.route}</span>
                     <span class="ml-auto text-xs text-base-content/60">{duration(
                       row.started_at,
@@ -286,6 +359,7 @@ defmodule PurpleFlowWeb.RunLive do
 
   defp dot_class(status) when status in ["ok", "complete"], do: "bg-emerald-500"
   defp dot_class(status) when status in ["failed", "error", "timed_out"], do: "bg-red-500"
+  defp dot_class(status) when status in ["partial", "overflow"], do: "bg-amber-500"
   defp dot_class("running"), do: "bg-sky-500 animate-pulse"
   defp dot_class(_), do: "bg-base-300"
 end

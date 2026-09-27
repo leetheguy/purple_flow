@@ -31,9 +31,12 @@ defmodule PurpleFlow.Workflow.LoaderTest do
         name = "b"
         node = "n.toml"
         after = ["a"]
-        run = "all"
-        concurrency = "sequential"
+        concurrency = 1
+        delay = 50
         timeout = 5
+        max_queue = 10
+        on_full = "overflow"
+        on_fail = "end_run"
 
         [[steps]]
         name = "c"
@@ -50,8 +53,10 @@ defmodule PurpleFlow.Workflow.LoaderTest do
     assert workflow.cron == "0 * * * *"
 
     [a, b, c] = workflow.steps
-    assert a.after == [] and a.run == :each and a.concurrency == 1_000 and a.timeout == 30_000
-    assert b.run == :all and b.concurrency == 1 and b.timeout == 5_000
+    assert a.after == [] and a.concurrency == 1_000 and a.delay == 0 and a.timeout == 0
+    assert a.max_queue == nil and a.on_full == :wait and a.on_fail == :continue
+    assert b.concurrency == 1 and b.delay == 50 and b.timeout == 5_000
+    assert b.max_queue == 10 and b.on_full == :overflow and b.on_fail == :end_run
     assert c.when == "yes"
     assert c.ancestors == ["a", "b"]
   end
@@ -92,7 +97,7 @@ defmodule PurpleFlow.Workflow.LoaderTest do
         [[steps]]
         name = "bad_options"
         node = "n.toml"
-        run = "sometimes"
+        concurrency = 0
         """,
         %{"n.toml" => fake_node(), "bad_module.toml" => ~s(module = "Not.A.Node")}
       )
@@ -100,9 +105,76 @@ defmodule PurpleFlow.Workflow.LoaderTest do
     assert text =~ "can't read"
     assert text =~ "Not.A.Node isn't a module that implements PurpleFlow.Node"
     assert text =~ "`when` needs exactly one `after`"
-    assert text =~ ~s(run must be "each" or "all")
+    assert text =~ "concurrency must be a number"
     assert text =~ ~s(cron schedule "not a schedule" isn't valid)
-    assert text =~ ~s(webhook respond must be "result" or "immediately")
+    assert text =~ ~s(webhook respond must be "result", "immediately", or "stream")
+  end
+
+  test "step settings are checked, and old ones say what to use instead" do
+    step = fn extra ->
+      problems(
+        """
+        [workflow]
+        name = "opts"
+        [[steps]]
+        name = "a"
+        node = "n.toml"
+        #{extra}
+        """,
+        %{"n.toml" => fake_node()}
+      )
+    end
+
+    assert step.(~s(run = "all")) =~ "`run` was removed"
+    assert step.(~s(run = "all")) =~ "Batch step"
+
+    assert step.(~s(concurrency = "sequential")) =~
+             "concurrency must be a number, 1 for one at a time"
+
+    assert step.("delay = -1") =~ "delay must be milliseconds 0 or more"
+    assert step.("timeout = -1") =~ "timeout must be a number of seconds (0 for no limit)"
+    assert step.("max_queue = 0") =~ "max_queue must be a number of items, 1 or more"
+    assert step.(~s(on_full = "overflow")) =~ "on_full needs max_queue"
+    assert step.(~s(max_queue = 5\non_full = "drop")) =~ ~s(on_full must be "wait" or "overflow")
+    assert step.(~s(on_fail = "panic")) =~ ~s(on_fail must be "continue" or "end_run")
+  end
+
+  test "respond = \"stream\" loads" do
+    workflow =
+      load_workflow!(
+        """
+        [workflow]
+        name = "streams"
+        [trigger.webhook]
+        path = "streams"
+        respond = "stream"
+        [[steps]]
+        name = "a"
+        node = "n.toml"
+        """,
+        %{"n.toml" => fake_node()}
+      )
+
+    assert workflow.respond == :stream
+  end
+
+  test "a Batch step needs a whole-number size, and wait if set" do
+    batch = fn config ->
+      problems(
+        """
+        [workflow]
+        name = "b"
+        [[steps]]
+        name = "chunk"
+        node = "chunk.toml"
+        """,
+        %{"chunk.toml" => ~s(module = "PurpleFlow.Nodes.Batch"\n[config]\n#{config})}
+      )
+    end
+
+    assert batch.("") =~ "Batch needs `size`"
+    assert batch.("size = 0") =~ "Batch size must be a whole number, 1 or more"
+    assert batch.("size = 10\nwait = 1.5") =~ "Batch wait must be a whole number"
   end
 
   test "unknown after names and cycles" do

@@ -52,3 +52,6 @@ Steps that didn't run have no rows.
 ## Tests
 
 Write rows and read them back. Check that JSON round-trips unchanged.
+
+## Log
+- 2026-09-27 — [120](120_flow.md), [130](130_failures.md): **`runs`**: `status` can also be `killed`. **`step_runs`**: `item` is always set, numbering the step's executions in the order they started (0, 1, 2, …); `from_item` is the execution of the step before that made its input. `status` can also be `killed` or `overflow` (an item that didn't fit a full queue, [120](120_flow.md)). A streamed execution's `output` is every item it produced. **Writes**: tasks no longer write their own rows. The run process saves them, many per insert, at most every 250 ms and before it finishes. **Functions**: `PurpleFlow.Runs.save_steps(rows)` replaces `save_step/1`.

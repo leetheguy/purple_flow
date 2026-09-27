@@ -223,6 +223,91 @@ defmodule PurpleFlowWeb.LiveTest do
     assert has_element?(view, "#step-echo-item-2")
   end
 
+  test "each step shows ok / total, with a dot for all, some, or none ok", %{conn: conn} do
+    workflow =
+      steps!(
+        "tally",
+        """
+        [[steps]]
+        name = "all_ok"
+        node = "n.toml"
+        [[steps]]
+        name = "some_ok"
+        node = "some.toml"
+        [[steps]]
+        name = "none_ok"
+        node = "none.toml"
+        """,
+        %{
+          "n.toml" => fake_node(),
+          "some.toml" => fake_node(%{"fail_if" => 2}),
+          "none.toml" => fake_node(%{"raise" => true})
+        }
+      )
+
+    result = run!(workflow, [1, 2, 3])
+    {:ok, view, _html} = live(conn, ~p"/runs/#{result.run.id}")
+
+    assert has_element?(view, "#step-all_ok-counts", "3/3")
+    assert has_element?(view, "#step-some_ok-counts", "2/3")
+    assert has_element?(view, "#step-none_ok-counts", "0/3")
+    assert has_element?(view, "#step-all_ok-dot[data-status=ok]")
+    assert has_element?(view, "#step-some_ok-dot[data-status=partial]")
+    assert has_element?(view, "#step-none_ok-dot[data-status=failed]")
+    refute has_element?(view, "#kill-run")
+  end
+
+  test "a running run shows what's queued and running, and Kill stops it", %{conn: conn} do
+    workflow =
+      steps!(
+        "killable",
+        """
+        [[steps]]
+        name = "slow"
+        node = "slow.toml"
+        concurrency = 1
+        """,
+        %{"slow.toml" => fake_node(%{"sleep" => 60_000})}
+      )
+
+    id = start!(workflow, [1, 2])
+    {:ok, view, _html} = live(conn, ~p"/runs/#{id}")
+    assert_receive {:run_progress, ^id, _}, 1_000
+
+    # The page hears the same progress message.
+    _ = :sys.get_state(view.pid)
+    assert has_element?(view, "#step-slow-live", "queue 1 · running 1/1")
+
+    view |> element("#kill-run") |> render_click()
+    assert_receive {:run_finished, ^id, "killed"}, 5_000
+    _ = :sys.get_state(view.pid)
+
+    assert has_element?(view, "#run-status", "killed")
+    assert has_element?(view, "#run-killed")
+    refute has_element?(view, "#kill-run")
+  end
+
+  test "the runs list has Kill for a running run", %{conn: conn} do
+    workflow =
+      steps!(
+        "killable_list",
+        """
+        [[steps]]
+        name = "slow"
+        node = "slow.toml"
+        """,
+        %{"slow.toml" => fake_node(%{"sleep" => 60_000})}
+      )
+
+    id = start!(workflow, 1)
+    {:ok, view, _html} = live(conn, ~p"/workflows/killable_list")
+
+    view |> element("#kill-#{id}") |> render_click()
+    assert_receive {:run_finished, ^id, "killed"}, 5_000
+    _ = :sys.get_state(view.pid)
+    refute has_element?(view, "#kill-#{id}")
+  end
+
   test "runs list shows the workflow's runs", %{conn: conn} do
     {:ok, workflow} = PurpleFlow.Workflows.fetch("echo")
     result = run!(workflow, 1)

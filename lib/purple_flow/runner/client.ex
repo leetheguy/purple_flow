@@ -7,9 +7,9 @@ defmodule PurpleFlow.Runner.Client do
   `{host, port}`, set from `PURPLEFLOW_RUNNER_ADDRESS`). Without one, the
   runner started inside this VM is used.
 
-  Waits as long as the script takes. `PurpleFlow.StepTask` enforces the
-  step's timeout by killing the process this runs in, which closes the
-  connection, which makes the runner kill the script.
+  Waits as long as the script takes. `PurpleFlow.Run` enforces the step's
+  timeout (and Kill) by killing the execution this runs in, which closes
+  the connection, which makes the runner kill the script.
   """
 
   @connect_timeout 5_000

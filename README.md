@@ -92,20 +92,20 @@ A barebones n8n on Elixir/OTP. Workflows are TOML files in git.
 
 ```
 trigger (webhook / cron / manual)
-  -> run walks the workflow's steps
-  -> each step runs a node: one input in, one output out
-  -> list input? the node runs once per item, in parallel (or once for all)
-  -> results are always one flat list
-  -> every execution saves its own record and broadcasts "done"
-  -> the run starts whatever's next
-  -> any failure stops the run; everything so far is already saved
+  -> every step has a queue; the trigger's input goes into the first ones
+  -> each step runs a node once per item: one item in, one output out
+  -> a list output splits into items; each goes straight on to the next queue
+  -> nothing waits for a whole step: items flow, and nodes can stream
+  -> concurrency, delay, and max_queue set each step's pace
+  -> a failed item stops there (or takes a "failed" route, or ends the run)
+  -> the run saves its records in batches, and a Kill button stops it
 ```
 
-Built-in nodes: HTTP, Postgres, Code, and "run another workflow". A new node type is just a module implementing `execute(input, config)`.
+Built-in nodes: HTTP (which can stream), Postgres, Code, Batch, and "run another workflow". A new node type is just a module implementing `execute(input, config)`.
 
 The UI (Phoenix LiveView) is one site behind one sign-in, with a side menu (a menu button on small screens):
 
-- **Workflows**: every workflow, with a search box, its triggers, its last run, a link to its files, and a Run box. The Run box takes just the request body, and the run gets it as `input["body"]`, the same as from a webhook. Pick a workflow to see its runs, and a run to see every step's input and output.
+- **Workflows**: every workflow, with a search box, its triggers, its last run, a link to its files, and a Run box. The Run box takes just the request body, and the run gets it as `input["body"]`, the same as from a webhook. Pick a workflow to see its runs (and kill a running one), and a run to see every step's queue, what's running, how many succeeded, and every execution's input and output.
 - **Files**: the workflows folder, to browse and edit in place.
 - **Credentials**: secrets that workflows use by name.
 

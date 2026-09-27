@@ -7,3 +7,4 @@ path = "boom"
 [[steps]]
 name = "boom"
 node = "boom.toml"
+on_fail = "end_run"
