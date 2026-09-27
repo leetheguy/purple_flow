@@ -1,0 +1,1516 @@
+# A crash test: 100 diamonds in a row. Each one splits into a branch that
+# always fails and one that counts, then merges them again. A failure stops
+# only its own item, so the counting branch carries on and the run ends
+# `complete` with {"survived": 100}; the run's page shows 100 failed items.
+#   curl -X POST localhost:4000/hooks/diamonds -H 'content-type: application/json' -d '{}'
+# Generated; see the comment in start.exs.
+
+[workflow]
+name = "diamonds"
+
+[trigger.webhook]
+path = "diamonds"
+
+[[steps]]
+name = "start"
+node = "start.toml"
+
+[[steps]]
+name = "fail_1"
+node = "fail.toml"
+after = ["start"]
+
+[[steps]]
+name = "ok_1"
+node = "ok.toml"
+after = ["start"]
+
+[[steps]]
+name = "merge_1"
+node = "merge.toml"
+after = ["fail_1", "ok_1"]
+
+[[steps]]
+name = "fail_2"
+node = "fail.toml"
+after = ["merge_1"]
+
+[[steps]]
+name = "ok_2"
+node = "ok.toml"
+after = ["merge_1"]
+
+[[steps]]
+name = "merge_2"
+node = "merge.toml"
+after = ["fail_2", "ok_2"]
+
+[[steps]]
+name = "fail_3"
+node = "fail.toml"
+after = ["merge_2"]
+
+[[steps]]
+name = "ok_3"
+node = "ok.toml"
+after = ["merge_2"]
+
+[[steps]]
+name = "merge_3"
+node = "merge.toml"
+after = ["fail_3", "ok_3"]
+
+[[steps]]
+name = "fail_4"
+node = "fail.toml"
+after = ["merge_3"]
+
+[[steps]]
+name = "ok_4"
+node = "ok.toml"
+after = ["merge_3"]
+
+[[steps]]
+name = "merge_4"
+node = "merge.toml"
+after = ["fail_4", "ok_4"]
+
+[[steps]]
+name = "fail_5"
+node = "fail.toml"
+after = ["merge_4"]
+
+[[steps]]
+name = "ok_5"
+node = "ok.toml"
+after = ["merge_4"]
+
+[[steps]]
+name = "merge_5"
+node = "merge.toml"
+after = ["fail_5", "ok_5"]
+
+[[steps]]
+name = "fail_6"
+node = "fail.toml"
+after = ["merge_5"]
+
+[[steps]]
+name = "ok_6"
+node = "ok.toml"
+after = ["merge_5"]
+
+[[steps]]
+name = "merge_6"
+node = "merge.toml"
+after = ["fail_6", "ok_6"]
+
+[[steps]]
+name = "fail_7"
+node = "fail.toml"
+after = ["merge_6"]
+
+[[steps]]
+name = "ok_7"
+node = "ok.toml"
+after = ["merge_6"]
+
+[[steps]]
+name = "merge_7"
+node = "merge.toml"
+after = ["fail_7", "ok_7"]
+
+[[steps]]
+name = "fail_8"
+node = "fail.toml"
+after = ["merge_7"]
+
+[[steps]]
+name = "ok_8"
+node = "ok.toml"
+after = ["merge_7"]
+
+[[steps]]
+name = "merge_8"
+node = "merge.toml"
+after = ["fail_8", "ok_8"]
+
+[[steps]]
+name = "fail_9"
+node = "fail.toml"
+after = ["merge_8"]
+
+[[steps]]
+name = "ok_9"
+node = "ok.toml"
+after = ["merge_8"]
+
+[[steps]]
+name = "merge_9"
+node = "merge.toml"
+after = ["fail_9", "ok_9"]
+
+[[steps]]
+name = "fail_10"
+node = "fail.toml"
+after = ["merge_9"]
+
+[[steps]]
+name = "ok_10"
+node = "ok.toml"
+after = ["merge_9"]
+
+[[steps]]
+name = "merge_10"
+node = "merge.toml"
+after = ["fail_10", "ok_10"]
+
+[[steps]]
+name = "fail_11"
+node = "fail.toml"
+after = ["merge_10"]
+
+[[steps]]
+name = "ok_11"
+node = "ok.toml"
+after = ["merge_10"]
+
+[[steps]]
+name = "merge_11"
+node = "merge.toml"
+after = ["fail_11", "ok_11"]
+
+[[steps]]
+name = "fail_12"
+node = "fail.toml"
+after = ["merge_11"]
+
+[[steps]]
+name = "ok_12"
+node = "ok.toml"
+after = ["merge_11"]
+
+[[steps]]
+name = "merge_12"
+node = "merge.toml"
+after = ["fail_12", "ok_12"]
+
+[[steps]]
+name = "fail_13"
+node = "fail.toml"
+after = ["merge_12"]
+
+[[steps]]
+name = "ok_13"
+node = "ok.toml"
+after = ["merge_12"]
+
+[[steps]]
+name = "merge_13"
+node = "merge.toml"
+after = ["fail_13", "ok_13"]
+
+[[steps]]
+name = "fail_14"
+node = "fail.toml"
+after = ["merge_13"]
+
+[[steps]]
+name = "ok_14"
+node = "ok.toml"
+after = ["merge_13"]
+
+[[steps]]
+name = "merge_14"
+node = "merge.toml"
+after = ["fail_14", "ok_14"]
+
+[[steps]]
+name = "fail_15"
+node = "fail.toml"
+after = ["merge_14"]
+
+[[steps]]
+name = "ok_15"
+node = "ok.toml"
+after = ["merge_14"]
+
+[[steps]]
+name = "merge_15"
+node = "merge.toml"
+after = ["fail_15", "ok_15"]
+
+[[steps]]
+name = "fail_16"
+node = "fail.toml"
+after = ["merge_15"]
+
+[[steps]]
+name = "ok_16"
+node = "ok.toml"
+after = ["merge_15"]
+
+[[steps]]
+name = "merge_16"
+node = "merge.toml"
+after = ["fail_16", "ok_16"]
+
+[[steps]]
+name = "fail_17"
+node = "fail.toml"
+after = ["merge_16"]
+
+[[steps]]
+name = "ok_17"
+node = "ok.toml"
+after = ["merge_16"]
+
+[[steps]]
+name = "merge_17"
+node = "merge.toml"
+after = ["fail_17", "ok_17"]
+
+[[steps]]
+name = "fail_18"
+node = "fail.toml"
+after = ["merge_17"]
+
+[[steps]]
+name = "ok_18"
+node = "ok.toml"
+after = ["merge_17"]
+
+[[steps]]
+name = "merge_18"
+node = "merge.toml"
+after = ["fail_18", "ok_18"]
+
+[[steps]]
+name = "fail_19"
+node = "fail.toml"
+after = ["merge_18"]
+
+[[steps]]
+name = "ok_19"
+node = "ok.toml"
+after = ["merge_18"]
+
+[[steps]]
+name = "merge_19"
+node = "merge.toml"
+after = ["fail_19", "ok_19"]
+
+[[steps]]
+name = "fail_20"
+node = "fail.toml"
+after = ["merge_19"]
+
+[[steps]]
+name = "ok_20"
+node = "ok.toml"
+after = ["merge_19"]
+
+[[steps]]
+name = "merge_20"
+node = "merge.toml"
+after = ["fail_20", "ok_20"]
+
+[[steps]]
+name = "fail_21"
+node = "fail.toml"
+after = ["merge_20"]
+
+[[steps]]
+name = "ok_21"
+node = "ok.toml"
+after = ["merge_20"]
+
+[[steps]]
+name = "merge_21"
+node = "merge.toml"
+after = ["fail_21", "ok_21"]
+
+[[steps]]
+name = "fail_22"
+node = "fail.toml"
+after = ["merge_21"]
+
+[[steps]]
+name = "ok_22"
+node = "ok.toml"
+after = ["merge_21"]
+
+[[steps]]
+name = "merge_22"
+node = "merge.toml"
+after = ["fail_22", "ok_22"]
+
+[[steps]]
+name = "fail_23"
+node = "fail.toml"
+after = ["merge_22"]
+
+[[steps]]
+name = "ok_23"
+node = "ok.toml"
+after = ["merge_22"]
+
+[[steps]]
+name = "merge_23"
+node = "merge.toml"
+after = ["fail_23", "ok_23"]
+
+[[steps]]
+name = "fail_24"
+node = "fail.toml"
+after = ["merge_23"]
+
+[[steps]]
+name = "ok_24"
+node = "ok.toml"
+after = ["merge_23"]
+
+[[steps]]
+name = "merge_24"
+node = "merge.toml"
+after = ["fail_24", "ok_24"]
+
+[[steps]]
+name = "fail_25"
+node = "fail.toml"
+after = ["merge_24"]
+
+[[steps]]
+name = "ok_25"
+node = "ok.toml"
+after = ["merge_24"]
+
+[[steps]]
+name = "merge_25"
+node = "merge.toml"
+after = ["fail_25", "ok_25"]
+
+[[steps]]
+name = "fail_26"
+node = "fail.toml"
+after = ["merge_25"]
+
+[[steps]]
+name = "ok_26"
+node = "ok.toml"
+after = ["merge_25"]
+
+[[steps]]
+name = "merge_26"
+node = "merge.toml"
+after = ["fail_26", "ok_26"]
+
+[[steps]]
+name = "fail_27"
+node = "fail.toml"
+after = ["merge_26"]
+
+[[steps]]
+name = "ok_27"
+node = "ok.toml"
+after = ["merge_26"]
+
+[[steps]]
+name = "merge_27"
+node = "merge.toml"
+after = ["fail_27", "ok_27"]
+
+[[steps]]
+name = "fail_28"
+node = "fail.toml"
+after = ["merge_27"]
+
+[[steps]]
+name = "ok_28"
+node = "ok.toml"
+after = ["merge_27"]
+
+[[steps]]
+name = "merge_28"
+node = "merge.toml"
+after = ["fail_28", "ok_28"]
+
+[[steps]]
+name = "fail_29"
+node = "fail.toml"
+after = ["merge_28"]
+
+[[steps]]
+name = "ok_29"
+node = "ok.toml"
+after = ["merge_28"]
+
+[[steps]]
+name = "merge_29"
+node = "merge.toml"
+after = ["fail_29", "ok_29"]
+
+[[steps]]
+name = "fail_30"
+node = "fail.toml"
+after = ["merge_29"]
+
+[[steps]]
+name = "ok_30"
+node = "ok.toml"
+after = ["merge_29"]
+
+[[steps]]
+name = "merge_30"
+node = "merge.toml"
+after = ["fail_30", "ok_30"]
+
+[[steps]]
+name = "fail_31"
+node = "fail.toml"
+after = ["merge_30"]
+
+[[steps]]
+name = "ok_31"
+node = "ok.toml"
+after = ["merge_30"]
+
+[[steps]]
+name = "merge_31"
+node = "merge.toml"
+after = ["fail_31", "ok_31"]
+
+[[steps]]
+name = "fail_32"
+node = "fail.toml"
+after = ["merge_31"]
+
+[[steps]]
+name = "ok_32"
+node = "ok.toml"
+after = ["merge_31"]
+
+[[steps]]
+name = "merge_32"
+node = "merge.toml"
+after = ["fail_32", "ok_32"]
+
+[[steps]]
+name = "fail_33"
+node = "fail.toml"
+after = ["merge_32"]
+
+[[steps]]
+name = "ok_33"
+node = "ok.toml"
+after = ["merge_32"]
+
+[[steps]]
+name = "merge_33"
+node = "merge.toml"
+after = ["fail_33", "ok_33"]
+
+[[steps]]
+name = "fail_34"
+node = "fail.toml"
+after = ["merge_33"]
+
+[[steps]]
+name = "ok_34"
+node = "ok.toml"
+after = ["merge_33"]
+
+[[steps]]
+name = "merge_34"
+node = "merge.toml"
+after = ["fail_34", "ok_34"]
+
+[[steps]]
+name = "fail_35"
+node = "fail.toml"
+after = ["merge_34"]
+
+[[steps]]
+name = "ok_35"
+node = "ok.toml"
+after = ["merge_34"]
+
+[[steps]]
+name = "merge_35"
+node = "merge.toml"
+after = ["fail_35", "ok_35"]
+
+[[steps]]
+name = "fail_36"
+node = "fail.toml"
+after = ["merge_35"]
+
+[[steps]]
+name = "ok_36"
+node = "ok.toml"
+after = ["merge_35"]
+
+[[steps]]
+name = "merge_36"
+node = "merge.toml"
+after = ["fail_36", "ok_36"]
+
+[[steps]]
+name = "fail_37"
+node = "fail.toml"
+after = ["merge_36"]
+
+[[steps]]
+name = "ok_37"
+node = "ok.toml"
+after = ["merge_36"]
+
+[[steps]]
+name = "merge_37"
+node = "merge.toml"
+after = ["fail_37", "ok_37"]
+
+[[steps]]
+name = "fail_38"
+node = "fail.toml"
+after = ["merge_37"]
+
+[[steps]]
+name = "ok_38"
+node = "ok.toml"
+after = ["merge_37"]
+
+[[steps]]
+name = "merge_38"
+node = "merge.toml"
+after = ["fail_38", "ok_38"]
+
+[[steps]]
+name = "fail_39"
+node = "fail.toml"
+after = ["merge_38"]
+
+[[steps]]
+name = "ok_39"
+node = "ok.toml"
+after = ["merge_38"]
+
+[[steps]]
+name = "merge_39"
+node = "merge.toml"
+after = ["fail_39", "ok_39"]
+
+[[steps]]
+name = "fail_40"
+node = "fail.toml"
+after = ["merge_39"]
+
+[[steps]]
+name = "ok_40"
+node = "ok.toml"
+after = ["merge_39"]
+
+[[steps]]
+name = "merge_40"
+node = "merge.toml"
+after = ["fail_40", "ok_40"]
+
+[[steps]]
+name = "fail_41"
+node = "fail.toml"
+after = ["merge_40"]
+
+[[steps]]
+name = "ok_41"
+node = "ok.toml"
+after = ["merge_40"]
+
+[[steps]]
+name = "merge_41"
+node = "merge.toml"
+after = ["fail_41", "ok_41"]
+
+[[steps]]
+name = "fail_42"
+node = "fail.toml"
+after = ["merge_41"]
+
+[[steps]]
+name = "ok_42"
+node = "ok.toml"
+after = ["merge_41"]
+
+[[steps]]
+name = "merge_42"
+node = "merge.toml"
+after = ["fail_42", "ok_42"]
+
+[[steps]]
+name = "fail_43"
+node = "fail.toml"
+after = ["merge_42"]
+
+[[steps]]
+name = "ok_43"
+node = "ok.toml"
+after = ["merge_42"]
+
+[[steps]]
+name = "merge_43"
+node = "merge.toml"
+after = ["fail_43", "ok_43"]
+
+[[steps]]
+name = "fail_44"
+node = "fail.toml"
+after = ["merge_43"]
+
+[[steps]]
+name = "ok_44"
+node = "ok.toml"
+after = ["merge_43"]
+
+[[steps]]
+name = "merge_44"
+node = "merge.toml"
+after = ["fail_44", "ok_44"]
+
+[[steps]]
+name = "fail_45"
+node = "fail.toml"
+after = ["merge_44"]
+
+[[steps]]
+name = "ok_45"
+node = "ok.toml"
+after = ["merge_44"]
+
+[[steps]]
+name = "merge_45"
+node = "merge.toml"
+after = ["fail_45", "ok_45"]
+
+[[steps]]
+name = "fail_46"
+node = "fail.toml"
+after = ["merge_45"]
+
+[[steps]]
+name = "ok_46"
+node = "ok.toml"
+after = ["merge_45"]
+
+[[steps]]
+name = "merge_46"
+node = "merge.toml"
+after = ["fail_46", "ok_46"]
+
+[[steps]]
+name = "fail_47"
+node = "fail.toml"
+after = ["merge_46"]
+
+[[steps]]
+name = "ok_47"
+node = "ok.toml"
+after = ["merge_46"]
+
+[[steps]]
+name = "merge_47"
+node = "merge.toml"
+after = ["fail_47", "ok_47"]
+
+[[steps]]
+name = "fail_48"
+node = "fail.toml"
+after = ["merge_47"]
+
+[[steps]]
+name = "ok_48"
+node = "ok.toml"
+after = ["merge_47"]
+
+[[steps]]
+name = "merge_48"
+node = "merge.toml"
+after = ["fail_48", "ok_48"]
+
+[[steps]]
+name = "fail_49"
+node = "fail.toml"
+after = ["merge_48"]
+
+[[steps]]
+name = "ok_49"
+node = "ok.toml"
+after = ["merge_48"]
+
+[[steps]]
+name = "merge_49"
+node = "merge.toml"
+after = ["fail_49", "ok_49"]
+
+[[steps]]
+name = "fail_50"
+node = "fail.toml"
+after = ["merge_49"]
+
+[[steps]]
+name = "ok_50"
+node = "ok.toml"
+after = ["merge_49"]
+
+[[steps]]
+name = "merge_50"
+node = "merge.toml"
+after = ["fail_50", "ok_50"]
+
+[[steps]]
+name = "fail_51"
+node = "fail.toml"
+after = ["merge_50"]
+
+[[steps]]
+name = "ok_51"
+node = "ok.toml"
+after = ["merge_50"]
+
+[[steps]]
+name = "merge_51"
+node = "merge.toml"
+after = ["fail_51", "ok_51"]
+
+[[steps]]
+name = "fail_52"
+node = "fail.toml"
+after = ["merge_51"]
+
+[[steps]]
+name = "ok_52"
+node = "ok.toml"
+after = ["merge_51"]
+
+[[steps]]
+name = "merge_52"
+node = "merge.toml"
+after = ["fail_52", "ok_52"]
+
+[[steps]]
+name = "fail_53"
+node = "fail.toml"
+after = ["merge_52"]
+
+[[steps]]
+name = "ok_53"
+node = "ok.toml"
+after = ["merge_52"]
+
+[[steps]]
+name = "merge_53"
+node = "merge.toml"
+after = ["fail_53", "ok_53"]
+
+[[steps]]
+name = "fail_54"
+node = "fail.toml"
+after = ["merge_53"]
+
+[[steps]]
+name = "ok_54"
+node = "ok.toml"
+after = ["merge_53"]
+
+[[steps]]
+name = "merge_54"
+node = "merge.toml"
+after = ["fail_54", "ok_54"]
+
+[[steps]]
+name = "fail_55"
+node = "fail.toml"
+after = ["merge_54"]
+
+[[steps]]
+name = "ok_55"
+node = "ok.toml"
+after = ["merge_54"]
+
+[[steps]]
+name = "merge_55"
+node = "merge.toml"
+after = ["fail_55", "ok_55"]
+
+[[steps]]
+name = "fail_56"
+node = "fail.toml"
+after = ["merge_55"]
+
+[[steps]]
+name = "ok_56"
+node = "ok.toml"
+after = ["merge_55"]
+
+[[steps]]
+name = "merge_56"
+node = "merge.toml"
+after = ["fail_56", "ok_56"]
+
+[[steps]]
+name = "fail_57"
+node = "fail.toml"
+after = ["merge_56"]
+
+[[steps]]
+name = "ok_57"
+node = "ok.toml"
+after = ["merge_56"]
+
+[[steps]]
+name = "merge_57"
+node = "merge.toml"
+after = ["fail_57", "ok_57"]
+
+[[steps]]
+name = "fail_58"
+node = "fail.toml"
+after = ["merge_57"]
+
+[[steps]]
+name = "ok_58"
+node = "ok.toml"
+after = ["merge_57"]
+
+[[steps]]
+name = "merge_58"
+node = "merge.toml"
+after = ["fail_58", "ok_58"]
+
+[[steps]]
+name = "fail_59"
+node = "fail.toml"
+after = ["merge_58"]
+
+[[steps]]
+name = "ok_59"
+node = "ok.toml"
+after = ["merge_58"]
+
+[[steps]]
+name = "merge_59"
+node = "merge.toml"
+after = ["fail_59", "ok_59"]
+
+[[steps]]
+name = "fail_60"
+node = "fail.toml"
+after = ["merge_59"]
+
+[[steps]]
+name = "ok_60"
+node = "ok.toml"
+after = ["merge_59"]
+
+[[steps]]
+name = "merge_60"
+node = "merge.toml"
+after = ["fail_60", "ok_60"]
+
+[[steps]]
+name = "fail_61"
+node = "fail.toml"
+after = ["merge_60"]
+
+[[steps]]
+name = "ok_61"
+node = "ok.toml"
+after = ["merge_60"]
+
+[[steps]]
+name = "merge_61"
+node = "merge.toml"
+after = ["fail_61", "ok_61"]
+
+[[steps]]
+name = "fail_62"
+node = "fail.toml"
+after = ["merge_61"]
+
+[[steps]]
+name = "ok_62"
+node = "ok.toml"
+after = ["merge_61"]
+
+[[steps]]
+name = "merge_62"
+node = "merge.toml"
+after = ["fail_62", "ok_62"]
+
+[[steps]]
+name = "fail_63"
+node = "fail.toml"
+after = ["merge_62"]
+
+[[steps]]
+name = "ok_63"
+node = "ok.toml"
+after = ["merge_62"]
+
+[[steps]]
+name = "merge_63"
+node = "merge.toml"
+after = ["fail_63", "ok_63"]
+
+[[steps]]
+name = "fail_64"
+node = "fail.toml"
+after = ["merge_63"]
+
+[[steps]]
+name = "ok_64"
+node = "ok.toml"
+after = ["merge_63"]
+
+[[steps]]
+name = "merge_64"
+node = "merge.toml"
+after = ["fail_64", "ok_64"]
+
+[[steps]]
+name = "fail_65"
+node = "fail.toml"
+after = ["merge_64"]
+
+[[steps]]
+name = "ok_65"
+node = "ok.toml"
+after = ["merge_64"]
+
+[[steps]]
+name = "merge_65"
+node = "merge.toml"
+after = ["fail_65", "ok_65"]
+
+[[steps]]
+name = "fail_66"
+node = "fail.toml"
+after = ["merge_65"]
+
+[[steps]]
+name = "ok_66"
+node = "ok.toml"
+after = ["merge_65"]
+
+[[steps]]
+name = "merge_66"
+node = "merge.toml"
+after = ["fail_66", "ok_66"]
+
+[[steps]]
+name = "fail_67"
+node = "fail.toml"
+after = ["merge_66"]
+
+[[steps]]
+name = "ok_67"
+node = "ok.toml"
+after = ["merge_66"]
+
+[[steps]]
+name = "merge_67"
+node = "merge.toml"
+after = ["fail_67", "ok_67"]
+
+[[steps]]
+name = "fail_68"
+node = "fail.toml"
+after = ["merge_67"]
+
+[[steps]]
+name = "ok_68"
+node = "ok.toml"
+after = ["merge_67"]
+
+[[steps]]
+name = "merge_68"
+node = "merge.toml"
+after = ["fail_68", "ok_68"]
+
+[[steps]]
+name = "fail_69"
+node = "fail.toml"
+after = ["merge_68"]
+
+[[steps]]
+name = "ok_69"
+node = "ok.toml"
+after = ["merge_68"]
+
+[[steps]]
+name = "merge_69"
+node = "merge.toml"
+after = ["fail_69", "ok_69"]
+
+[[steps]]
+name = "fail_70"
+node = "fail.toml"
+after = ["merge_69"]
+
+[[steps]]
+name = "ok_70"
+node = "ok.toml"
+after = ["merge_69"]
+
+[[steps]]
+name = "merge_70"
+node = "merge.toml"
+after = ["fail_70", "ok_70"]
+
+[[steps]]
+name = "fail_71"
+node = "fail.toml"
+after = ["merge_70"]
+
+[[steps]]
+name = "ok_71"
+node = "ok.toml"
+after = ["merge_70"]
+
+[[steps]]
+name = "merge_71"
+node = "merge.toml"
+after = ["fail_71", "ok_71"]
+
+[[steps]]
+name = "fail_72"
+node = "fail.toml"
+after = ["merge_71"]
+
+[[steps]]
+name = "ok_72"
+node = "ok.toml"
+after = ["merge_71"]
+
+[[steps]]
+name = "merge_72"
+node = "merge.toml"
+after = ["fail_72", "ok_72"]
+
+[[steps]]
+name = "fail_73"
+node = "fail.toml"
+after = ["merge_72"]
+
+[[steps]]
+name = "ok_73"
+node = "ok.toml"
+after = ["merge_72"]
+
+[[steps]]
+name = "merge_73"
+node = "merge.toml"
+after = ["fail_73", "ok_73"]
+
+[[steps]]
+name = "fail_74"
+node = "fail.toml"
+after = ["merge_73"]
+
+[[steps]]
+name = "ok_74"
+node = "ok.toml"
+after = ["merge_73"]
+
+[[steps]]
+name = "merge_74"
+node = "merge.toml"
+after = ["fail_74", "ok_74"]
+
+[[steps]]
+name = "fail_75"
+node = "fail.toml"
+after = ["merge_74"]
+
+[[steps]]
+name = "ok_75"
+node = "ok.toml"
+after = ["merge_74"]
+
+[[steps]]
+name = "merge_75"
+node = "merge.toml"
+after = ["fail_75", "ok_75"]
+
+[[steps]]
+name = "fail_76"
+node = "fail.toml"
+after = ["merge_75"]
+
+[[steps]]
+name = "ok_76"
+node = "ok.toml"
+after = ["merge_75"]
+
+[[steps]]
+name = "merge_76"
+node = "merge.toml"
+after = ["fail_76", "ok_76"]
+
+[[steps]]
+name = "fail_77"
+node = "fail.toml"
+after = ["merge_76"]
+
+[[steps]]
+name = "ok_77"
+node = "ok.toml"
+after = ["merge_76"]
+
+[[steps]]
+name = "merge_77"
+node = "merge.toml"
+after = ["fail_77", "ok_77"]
+
+[[steps]]
+name = "fail_78"
+node = "fail.toml"
+after = ["merge_77"]
+
+[[steps]]
+name = "ok_78"
+node = "ok.toml"
+after = ["merge_77"]
+
+[[steps]]
+name = "merge_78"
+node = "merge.toml"
+after = ["fail_78", "ok_78"]
+
+[[steps]]
+name = "fail_79"
+node = "fail.toml"
+after = ["merge_78"]
+
+[[steps]]
+name = "ok_79"
+node = "ok.toml"
+after = ["merge_78"]
+
+[[steps]]
+name = "merge_79"
+node = "merge.toml"
+after = ["fail_79", "ok_79"]
+
+[[steps]]
+name = "fail_80"
+node = "fail.toml"
+after = ["merge_79"]
+
+[[steps]]
+name = "ok_80"
+node = "ok.toml"
+after = ["merge_79"]
+
+[[steps]]
+name = "merge_80"
+node = "merge.toml"
+after = ["fail_80", "ok_80"]
+
+[[steps]]
+name = "fail_81"
+node = "fail.toml"
+after = ["merge_80"]
+
+[[steps]]
+name = "ok_81"
+node = "ok.toml"
+after = ["merge_80"]
+
+[[steps]]
+name = "merge_81"
+node = "merge.toml"
+after = ["fail_81", "ok_81"]
+
+[[steps]]
+name = "fail_82"
+node = "fail.toml"
+after = ["merge_81"]
+
+[[steps]]
+name = "ok_82"
+node = "ok.toml"
+after = ["merge_81"]
+
+[[steps]]
+name = "merge_82"
+node = "merge.toml"
+after = ["fail_82", "ok_82"]
+
+[[steps]]
+name = "fail_83"
+node = "fail.toml"
+after = ["merge_82"]
+
+[[steps]]
+name = "ok_83"
+node = "ok.toml"
+after = ["merge_82"]
+
+[[steps]]
+name = "merge_83"
+node = "merge.toml"
+after = ["fail_83", "ok_83"]
+
+[[steps]]
+name = "fail_84"
+node = "fail.toml"
+after = ["merge_83"]
+
+[[steps]]
+name = "ok_84"
+node = "ok.toml"
+after = ["merge_83"]
+
+[[steps]]
+name = "merge_84"
+node = "merge.toml"
+after = ["fail_84", "ok_84"]
+
+[[steps]]
+name = "fail_85"
+node = "fail.toml"
+after = ["merge_84"]
+
+[[steps]]
+name = "ok_85"
+node = "ok.toml"
+after = ["merge_84"]
+
+[[steps]]
+name = "merge_85"
+node = "merge.toml"
+after = ["fail_85", "ok_85"]
+
+[[steps]]
+name = "fail_86"
+node = "fail.toml"
+after = ["merge_85"]
+
+[[steps]]
+name = "ok_86"
+node = "ok.toml"
+after = ["merge_85"]
+
+[[steps]]
+name = "merge_86"
+node = "merge.toml"
+after = ["fail_86", "ok_86"]
+
+[[steps]]
+name = "fail_87"
+node = "fail.toml"
+after = ["merge_86"]
+
+[[steps]]
+name = "ok_87"
+node = "ok.toml"
+after = ["merge_86"]
+
+[[steps]]
+name = "merge_87"
+node = "merge.toml"
+after = ["fail_87", "ok_87"]
+
+[[steps]]
+name = "fail_88"
+node = "fail.toml"
+after = ["merge_87"]
+
+[[steps]]
+name = "ok_88"
+node = "ok.toml"
+after = ["merge_87"]
+
+[[steps]]
+name = "merge_88"
+node = "merge.toml"
+after = ["fail_88", "ok_88"]
+
+[[steps]]
+name = "fail_89"
+node = "fail.toml"
+after = ["merge_88"]
+
+[[steps]]
+name = "ok_89"
+node = "ok.toml"
+after = ["merge_88"]
+
+[[steps]]
+name = "merge_89"
+node = "merge.toml"
+after = ["fail_89", "ok_89"]
+
+[[steps]]
+name = "fail_90"
+node = "fail.toml"
+after = ["merge_89"]
+
+[[steps]]
+name = "ok_90"
+node = "ok.toml"
+after = ["merge_89"]
+
+[[steps]]
+name = "merge_90"
+node = "merge.toml"
+after = ["fail_90", "ok_90"]
+
+[[steps]]
+name = "fail_91"
+node = "fail.toml"
+after = ["merge_90"]
+
+[[steps]]
+name = "ok_91"
+node = "ok.toml"
+after = ["merge_90"]
+
+[[steps]]
+name = "merge_91"
+node = "merge.toml"
+after = ["fail_91", "ok_91"]
+
+[[steps]]
+name = "fail_92"
+node = "fail.toml"
+after = ["merge_91"]
+
+[[steps]]
+name = "ok_92"
+node = "ok.toml"
+after = ["merge_91"]
+
+[[steps]]
+name = "merge_92"
+node = "merge.toml"
+after = ["fail_92", "ok_92"]
+
+[[steps]]
+name = "fail_93"
+node = "fail.toml"
+after = ["merge_92"]
+
+[[steps]]
+name = "ok_93"
+node = "ok.toml"
+after = ["merge_92"]
+
+[[steps]]
+name = "merge_93"
+node = "merge.toml"
+after = ["fail_93", "ok_93"]
+
+[[steps]]
+name = "fail_94"
+node = "fail.toml"
+after = ["merge_93"]
+
+[[steps]]
+name = "ok_94"
+node = "ok.toml"
+after = ["merge_93"]
+
+[[steps]]
+name = "merge_94"
+node = "merge.toml"
+after = ["fail_94", "ok_94"]
+
+[[steps]]
+name = "fail_95"
+node = "fail.toml"
+after = ["merge_94"]
+
+[[steps]]
+name = "ok_95"
+node = "ok.toml"
+after = ["merge_94"]
+
+[[steps]]
+name = "merge_95"
+node = "merge.toml"
+after = ["fail_95", "ok_95"]
+
+[[steps]]
+name = "fail_96"
+node = "fail.toml"
+after = ["merge_95"]
+
+[[steps]]
+name = "ok_96"
+node = "ok.toml"
+after = ["merge_95"]
+
+[[steps]]
+name = "merge_96"
+node = "merge.toml"
+after = ["fail_96", "ok_96"]
+
+[[steps]]
+name = "fail_97"
+node = "fail.toml"
+after = ["merge_96"]
+
+[[steps]]
+name = "ok_97"
+node = "ok.toml"
+after = ["merge_96"]
+
+[[steps]]
+name = "merge_97"
+node = "merge.toml"
+after = ["fail_97", "ok_97"]
+
+[[steps]]
+name = "fail_98"
+node = "fail.toml"
+after = ["merge_97"]
+
+[[steps]]
+name = "ok_98"
+node = "ok.toml"
+after = ["merge_97"]
+
+[[steps]]
+name = "merge_98"
+node = "merge.toml"
+after = ["fail_98", "ok_98"]
+
+[[steps]]
+name = "fail_99"
+node = "fail.toml"
+after = ["merge_98"]
+
+[[steps]]
+name = "ok_99"
+node = "ok.toml"
+after = ["merge_98"]
+
+[[steps]]
+name = "merge_99"
+node = "merge.toml"
+after = ["fail_99", "ok_99"]
+
+[[steps]]
+name = "fail_100"
+node = "fail.toml"
+after = ["merge_99"]
+
+[[steps]]
+name = "ok_100"
+node = "ok.toml"
+after = ["merge_99"]
+
+[[steps]]
+name = "merge_100"
+node = "merge.toml"
+after = ["fail_100", "ok_100"]

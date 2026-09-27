@@ -207,6 +207,49 @@ defmodule PurpleFlow.Workflow.LoaderTest do
            ) =~ "loop back on themselves"
   end
 
+  # 100 branches that meet again make 2^100 paths from the first step to the
+  # last; the checks must not walk them one by one.
+  defp diamonds(n, extra \\ "") do
+    steps =
+      for i <- 1..n, into: "" do
+        prev = if i == 1, do: "start", else: "merge_#{i - 1}"
+
+        """
+        [[steps]]
+        name = "left_#{i}"
+        node = "n.toml"
+        after = ["#{prev}"]
+        [[steps]]
+        name = "right_#{i}"
+        node = "n.toml"
+        after = ["#{prev}"]
+        [[steps]]
+        name = "merge_#{i}"
+        node = "n.toml"
+        after = ["left_#{i}", "right_#{i}"]
+        """
+      end
+
+    """
+    [workflow]
+    name = "diamonds"
+    [[steps]]
+    name = "start"
+    node = "n.toml"
+    #{extra}
+    """ <> steps
+  end
+
+  test "branches that meet again, 100 times over, load quickly" do
+    workflow = load_workflow!(diamonds(100), %{"n.toml" => fake_node()})
+    assert length(workflow.steps) == 301
+  end
+
+  test "a loop behind 100 diamonds is still found" do
+    assert problems(diamonds(100, ~s(after = ["merge_100"])), %{"n.toml" => fake_node()}) =~
+             "loop back on themselves"
+  end
+
   test "placeholders must use set env vars and ancestors only" do
     text =
       problems(

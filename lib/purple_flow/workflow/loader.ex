@@ -323,18 +323,40 @@ defmodule PurpleFlow.Workflow.Loader do
   defp check_cycles(workflow) do
     graph = Map.new(workflow.steps, &{&1.name, &1.after})
 
-    Enum.find_value(workflow.steps, [], fn step ->
-      if cycle?(graph, step.name, MapSet.new()),
-        do: ["steps loop back on themselves at \"#{step.name}\""]
+    Enum.reduce_while(workflow.steps, {[], MapSet.new()}, fn step, {[], clear} ->
+      case visit(graph, step.name, MapSet.new(), clear) do
+        {:ok, clear} -> {:cont, {[], clear}}
+        :cycle -> {:halt, {["steps loop back on themselves at \"#{step.name}\""], clear}}
+      end
     end)
+    |> elem(0)
   end
 
-  defp cycle?(graph, name, seen) do
-    if name in seen do
-      true
-    else
-      seen = MapSet.put(seen, name)
-      Enum.any?(Map.get(graph, name, []), &cycle?(graph, &1, seen))
+  # Walks `after` backward from `name`. `path` is the steps on the way here;
+  # `clear` is every step already walked with no loop behind it, so it isn't
+  # walked again. Without `clear`, every path is walked separately, and a
+  # chain of branches that meet again has 2^n of them.
+  defp visit(graph, name, path, clear) do
+    cond do
+      name in clear ->
+        {:ok, clear}
+
+      name in path ->
+        :cycle
+
+      true ->
+        path = MapSet.put(path, name)
+
+        Enum.reduce_while(Map.get(graph, name, []), {:ok, clear}, fn parent, {:ok, clear} ->
+          case visit(graph, parent, path, clear) do
+            {:ok, clear} -> {:cont, {:ok, clear}}
+            :cycle -> {:halt, :cycle}
+          end
+        end)
+        |> case do
+          {:ok, clear} -> {:ok, MapSet.put(clear, name)}
+          :cycle -> :cycle
+        end
     end
   end
 
