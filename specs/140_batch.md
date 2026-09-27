@@ -1,6 +1,6 @@
 # 140 — Batch
 
-Status: draft
+Status: implemented
 Created: 2026-09-27
 
 Items flow one at a time ([120](120_flow.md)). Some steps want many at once: a bulk insert, a summary, an API that takes 100 records per call. The Batch node gathers items and hands them on as one.
@@ -21,6 +21,8 @@ It's a step like any other in `workflow.toml` (`name`, `node`, `after`, `when`).
 ```
 
 An object, so it doesn't split again: the step after it gets the whole batch in one execution, as `input.items`.
+
+After a batch, `{{ steps.X.output }}` ([120](120_flow.md)) still works for any earlier step whose output every item in the batch shares, like a single `fetch` that all of them came from. Earlier steps where the items differ can't be referenced past the batch; they're in `input.items` instead.
 
 ## When a batch goes
 
@@ -44,4 +46,5 @@ The Batch node is a node module (`PurpleFlow.Nodes.Batch`) so it's set up like o
 - the last, partial batch goes when nothing more can reach it
 - `wait` sends a partial batch while more is still coming
 - the output is one object, and the next step runs once per batch
+- earlier outputs all the items share can still be referenced after the batch
 - bad `size` or `wait` fails to load

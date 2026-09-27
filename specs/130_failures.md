@@ -1,6 +1,6 @@
 # 130 — Failures and stopping runs
 
-Status: draft
+Status: implemented
 Created: 2026-09-27
 
 A failed execution is one item that didn't make it. The rest of the run keeps going, like a phone network that loses one call and keeps carrying the others. The workflow decides what a failure means: carry on, handle it on a `failed` route, or end the whole run.

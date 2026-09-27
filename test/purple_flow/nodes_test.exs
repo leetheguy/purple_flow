@@ -27,6 +27,75 @@ defmodule PurpleFlow.NodesTest do
 
       assert {:error, "HTTP 500: nope"} = Http.execute(nil, %{"url" => "http://api.test/"})
     end
+
+    test "stream = \"sse\" emits one item per event" do
+      Req.Test.stub(Http, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/event-stream")
+        |> Plug.Conn.send_resp(200, """
+        : a comment
+        event: delta
+        data: {"text": "Hel"}
+
+        data: lo
+        data: world
+        id: 7
+
+        data: [DONE]
+
+        data: cut off
+        """)
+      end)
+
+      assert {:ok, []} = Http.execute(nil, %{"url" => "http://api.test/", "stream" => "sse"})
+      assert_received {:emit, %{"event" => "delta", "data" => %{"text" => "Hel"}}, nil}
+      assert_received {:emit, %{"event" => "message", "data" => "lo\nworld", "id" => "7"}, nil}
+      assert_received {:emit, %{"event" => "message", "data" => "[DONE]"}, nil}
+      refute_received {:emit, %{"data" => "cut off"}, _}
+    end
+
+    test "stream = \"ndjson\" and \"lines\" emit one item per line, even the last with no newline" do
+      Req.Test.stub(Http, fn conn ->
+        Plug.Conn.send_resp(conn, 200, "{\"n\": 1}\n\n{\"n\": 2}")
+      end)
+
+      assert {:ok, []} = Http.execute(nil, %{"url" => "http://api.test/", "stream" => "ndjson"})
+      assert_received {:emit, %{"n" => 1}, nil}
+      assert_received {:emit, %{"n" => 2}, nil}
+
+      Req.Test.stub(Http, fn conn -> Plug.Conn.send_resp(conn, 200, "one\r\ntwo") end)
+      assert {:ok, []} = Http.execute(nil, %{"url" => "http://api.test/", "stream" => "lines"})
+      assert_received {:emit, "one", nil}
+      assert_received {:emit, "two", nil}
+    end
+
+    test "a streamed non-2xx response is an error and emits nothing" do
+      Req.Test.stub(Http, fn conn -> Plug.Conn.send_resp(conn, 503, "data: busy\n\n") end)
+
+      assert {:error, "HTTP 503: data: busy" <> _} =
+               Http.execute(nil, %{"url" => "http://api.test/", "stream" => "sse"})
+
+      refute_received {:emit, _, _}
+    end
+
+    test "streamed messages split across chunks come out whole" do
+      chunks = ["data: {\"a\"", ": 1}\n", "\nda", "ta: two\n\n"]
+
+      {items, _parser} =
+        Enum.flat_map_reduce(chunks, Http.new_parser(), fn chunk, parser ->
+          Http.parse("sse", parser, chunk)
+        end)
+
+      assert items == [
+               %{"event" => "message", "data" => %{"a" => 1}},
+               %{"event" => "message", "data" => "two"}
+             ]
+    end
+
+    test "an unknown stream protocol fails at load time" do
+      assert {:error, "stream must be" <> _} =
+               Http.prepare(%{"stream" => "carrier pigeon"}, ".", ".")
+    end
   end
 
   describe "Postgres" do

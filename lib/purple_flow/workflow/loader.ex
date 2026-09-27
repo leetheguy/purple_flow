@@ -188,14 +188,78 @@ defmodule PurpleFlow.Workflow.Loader do
   defp step_options(raw, label) do
     after_ = List.wrap(Map.get(raw, "after", []))
 
-    with {:ok, run} <- run_mode(Map.get(raw, "run", "each"), label),
-         {:ok, concurrency} <- concurrency(Map.get(raw, "concurrency", "concurrent"), label),
-         {:ok, timeout} <- timeout(Map.get(raw, "timeout", 30), label),
+    with :ok <- removed(raw, label),
+         {:ok, concurrency} <- concurrency(Map.get(raw, "concurrency", 1_000), label),
+         {:ok, delay} <- whole(Map.get(raw, "delay", 0), 0, "delay", "milliseconds", label),
+         {:ok, timeout} <- timeout(Map.get(raw, "timeout", 0), label),
+         {:ok, max_queue} <- max_queue(Map.get(raw, "max_queue"), label),
+         {:ok, on_full} <- on_full(Map.get(raw, "on_full"), max_queue, label),
+         {:ok, on_fail} <- on_fail(Map.get(raw, "on_fail", "continue"), label),
          :ok <- check_when(raw["when"], after_, label) do
       {:ok,
-       [after: after_, when: raw["when"], run: run, concurrency: concurrency, timeout: timeout]}
+       [
+         after: after_,
+         when: raw["when"],
+         concurrency: concurrency,
+         delay: delay,
+         timeout: timeout,
+         max_queue: max_queue,
+         on_full: on_full,
+         on_fail: on_fail
+       ]}
     end
   end
+
+  # Settings from before specs/120, with what to do instead.
+  defp removed(%{"run" => _}, label),
+    do:
+      {:error,
+       "#{label}: `run` was removed. Lists always split into items; to handle many items in one execution, put a Batch step before this one (specs/140)"}
+
+  defp removed(_raw, _label), do: :ok
+
+  defp concurrency(n, label),
+    do: whole(n, 1, "concurrency", "a number, 1 for one at a time,", label)
+
+  # A whole number of at least `min`.
+  defp whole(n, min, _name, _unit, _label) when is_integer(n) and n >= min, do: {:ok, n}
+
+  defp whole(other, min, name, unit, label),
+    do: {:error, "#{label}: #{name} must be #{unit} #{min} or more, not #{inspect(other)}"}
+
+  defp timeout(seconds, _) when is_number(seconds) and seconds >= 0,
+    do: {:ok, round(seconds * 1000)}
+
+  defp timeout(other, label),
+    do:
+      {:error,
+       "#{label}: timeout must be a number of seconds (0 for no limit), not #{inspect(other)}"}
+
+  defp max_queue(nil, _label), do: {:ok, nil}
+  defp max_queue(n, label), do: whole(n, 1, "max_queue", "a number of items,", label)
+
+  defp on_full(nil, _max_queue, _label), do: {:ok, :wait}
+  defp on_full(_value, nil, label), do: {:error, "#{label}: on_full needs max_queue"}
+  defp on_full("wait", _max_queue, _label), do: {:ok, :wait}
+  defp on_full("overflow", _max_queue, _label), do: {:ok, :overflow}
+
+  defp on_full(other, _max_queue, label),
+    do: {:error, ~s(#{label}: on_full must be "wait" or "overflow", not #{inspect(other)})}
+
+  defp on_fail("continue", _label), do: {:ok, :continue}
+  defp on_fail("end_run", _label), do: {:ok, :end_run}
+
+  defp on_fail(other, label),
+    do: {:error, ~s(#{label}: on_fail must be "continue" or "end_run", not #{inspect(other)})}
+
+  defp check_when(nil, _after, _label), do: :ok
+  defp check_when(route, [_one], _label) when is_binary(route), do: :ok
+
+  defp check_when(route, _after, label) when is_binary(route),
+    do: {:error, "#{label}: `when` needs exactly one `after`"}
+
+  defp check_when(other, _after, label),
+    do: {:error, "#{label}: when must be a string, not #{inspect(other)}"}
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
@@ -207,37 +271,8 @@ defmodule PurpleFlow.Workflow.Loader do
   defp respond_mode(nil), do: :result
   defp respond_mode("result"), do: :result
   defp respond_mode("immediately"), do: :immediately
+  defp respond_mode("stream"), do: :stream
   defp respond_mode(other), do: {:bad, other}
-
-  defp run_mode("each", _), do: {:ok, :each}
-  defp run_mode("all", _), do: {:ok, :all}
-
-  defp run_mode(other, label),
-    do: {:error, "#{label}: run must be \"each\" or \"all\", not #{inspect(other)}"}
-
-  defp concurrency("concurrent", _), do: {:ok, 1_000}
-  defp concurrency("sequential", _), do: {:ok, 1}
-  defp concurrency(n, _) when is_integer(n) and n > 0, do: {:ok, n}
-
-  defp concurrency(other, label),
-    do:
-      {:error,
-       "#{label}: concurrency must be \"concurrent\", \"sequential\", or a number, not #{inspect(other)}"}
-
-  defp timeout(seconds, _) when is_number(seconds) and seconds > 0,
-    do: {:ok, round(seconds * 1000)}
-
-  defp timeout(other, label),
-    do: {:error, "#{label}: timeout must be a number of seconds, not #{inspect(other)}"}
-
-  defp check_when(nil, _after, _label), do: :ok
-  defp check_when(route, [_one], _label) when is_binary(route), do: :ok
-
-  defp check_when(route, _after, label) when is_binary(route),
-    do: {:error, "#{label}: `when` needs exactly one `after`"}
-
-  defp check_when(other, _after, label),
-    do: {:error, "#{label}: when must be a string, not #{inspect(other)}"}
 
   # -- whole-workflow checks --
 
@@ -245,7 +280,7 @@ defmodule PurpleFlow.Workflow.Loader do
     do: check_respond(workflow) ++ check_auth(workflow) ++ check_cron(workflow)
 
   defp check_respond(%Workflow{respond: {:bad, value}}) do
-    [~s(webhook respond must be "result" or "immediately", not #{inspect(value)})]
+    [~s(webhook respond must be "result", "immediately", or "stream", not #{inspect(value)})]
   end
 
   defp check_respond(_workflow), do: []

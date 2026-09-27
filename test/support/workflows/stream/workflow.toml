@@ -1,0 +1,10 @@
+[workflow]
+name = "stream"
+
+[trigger.webhook]
+path = "stream"
+respond = "stream"
+
+[[steps]]
+name = "talk"
+node = "talk.toml"

@@ -23,17 +23,29 @@ defmodule PurpleFlow.Runs do
     })
   end
 
-  @doc "Marks a run `complete` (with its output) or `failed` (with its error)."
-  def finish_run(id, status, fields) when status in ["complete", "failed"] do
+  @doc """
+  Marks a run `complete` (with its output), `failed` (with its error), or
+  `killed`.
+  """
+  def finish_run(id, status, fields) when status in ["complete", "failed", "killed"] do
     Repo.update_all(
       from(r in Run, where: r.id == ^id),
       set: [status: status, finished_at: DateTime.utc_now()] ++ fields
     )
   end
 
-  @doc "Saves one node execution."
-  def save_step(fields) do
-    Repo.insert!(struct!(StepRun, fields))
+  @doc """
+  Saves node executions, many in one insert. Each is a map of `StepRun`
+  fields. The run process saves its rows this way in batches.
+  """
+  def save_steps(rows) do
+    fields = StepRun.__schema__(:fields) -- [:id]
+
+    rows
+    |> Enum.map(fn row -> Map.new(fields, &{&1, Map.get(row, &1)}) end)
+    # Postgres takes at most 65,535 parameters per statement.
+    |> Enum.chunk_every(5_000)
+    |> Enum.each(&Repo.insert_all(StepRun, &1))
   end
 
   @doc "Newest runs first. `workflow: nil` lists runs of every workflow."

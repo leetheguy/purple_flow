@@ -32,6 +32,25 @@ defmodule PurpleFlowWeb.WebhookControllerTest do
     assert_receive {:run_finished, ^run_id, "complete"}, 5_000
   end
 
+  test "respond = \"stream\" sends each last-step item as an event, then end", %{conn: conn} do
+    conn = post(conn, "/hooks/stream")
+
+    assert conn.status == 200
+    assert ["text/event-stream" <> _] = get_resp_header(conn, "content-type")
+    [run_id] = get_resp_header(conn, "x-run-id")
+
+    assert [
+             "data: " <> hello,
+             "data: " <> world,
+             "event: end\ndata: " <> done,
+             ""
+           ] = String.split(conn.resp_body, "\n\n")
+
+    assert Jason.decode!(hello) == %{"word" => "hello"}
+    assert Jason.decode!(world) == %{"word" => "world"}
+    assert Jason.decode!(done) == %{"status" => "complete", "run_id" => run_id}
+  end
+
   test "an unknown path is a 404", %{conn: conn} do
     assert %{"error" => _} = conn |> post("/hooks/nope") |> json_response(404)
   end

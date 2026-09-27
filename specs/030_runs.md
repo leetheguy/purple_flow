@@ -1,6 +1,6 @@
 # 030 — Runs
 
-Status: implemented
+Status: superseded by [120](120_flow.md)
 Created: 2026-09-25
 
 ## Who does what

@@ -13,7 +13,11 @@ defmodule PurpleFlow do
   Starts a run of the named workflow and returns its ID right away, without
   waiting for it to finish.
 
-  Options: `trigger:` (saved with the run; defaults to `"manual"`).
+  Options: `trigger:` (saved with the run; defaults to `"manual"`),
+  `id:` (a run ID to use), and `stream_to:` (a pid that gets
+  `{:run_item, run_id, step, item}` for every item a last step produces,
+  as it's produced, then `{:run_finished, run_id, status}`; see
+  `specs/150_streaming.md`).
   """
   @spec run(String.t(), term(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def run(workflow_name, input, opts \\ []) do
@@ -31,7 +35,8 @@ defmodule PurpleFlow do
         id: id,
         workflow: workflow,
         input: input,
-        trigger: Keyword.get(opts, :trigger, "manual")
+        trigger: Keyword.get(opts, :trigger, "manual"),
+        stream_to: Keyword.get(opts, :stream_to)
       }
 
       case DynamicSupervisor.start_child(PurpleFlow.RunSupervisor, {PurpleFlow.Run, args}) do
@@ -57,6 +62,9 @@ defmodule PurpleFlow do
           {:run_finished, ^id, "complete"} ->
             {:ok, Runs.get(id).run.output}
 
+          {:run_finished, ^id, "killed"} ->
+            {:error, "workflow #{workflow_name} was killed"}
+
           {:run_finished, ^id, _failed} ->
             {:error, "workflow #{workflow_name} failed: #{Runs.get(id).run.error["message"]}"}
         end
@@ -65,6 +73,13 @@ defmodule PurpleFlow do
       Phoenix.PubSub.unsubscribe(PurpleFlow.PubSub, topic(id))
     end
   end
+
+  @doc """
+  Stops a running run now: running executions are stopped and saved as
+  `killed`, and so is the run. See `specs/130_failures.md`.
+  """
+  @spec kill(String.t()) :: :ok | {:error, String.t()}
+  def kill(run_id), do: PurpleFlow.Run.kill(run_id)
 
   @doc "The PubSub topic for one run's messages."
   def topic(run_id), do: "run:" <> run_id

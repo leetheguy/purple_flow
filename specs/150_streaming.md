@@ -1,6 +1,6 @@
 # 150 — Streaming
 
-Status: draft
+Status: implemented
 Created: 2026-09-27
 
 Since items already flow one at a time ([120](120_flow.md)), streaming is just a node handing over items while it's still running, instead of all at once when it returns. The HTTP node does that for streamed responses, and a webhook can stream its run's results back to the caller as they're made.

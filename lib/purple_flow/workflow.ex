@@ -19,7 +19,7 @@ defmodule PurpleFlow.Workflow do
           name: String.t(),
           dir: String.t(),
           webhook: String.t() | nil,
-          respond: :result | :immediately,
+          respond: :result | :immediately | :stream,
           auth: String.t() | nil,
           auth_header: String.t() | nil,
           cron: String.t() | nil,
@@ -28,10 +28,14 @@ defmodule PurpleFlow.Workflow do
 
   defmodule Step do
     @moduledoc """
-    One step of a workflow: which node it runs, what it waits for, and how.
+    One step of a workflow: which node it runs, what feeds it, and how fast
+    it drains its queue (see `specs/120_flow.md`).
 
     `ancestors` is every step you reach by following `after` backward. Those
     are the only earlier outputs this step is allowed to see.
+
+    `timeout` is in milliseconds, `0` for no limit. `max_queue` is `nil` for
+    no limit.
     """
 
     defstruct [
@@ -42,9 +46,12 @@ defmodule PurpleFlow.Workflow do
       :when,
       after: [],
       ancestors: [],
-      timeout: 30_000,
-      run: :each,
-      concurrency: 1_000
+      timeout: 0,
+      concurrency: 1_000,
+      delay: 0,
+      max_queue: nil,
+      on_full: :wait,
+      on_fail: :continue
     ]
 
     @type t :: %__MODULE__{
@@ -55,9 +62,12 @@ defmodule PurpleFlow.Workflow do
             when: String.t() | nil,
             after: [String.t()],
             ancestors: [String.t()],
-            timeout: pos_integer(),
-            run: :each | :all,
-            concurrency: pos_integer()
+            timeout: non_neg_integer(),
+            concurrency: pos_integer(),
+            delay: non_neg_integer(),
+            max_queue: pos_integer() | nil,
+            on_full: :wait | :overflow,
+            on_fail: :continue | :end_run
           }
   end
 
@@ -69,6 +79,9 @@ defmodule PurpleFlow.Workflow do
 
   @doc "Steps that come right after `name`."
   def next_steps(%__MODULE__{steps: steps}, name), do: Enum.filter(steps, &(name in &1.after))
+
+  @doc "True for a Batch step, which the run handles itself (`specs/140_batch.md`)."
+  def batch?(%Step{module: module}), do: module == PurpleFlow.Nodes.Batch
 
   @doc "Steps that nothing else comes after. Their outputs are the run's output."
   def last_steps(%__MODULE__{steps: steps} = workflow) do

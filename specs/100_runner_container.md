@@ -131,3 +131,6 @@ release, a missing runner address is a boot error, not a fallback.
 - Per-credential allowed-host locks on the HTTP/Postgres nodes.
 - A VM per workflow inside the runner, if scripts interfering with other
   workflows' scripts ever turns out to matter.
+
+## Log
+- 2026-09-27 — [120](120_flow.md): the step's `timeout` (and Kill, [130](130_failures.md)) is enforced by `PurpleFlow.Run` killing the execution's process, which closes the connection and makes the runner kill the script, as before. `timeout` now defaults to no limit.

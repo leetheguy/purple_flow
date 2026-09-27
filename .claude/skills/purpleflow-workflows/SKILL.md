@@ -5,7 +5,7 @@ description: Create, edit, check, run, and debug PurpleFlow workflows (TOML work
 
 # PurpleFlow workflows
 
-PurpleFlow is a barebones n8n on Elixir. A workflow is a folder of plain files in `workflows/`. A trigger starts a **run**. The run walks the **steps**, and each step runs a **node**: one input in, one output out. Every execution is saved and shows up in the UI.
+PurpleFlow is a barebones n8n on Elixir. A workflow is a folder of plain files in `workflows/`. A trigger starts a **run**. Every **step** has a queue; items flow through the steps one at a time, and each step runs its **node** once per item: one item in, one output out. Every execution is saved and shows up in the UI.
 
 The full design is in `specs/`. This sheet covers what you need day to day.
 
@@ -47,7 +47,8 @@ name = "sync_records"          # unique
 
 [trigger.webhook]              # optional
 path = "sync-records"          # POST/GET /hooks/sync-records
-respond = "result"             # default: reply with the run's output. "immediately" = reply 202 + run_id
+respond = "result"             # default: reply with the run's output. "immediately" = reply 202 + run_id.
+                               # "stream" = server-sent events: each last-step item as it's made, then `end`
 auth = "SYNC_HOOK_TOKEN"       # optional: callers must send `Authorization: Bearer <credential value>`, else 401
 auth_header = "x-telegram-bot-api-secret-token"  # optional, needs auth: read the bare token from this header instead
 
@@ -62,11 +63,16 @@ node = "fetch.toml"            # relative to this file
 name = "save_big"
 node = "save.toml"
 after = ["is_big"]             # what feeds this step. No `after` = gets the trigger input
-when = "big"                   # only runs on this route. Needs exactly one `after`
-run = "each"                   # default. "all" = get the whole list in one execution
-concurrency = "concurrent"     # default (1,000 at once). "sequential", or a number like 5
-timeout = 30                   # seconds per execution, default 30
+when = "big"                   # only takes items on this route. Needs exactly one `after`
+concurrency = 5                # most running at once, across the run. Default 1000; 1 = one at a time, in order
+delay = 100                    # ms between starts, across the run. Default 0
+timeout = 30                   # seconds per execution. Default 0 = no limit
+max_queue = 50                 # most items waiting in this step's queue. Default: no limit
+on_full = "wait"               # with max_queue: "wait" (default) holds back the steps feeding it; "overflow" sends extras down the `overflow` route
+on_fail = "continue"           # default: a failed item stops there. "end_run" = one failure ends the run
 ```
+
+`run = "each"/"all"` and `concurrency = "sequential"/"concurrent"` are gone; they fail to load with a message saying what to use.
 
 ### Node file
 
@@ -80,20 +86,37 @@ headers = { authorization = "Bearer {{ creds.API_TOKEN }}" }
 
 ## How data moves
 
-- A step's **input** is the output of its `after` step. First steps get the trigger input.
-- **Lists run per item.** If the input is a list, the node runs once per item, in parallel, and the results come back as **one flat list**. 10 items that each return 5 results make 50 items, not 10 lists. Use `run = "all"` to get the whole list at once (bulk inserts, summaries, narrowing a list down).
-- An empty list means zero executions. Steps after it get `[]` and run zero times too.
-- Output caps at 10,000 items. More than that fails the run.
-- **Branches:** a node returns `{:ok, output, "route"}`, and steps with `when = "route"` run. Per item, each item goes its own way. A branch nobody took simply doesn't run.
-- **Branches meeting again:** a step with several `after` steps runs **each time** one of them finishes. After an if/else that's once. After two parallel branches that both ran, it's twice.
-- **The run's output** is the output of the last step (the one nothing comes after). If several last steps ran, it's a map of `%{"step" => output}`.
+See `specs/120_flow.md` for the whole story.
+
+- **One item, one execution.** A node always gets exactly one item as its input.
+- **A list splits.** A node that returns a list hands on each element as its own item. 10 items that each return 5 results make 50 executions of the next step. An empty list hands on nothing.
+- **Anything else is one item**, including `{"rows": [...]}`. Wrapping a list in an object is how a group travels as one. The Batch node does it for you.
+- **Every step has a queue**, and items don't wait for the rest of their step: each moves on as soon as it's done. So items reach the next step in the order they finish, not the order they started. `concurrency = 1` keeps queue order.
+- **Failures are per item.** A failed execution stops that item and saves an `error`/`timed_out` record; the run carries on and ends `complete`. Steps with `when = "failed"` get `{"error": "...", "input": <item>}`. `on_fail = "end_run"` on the step makes one failure end the run as `failed` (running executions finish; nothing new starts).
+- **Branches:** a node returns `{:ok, output, "route"}`, and steps with `when = "route"` get those items. A step without `when` gets every item except `failed`/`overflow` ones.
+- **Branches meeting again:** a step with several `after` steps gets items from all of them, one execution per item.
+- **The run's output** comes from the last steps (nothing after them): a step that ran once gives its output; more than once, all its items as a list, in start order. Several last steps: `%{"step" => output}`.
+- **Streaming:** a node can hand items on while still running (`PurpleFlow.Node.emit/2`); the HTTP node does with `stream = "sse" | "ndjson" | "lines"`. See `specs/150_streaming.md`.
+- There's no item cap and no default timeout. A stuck run is stopped with Kill on its page, or `PurpleFlow.kill(run_id)`.
+
+## Design guidelines
+
+It's a power tool; it does what the workflow says. When you design one, think about:
+
+- **Queues.** A slow step after a fast one builds a queue. Pace it with `concurrency` and `delay` (both across the whole run: `delay = 100` is at most 10 starts a second). Cap it with `max_queue`, then choose: `on_full = "wait"` slows the steps feeding it; `"overflow"` sends extras to a `when = "overflow"` step.
+- **Grouping.** Put a Batch step before bulk inserts, summaries, and APIs that take many records per call.
+- **Fan-out.** Nothing caps how many items a step makes. 1,000 × 1,000 is a million executions.
+- **Failures.** Decide per step: carry on (default), handle on a `failed` route, or `end_run`.
+- **Timeouts.** None by default. Set one on steps that can hang.
+- **Order.** Items finish in any order; use `concurrency = 1` where order matters.
+- **Recursion.** A workflow may run itself through the Workflow node. Make sure it stops.
 
 ## Templates (in any `[config]` string)
 
 | Placeholder | Means |
 |---|---|
 | `{{ input.user.id }}` | from this node's input (`input.items.0` for list positions) |
-| `{{ steps.fetch.output.total }}` | from an **ancestor** step's output (only ancestors, never sibling branches) |
+| `{{ steps.fetch.output.total }}` | from the item an **ancestor** step produced on the way to this item (if `fetch` returned a list, the element that led here). Only ancestors, never sibling branches |
 | `{{ creds.API_TOKEN }}` | a credential |
 
 If a string is only one placeholder, the raw value is used (numbers, lists, and maps stay as they are). A missing path fails the step.
@@ -109,9 +132,10 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 
 | module | config | output |
 |---|---|---|
-| `PurpleFlow.Nodes.Http` | `url`, `method` (GET), `headers`, `query`, `body` (maps are sent as JSON) | response body. Non-2xx is an error. No retries |
+| `PurpleFlow.Nodes.Http` | `url`, `method` (GET), `headers`, `query`, `body` (maps are sent as JSON), `stream` (`"sse"`, `"ndjson"`, `"lines"`) | response body. Non-2xx is an error. No retries. With `stream`: one item per event/line as it arrives (SSE: `{"event", "data", "id"}`), and returns `[]` |
 | `PurpleFlow.Nodes.Postgres` | `database_url`, `query`, `params` | list of row maps, so the next step runs per row |
 | `PurpleFlow.Nodes.Code` | `file` (an `.exs` next to the node file) | whatever the script returns |
+| `PurpleFlow.Nodes.Batch` | `size`, `wait` (ms, optional) | `{"items": [...]}`, one per batch. The last partial batch goes when nothing more can reach it |
 | `PurpleFlow.Nodes.Workflow` | `workflow` (name) | that workflow's output. Waits for it |
 
 **Postgres:** values always go in `params` as `$1`, `$2`, …, never pasted into `query`. Params arrive as text or numbers, so cast in SQL when needed: `$1::text::timestamptz`.
@@ -128,8 +152,9 @@ Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
 ## Gotchas
 
 - **Webhook input is wrapped**: `%{"body" => ..., "query" => ..., "headers" => ...}`. Most webhook workflows start with a tiny Code step that returns `input["body"]` (see `samples/hello/numbers.exs`).
-- Webhook calls wait for the result by default. For runs that can take longer than ~100s (Cloudflare's limit), use `respond = "immediately"`.
-- A list output from an HTTP or Postgres node makes the next step run per item. That's usually what you want. If not, use `run = "all"`.
+- Webhook calls wait for the result by default. For runs that can take longer than ~100s (Cloudflare's limit), use `respond = "immediately"` or `respond = "stream"`.
+- A list output from an HTTP or Postgres node makes the next step run per item. That's usually what you want. If not, wrap it in an object in a Code step, or gather items with a Batch step.
+- A run with failed items still ends `complete`. Look at the steps' ok / total on its page, or the `step_runs` statuses.
 - **Edits load on their own**, about two seconds after the last save. There's no reload step. If an edit breaks a workflow, **its previous version keeps running**, so a webhook that still answers doesn't prove your change loaded. Check (below).
 - The UI's Run button makes a real run. HTTP and Postgres steps really call out. Its box takes just the **body**: the run's input is `{"body": <what you typed>, "query": {}, "headers": {}}`, the same shape as a webhook's, so one workflow works from both.
 
@@ -155,9 +180,9 @@ Loading catches bad TOML, missing files, paths that leave the workflows folder, 
 ## Run and inspect
 
 - **Webhook:** `curl -X POST localhost:4000/hooks/<path> -H 'content-type: application/json' -d '<json>'`. The reply is the output. The run ID is in the `x-run-id` header.
-- **UI:** `localhost:4000`, then the workflow's Run box, then the run page. Click a step to see its input and output. Per-item steps expand into one row per item.
-- **Database** (dev db `purple_flow_dev`): `runs` has one row per run (`status`, `input`, `output`, `error`). `step_runs` has one row per node execution (`step`, `item`, `from_item`, `status`, `route`, `input`, `output`, `error`).
-- **A failed run's `error`** says which step and item failed and why. Nothing after a failure starts.
+- **UI:** `localhost:4000`, then the workflow's Run box, then the run page. Each step shows ok / total executions and, while running, its queue and running / concurrency. Click a step to see its input and output; a step that ran more than once expands into one row per execution. A running run has a Kill button.
+- **Database** (dev db `purple_flow_dev`): `runs` has one row per run (`status`: `running`, `complete`, `failed`, `killed`, `interrupted`; `input`, `output`, `error`). `step_runs` has one row per node execution (`step`, `item` = the step's execution number, `from_item` = the execution before it that made its input, `status` = `ok`, `error`, `timed_out`, `killed`, or `overflow`, `route`, `input`, `output`, `error`). Rows are saved in batches every 250 ms.
+- **A failed run's `error`** says which step and execution ended it (`on_fail = "end_run"`) and why.
 
 ## A new node type
 
@@ -180,5 +205,5 @@ end
 ```
 
 - Config arrives with templates already filled in.
-- Optional: `execute/3` also gets `steps`, and `prepare/3` (`config, node_dir, root`) checks config when the workflow loads. A file named in config is resolved with `PurpleFlow.Workflow.Paths.resolve/3`, so it can't leave the workflows folder.
+- Optional: `execute/3` also gets `steps`, and `prepare/3` (`config, node_dir, root`) checks config when the workflow loads. To stream, call `PurpleFlow.Node.emit(item)` while running and return `{:ok, []}` at the end. A file named in config is resolved with `PurpleFlow.Workflow.Paths.resolve/3`, so it can't leave the workflows folder.
 - Keep docs short and plain. Add a test that calls `execute/2` directly, then run `mix precommit`.

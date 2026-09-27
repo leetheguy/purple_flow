@@ -5,6 +5,11 @@ defmodule PurpleFlow.Node do
   A node is a module with an `execute` function: one input in, one output out.
   That's the whole interface. HTTP, Postgres, Code: all the same shape.
 
+  The input is always one item. A list output splits into items, one
+  execution each for the next steps; anything else, including an object
+  holding a list, is one item. A node can also hand items on while it's
+  still running, with `emit/2`. See `specs/120_flow.md`.
+
       defmodule MyNode do
         @behaviour PurpleFlow.Node
 
@@ -53,6 +58,28 @@ defmodule PurpleFlow.Node do
               {:ok, map()} | {:error, String.t()}
 
   @optional_callbacks execute: 2, execute: 3, prepare: 3
+
+  @doc """
+  Hands one item on now, while the node is still running, instead of
+  waiting for it to return (streaming, see `specs/150_streaming.md`). The
+  item goes to the next steps right away, like a returned one: a list
+  splits. Waits while a step after this one is full and set to wait.
+
+  Call it only from the node's own execution. Outside one (a test calling
+  `execute` directly), it sends `{:emit, value, route}` to the calling
+  process instead.
+  """
+  @spec emit(term(), String.t() | nil) :: :ok
+  def emit(value, route \\ nil) do
+    case Process.get(:purple_flow_emit) do
+      nil ->
+        send(self(), {:emit, value, route})
+        :ok
+
+      emit ->
+        emit.(value, route)
+    end
+  end
 
   @doc "True if `module` is a real module that says it's a `PurpleFlow.Node`."
   def node_module?(module) do

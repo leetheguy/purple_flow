@@ -1,6 +1,6 @@
 # 120 — Flow
 
-Status: draft
+Status: implemented
 Created: 2026-09-27
 Replaces: [030](030_runs.md)
 
@@ -104,7 +104,7 @@ One `step_runs` row per execution, as before, with `item` numbering the step's e
 | `"run:<id>"` | `{:run_progress, id, stats}` | at most every 250 ms while anything changed, right after the latest rows are saved |
 | `"run:<id>"`, `"runs"` | `{:run_finished, id, status}` | the run ends |
 
-`stats` is `%{"step" => %{queued:, running:, ok:, failed:, overflow:}}`. The per-execution `step_started` and `step_finished` messages are gone: a busy run would send thousands a second.
+`stats` is `%{"step" => %{queued:, running:, concurrency:, ok:, failed:, overflow:}}`. The per-execution `step_started` and `step_finished` messages are gone: a busy run would send thousands a second.
 
 ## Tests
 

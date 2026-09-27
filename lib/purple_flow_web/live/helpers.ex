@@ -3,7 +3,10 @@ defmodule PurpleFlowWeb.Live.Helpers do
 
   use Phoenix.Component
 
-  @doc "A colored status pill: green ok, red failed, blue running, gray didn't run."
+  @doc """
+  A colored status pill: green ok, red failed, amber overflowed, blue
+  running, gray anything else (killed, interrupted, didn't run).
+  """
   attr :status, :string, required: true
   attr :id, :string, default: nil
 
@@ -28,6 +31,7 @@ defmodule PurpleFlowWeb.Live.Helpers do
   def status_class(status) when status in ["failed", "error", "timed_out"],
     do: "bg-red-500/15 text-red-600 dark:text-red-400"
 
+  def status_class("overflow"), do: "bg-amber-500/15 text-amber-600 dark:text-amber-400"
   def status_class("running"), do: "bg-sky-500/15 text-sky-600 dark:text-sky-400"
   def status_class(_), do: "bg-base-300/60 text-base-content/50"
 

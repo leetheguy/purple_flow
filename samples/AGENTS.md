@@ -56,7 +56,7 @@ my_flow/
   check.exs
 ```
 
-A run works like this. Something starts it (a web request, a schedule, or a person clicking Run). The steps then run in order, and each step's output becomes the next step's input.
+A run works like this. Something starts it (a web request, a schedule, or a person clicking Run). Each step's output becomes the next step's input, one item at a time: every step has a queue in front of it, and items flow through as soon as they're ready (see How data flows).
 
 Only folders containing a `workflow.toml` are workflows. Other files are ignored.
 
@@ -99,22 +99,26 @@ Step options:
 
 | Option | Meaning |
 |---|---|
-| `after = ["a"]` | this step's input is step `a`'s output. Leave it out for the first step, which gets what started the run |
-| `when = "big"` | only run if the step before sent its result down the route named `big` (see Branching). Needs exactly one `after` |
-| `run = "all"` | when the input is a list, handle the whole list at once instead of once per item |
-| `concurrency = 5` | when running once per item, at most this many at a time (default: all at once) |
-| `timeout = 60` | seconds allowed per step (default 30) |
+| `after = ["a"]` | this step gets step `a`'s items. Leave it out for the first step, which gets what started the run |
+| `when = "big"` | only take items the step before sent down the route named `big` (see Branching). Needs exactly one `after` |
+| `concurrency = 5` | at most this many of this step's runs at once, across the whole run (default 1000). `1` means one at a time, in order |
+| `delay = 200` | milliseconds between starts of this step's runs (default 0). For rate-limited APIs |
+| `timeout = 60` | seconds one run of the step may take before it's stopped (default 0: no limit) |
+| `max_queue = 100` | the most items that may wait in this step's queue (default: no limit) |
+| `on_full = "wait"` | with `max_queue`: what happens when the queue is full. `"wait"` (default) holds back the steps feeding it; `"overflow"` sends extra items down the `overflow` route instead |
+| `on_fail = "end_run"` | a failure here ends the whole run. Default `"continue"`: only that item stops |
 
 Webhook options:
 
 | Option | Meaning |
 |---|---|
 | `respond = "immediately"` | reply right away instead of waiting for the result. Use this for anything that takes more than about a minute |
+| `respond = "stream"` | reply with a server-sent event stream: each result as it's made, then an `end` event (see Streaming) |
 | `auth = "SOME_NAME"` | callers must send `Authorization: Bearer <secret>`, where the secret is a stored credential named `SOME_NAME` |
 
 ## Step files
 
-A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are four kinds.
+A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are five kinds.
 
 **HTTP request**
 
@@ -130,6 +134,8 @@ body = { name = "{{ input.name }}" }     # sent as JSON
 ```
 
 The output is the response body. A response that isn't a success (anything outside 200–299) fails the step.
+
+Add `stream = "sse"` (server-sent events), `"ndjson"` (one JSON value per line), or `"lines"` (plain text lines) to read a streamed response as it arrives. Each event or line becomes its own item and moves on right away, while the rest is still coming. A server-sent event arrives as `{"event": "message", "data": ..., "id": "..."}`, with `data` already decoded if it's JSON. Streams from AI APIs usually want `stream = "sse"`.
 
 **Database query (Postgres)**
 
@@ -166,6 +172,18 @@ end
 
 It can also return `{:ok, value}`, `{:error, "what went wrong"}`, or just a plain value. Scripts have no internet access and no secrets, so fetch data with an HTTP step first and read it from `input` or `steps`. Results must be plain data: text, numbers, true/false, lists, and key/value maps.
 
+**Batch**
+
+```toml
+module = "PurpleFlow.Nodes.Batch"
+
+[config]
+size = 100       # hand on a batch once it has this many items
+wait = 2000      # optional: or once the oldest has waited this many milliseconds
+```
+
+Gathers items and hands them on as one: `{"items": [...]}`. The step after it runs once per batch and reads `input.items`. The last, smaller batch goes once nothing more can reach it, so nothing is left behind. Use it for bulk inserts, summaries, and APIs that take many records per call.
+
 **Run another workflow**
 
 ```toml
@@ -175,7 +193,7 @@ module = "PurpleFlow.Nodes.Workflow"
 workflow = "other_flow_name"
 ```
 
-The output is whatever that workflow outputs. This step waits for it to finish.
+The output is whatever that workflow outputs. This step waits for it to finish, with no time limit unless the step sets `timeout`. A workflow may run itself this way; see Guidelines.
 
 ## Filling in values: `{{ }}`
 
@@ -184,7 +202,7 @@ Any text in `[config]` can include values from the run:
 | Write | Gets |
 |---|---|
 | `{{ input.user.id }}` | a field from this step's input. Use numbers for list positions: `{{ input.items.0 }}` |
-| `{{ steps.fetch.output.total }}` | a field from an earlier step's output. Only steps that lead to this one, not steps on another branch |
+| `{{ steps.fetch.output.total }}` | a field from the item an earlier step produced on the way to this one. If `fetch` returned 500 users, the step handling user 7 sees user 7. Only steps that lead to this one, not steps on another branch |
 | `{{ creds.SOME_NAME }}` | a stored secret |
 
 If the whole value is a single `{{ }}`, the original value is kept as is, so lists stay lists and numbers stay numbers. A `{{ }}` pointing at something that doesn't exist fails the step.
@@ -197,12 +215,38 @@ You can't create secrets or see their values. A person adds them in the app. If 
 
 ## How data flows
 
-- **A list runs once per item.** If a step's input is a list, the step runs once for each item, all at the same time, and the results are gathered into one flat list. If 10 items each produce 5 results, the next step gets 50 items, not 10 lists of 5. Use `run = "all"` when a step should get the whole list at once, for example to count, summarize, or insert many rows in one go.
-- **An empty list** means the step runs zero times, and so does everything after it.
-- **Branching:** a Code step can send its result down a named route, and only steps with a matching `when` run. When a step runs once per item, each item takes its own route.
-- **Joining back up:** a step with several `after` entries runs once each time one of those steps finishes.
-- **The result of the run** is the output of the last step.
-- **Limit:** a step can produce at most 10,000 items.
+- **One item, one run.** A step runs once for every item it gets, and each run gets exactly one item.
+- **A list splits.** When a step returns a list, each element becomes its own item. If 10 items each produce 5 results, the next step runs 50 times. An empty list means nothing goes on.
+- **Anything else is one item**, including an object holding a list. Return `{"rows": [...]}` and the next step gets the whole list in one run. That's how you keep a group together. The Batch step does it for you.
+- **Every step has a queue.** Items don't wait for the rest of their step: each one moves on to the next step's queue as soon as it's ready. The next step takes items off its queue as fast as its `concurrency` and `delay` allow. So items finish in whatever order they finish, not the order they came in, unless a step has `concurrency = 1`.
+- **Failures stop one item, not the run.** A failed item goes no further, and the rest carry on. To handle failures, add a step with `when = "failed"` after the step that might fail: it gets `{"error": "...", "input": <the item>}`. To stop everything on the first failure (an email blast, say), set `on_fail = "end_run"` on that step.
+- **Branching:** a Code step can send its result down a named route, and only steps with a matching `when` get it. Each item takes its own route.
+- **Joining back up:** a step with several `after` entries gets the items from all of them, one run per item.
+- **The result of the run** is the output of the last step: its output if it ran once, or all its items as a list if it ran more than once.
+- **Kill:** a run that's stuck can be stopped from its page in the app.
+
+## Streaming
+
+Two things stream:
+
+- **An HTTP step with `stream`** hands on each message of the response as it arrives (see HTTP request above).
+- **A webhook with `respond = "stream"`** replies as a server-sent event stream. Every item the last step produces is sent as `data: <item as JSON>` as soon as it exists, and the stream ends with `event: end` and `data: {"status": "complete", "run_id": "..."}`.
+
+Together: a webhook that streams an AI's answer back to its caller is a workflow whose last step is an HTTP step with `stream = "sse"` and whose webhook has `respond = "stream"`. Items stream back as they arrive.
+
+## Guidelines
+
+This is a power tool. It won't stop you from doing big or risky things; it gives you the controls to do them well. Things to keep in mind:
+
+- **Think about the queues.** Every step has a queue, and it fills whenever items arrive faster than the step handles them. A slow step after a fast one (an AI call after a database query, say) builds a queue. That's fine; it's what queues are for. Watch the run page: it shows each step's queue, what's running, and how many succeeded.
+- **Pace calls to outside services.** A step's `concurrency` (how many at once) and `delay` (milliseconds between starts) apply across the whole run. For an API that allows 10 requests a second, use `delay = 100`. For an API that dislikes parallel calls, use `concurrency = 1`.
+- **Hold back or spill over.** `max_queue` caps a queue. With `on_full = "wait"`, the steps feeding it slow down to match. With `on_full = "overflow"`, extra items go to a step with `when = "overflow"`, where you decide what happens to them.
+- **Group before bulk work.** Put a Batch step before bulk inserts and before APIs that take many records at once, instead of making one call per item.
+- **Mind the fan-out.** A list of 1,000 items that each produce 1,000 more is a million runs of the next step. There's no limit, so it will do exactly that.
+- **Decide what a failure means.** The default is to let one item fail and carry on. Add a `when = "failed"` step to log, retry elsewhere, or notify someone. Use `on_fail = "end_run"` where one failure means the rest shouldn't happen.
+- **Set a timeout where it matters.** There's no time limit by default. A step calling something that can hang forever should set `timeout`.
+- **Order is yours to keep.** Items flow in whatever order they finish. If order matters, use `concurrency = 1` on the steps where it does, or put things back in order in a Code step after a Batch.
+- **Workflows may run themselves.** A workflow can run itself, directly or through others, as deep as you like. It's up to you to make sure it stops.
 
 ## What a webhook sends in
 
@@ -236,7 +280,7 @@ Wait until `reloaded_at` is later than your last save. Then check:
 - `"running_older_version": true`: your edit didn't load. `problems` says why, and the old version is still the one running.
 - A new workflow that failed shows up under `not_loaded`, with its problems.
 
-The checks catch broken file syntax, missing files, unknown step names, steps that loop back on themselves, misused `when`, missing secrets, and script syntax errors.
+The checks catch broken file syntax, missing files, unknown step names, steps that loop back on themselves, misused `when`, bad step options, missing secrets, and script syntax errors.
 
 ## Try it
 
@@ -246,7 +290,7 @@ If the workflow has a webhook, call it:
 curl -X POST "BASE/hooks/my-flow" -H "content-type: application/json" -d '{"hello": "world"}'
 ```
 
-The reply is the run's result, unless the webhook has `respond = "immediately"`. If it has `auth`, you need its secret, and you don't have that; ask the person to run it from the app instead.
+The reply is the run's result, unless the webhook has `respond = "immediately"` or `respond = "stream"`. If it has `auth`, you need its secret, and you don't have that; ask the person to run it from the app instead.
 
 Real runs do real things: HTTP steps really send requests, and database steps really read and write.
 

@@ -1,6 +1,6 @@
 # 160 — Live runs
 
-Status: draft
+Status: implemented
 Created: 2026-09-27
 
 With items flowing through queues ([120](120_flow.md)), the run page shows each step as a small machine: what's waiting, what's running, what came out. And a run that's gone wrong can be stopped.

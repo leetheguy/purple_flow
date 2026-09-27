@@ -1,91 +1,68 @@
 defmodule PurpleFlow.StepTask do
   @moduledoc """
-  Runs one node execution, start to finish, on its own.
+  One node execution, run in its own process. `PurpleFlow.Run` starts it
+  under `PurpleFlow.StepSupervisor`, watches it, and gets back its result.
 
-  For each execution a task:
+  The execution:
 
-  1. broadcasts `step_started`
-  2. fills in the config's `{{ }}` placeholders
-  3. runs the node, giving up after the step's `timeout`
-  4. redacts credentials, saves its record, broadcasts `step_finished`
+  1. fills in the config's `{{ }}` placeholders
+  2. runs the node (which may hand over items early with
+     `PurpleFlow.Node.emit/2`)
+  3. makes the result JSON-shaped and redacts credentials from it
 
-  Tasks aren't linked to the run. They finish and save their records even if
-  the run has already stopped.
+  It doesn't save anything or talk to anyone but the run: the run saves
+  rows in batches and decides where items go. Timeouts are the run's job
+  too; it kills the execution. See `specs/120_flow.md`.
   """
 
-  require Logger
-
-  alias PurpleFlow.{Redact, Runs, Template}
+  alias PurpleFlow.{Redact, Template}
 
   @doc """
-  Starts a task under `PurpleFlow.StepSupervisor`.
-
-  `args` has `:run_id`, `:step`, `:item`, `:from_item`, `:input`, `:steps`
-  (ancestor outputs), and `:instance` (which start of the step this is).
+  Starts an execution for `run` (the run's pid). `args` has `:step`,
+  `:input` (one item), and `:steps` (this item's path, as
+  `%{"fetch" => %{"output" => ...}}`). Returns a `Task`; its reply is
+  `%{status:, output:, route:, error:, input:}`.
   """
-  def start(args) do
-    Task.Supervisor.start_child(PurpleFlow.StepSupervisor, fn -> run(args) end)
+  def start(run, args) do
+    Task.Supervisor.async_nolink(PurpleFlow.StepSupervisor, fn -> execute(run, args) end)
   end
 
   @doc false
-  def run(%{run_id: run_id, step: step, item: item} = args) do
-    started_at = DateTime.utc_now()
-    PurpleFlow.broadcast(run_id, {:step_started, run_id, step.name, item})
+  def execute(run, %{step: step, input: input, steps: steps}) do
+    case Template.render(step.config, %{input: input, steps: steps}) do
+      {:ok, config, secrets} ->
+        Process.put(:purple_flow_emit, fn value, route -> emit(run, value, route, secrets) end)
 
-    {result, secrets} =
-      case Template.render(step.config, %{input: args.input, steps: args.steps}) do
-        {:ok, config, secrets} -> {execute(step, args.input, config, args.steps), secrets}
-        {:error, message} -> {{:error, message}, []}
-      end
+        case call_node(step.module, input, config, steps) do
+          {:ok, output, route} ->
+            %{
+              status: :ok,
+              output: Redact.redact(output, secrets),
+              route: route,
+              error: nil,
+              input: Redact.redact(input, secrets)
+            }
 
-    {status, output, route, error} =
-      case result do
-        {:ok, output, route} ->
-          {:ok, output, route, nil}
+          {:error, message} ->
+            error(Redact.redact(message, secrets), Redact.redact(input, secrets))
+        end
 
-        {:error, message} ->
-          {:error, nil, nil, %{"message" => message}}
-
-        :timed_out ->
-          {:timed_out, nil, nil, %{"message" => "timed out after #{div(step.timeout, 1000)}s"}}
-      end
-
-    input = Redact.redact(args.input, secrets)
-    output = Redact.redact(output, secrets)
-    error = Redact.redact(error, secrets)
-
-    save(%{
-      run_id: run_id,
-      step: step.name,
-      item: item,
-      from_item: args.from_item,
-      status: to_string(status),
-      route: route,
-      input: input,
-      output: output,
-      error: error,
-      started_at: started_at,
-      finished_at: DateTime.utc_now()
-    })
-
-    PurpleFlow.broadcast(
-      run_id,
-      {:step_finished, run_id, step.name, item,
-       %{instance: args.instance, status: status, output: output, route: route, error: error}}
-    )
+      {:error, message} ->
+        error(message, input)
+    end
   end
 
-  # Runs the node in its own process so it can be stopped if it takes too long.
-  defp execute(step, input, config, steps) do
-    inner =
-      Task.Supervisor.async_nolink(PurpleFlow.StepSupervisor, fn ->
-        call_node(step.module, input, config, steps)
-      end)
+  defp error(message, input),
+    do: %{status: :error, output: nil, route: nil, error: %{"message" => message}, input: input}
 
-    case Task.yield(inner, step.timeout) || Task.shutdown(inner, :brutal_kill) do
-      {:ok, result} -> result
-      {:exit, reason} -> {:error, "node crashed: #{Exception.format_exit(reason)}"}
-      nil -> :timed_out
+  # Hands one item to the run now. Waits while the run holds it back.
+  defp emit(run, value, route, secrets) when is_binary(route) or is_nil(route) do
+    case to_json(value) do
+      {:ok, value} ->
+        GenServer.call(run, {:emit, self(), Redact.redact(value, secrets), route}, :infinity)
+
+      {:error, message} ->
+        raise "emitted #{message}"
     end
   end
 
@@ -109,7 +86,7 @@ defmodule PurpleFlow.StepTask do
   defp normalize({:ok, output, route}) when is_binary(route) or is_nil(route) do
     case to_json(output) do
       {:ok, output} -> {:ok, output, route}
-      {:error, message} -> {:error, message}
+      {:error, message} -> {:error, "output " <> message}
     end
   end
 
@@ -122,18 +99,11 @@ defmodule PurpleFlow.StepTask do
     end
     |> case do
       {:ok, value} -> {:ok, value}
-      {:error, error} -> {:error, "output isn't JSON: #{Exception.message(error)}"}
+      {:error, error} -> {:error, "isn't JSON: #{Exception.message(error)}"}
     end
   end
 
   defp message(reason) when is_binary(reason), do: reason
   defp message(reason) when is_exception(reason), do: Exception.message(reason)
   defp message(reason), do: inspect(reason)
-
-  # If saving fails, still broadcast, so the run hears about it and doesn't wait forever.
-  defp save(fields) do
-    Runs.save_step(fields)
-  rescue
-    error -> Logger.error("couldn't save step #{fields.step}: #{Exception.message(error)}")
-  end
 end
