@@ -1,0 +1,5 @@
+module = "PurpleFlow.Nodes.Batch"
+
+# Bigger than any count: everything goes in one batch, once the last item is in.
+[config]
+size = 1000000

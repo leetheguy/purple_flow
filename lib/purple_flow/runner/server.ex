@@ -23,8 +23,8 @@ defmodule PurpleFlow.Runner.Server do
 
   Either way, once the script is done, so is everything it started: each
   script gets its own group leader, which every process it spawns inherits,
-  and every process under that leader is killed. A script that starts a
-  `Task` and returns doesn't leave it running.
+  and `PurpleFlow.Runner.Reaper` kills every process under that leader. A
+  script that starts a `Task` and returns doesn't leave it running.
   """
 
   use GenServer
@@ -34,6 +34,12 @@ defmodule PurpleFlow.Runner.Server do
   # Largest request accepted, in bytes. A script's input and steps ride
   # along with it, so this is generous.
   @max_request 64 * 1024 * 1024
+
+  # How many connections can wait to be accepted. Every Code execution is a
+  # connection, and thousands can start at once; the kernel's own default
+  # of 5 drops the rest, which then retry after 1, 3, 7... seconds. The
+  # kernel caps this at net.core.somaxconn (4096 on current Linux).
+  @backlog 4096
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
@@ -51,7 +57,8 @@ defmodule PurpleFlow.Runner.Server do
         packet: 4,
         packet_size: @max_request,
         active: false,
-        reuseaddr: true
+        reuseaddr: true,
+        backlog: Keyword.get(opts, :backlog, @backlog)
       ])
 
     {:ok, port} = :inet.port(listen)
@@ -63,17 +70,26 @@ defmodule PurpleFlow.Runner.Server do
   end
 
   defp accept_loop(listen) do
-    {:ok, socket} = :gen_tcp.accept(listen)
+    case :gen_tcp.accept(listen) do
+      {:ok, socket} ->
+        {:ok, pid} =
+          Task.Supervisor.start_child(PurpleFlow.Runner.Connections, fn ->
+            receive do
+              {:socket, socket} -> serve(socket)
+            end
+          end)
 
-    {:ok, pid} =
-      Task.Supervisor.start_child(PurpleFlow.Runner.Connections, fn ->
-        receive do
-          {:socket, socket} -> serve(socket)
-        end
-      end)
+        :ok = :gen_tcp.controlling_process(socket, pid)
+        send(pid, {:socket, socket})
 
-    :ok = :gen_tcp.controlling_process(socket, pid)
-    send(pid, {:socket, socket})
+      # Out of file descriptors (the container's `nofile` limit): the
+      # connection waits in the backlog until one frees up. Crashing here
+      # would drop every waiting connection with it.
+      {:error, reason} when reason in [:emfile, :enfile] ->
+        Logger.warning("Code runner can't accept a connection (#{reason}); retrying")
+        Process.sleep(50)
+    end
+
     accept_loop(listen)
   end
 
@@ -129,16 +145,12 @@ defmodule PurpleFlow.Runner.Server do
     forward_io(parent)
   end
 
-  # The script (by pid too, in case it hasn't taken its leader yet), then
-  # everything it started, then the leader itself.
+  # The script and its leader now; what it started, at the Reaper's next
+  # sweep. By pid too, in case the script hasn't taken its leader yet.
   defp kill_group(script, leader) do
     Process.exit(script, :kill)
-
-    for pid <- Process.list(),
-        Process.info(pid, :group_leader) == {:group_leader, leader},
-        do: Process.exit(pid, :kill)
-
     Process.exit(leader, :kill)
+    PurpleFlow.Runner.Reaper.reap(leader)
   end
 
   # Runs in the script's own process. Returns the encoded response.

@@ -122,7 +122,9 @@ defmodule PurpleFlow.RunnerTest do
       assert_receive {:started, pid}
       ref = Process.monitor(pid)
       # :noproc if it was already gone by the time it's watched.
-      assert_receive {:DOWN, ^ref, :process, ^pid, reason} when reason in [:killed, :noproc]
+      # Swept by the Reaper, at most 100 ms after the last sweep.
+      assert_receive {:DOWN, ^ref, :process, ^pid, reason} when reason in [:killed, :noproc],
+                     1_000
     end
 
     test "what a stopped script started is killed", %{name: name} do
@@ -133,7 +135,7 @@ defmodule PurpleFlow.RunnerTest do
       ref = Process.monitor(pid)
       Process.exit(caller, :kill)
 
-      assert_receive {:DOWN, ^ref, :process, ^pid, :killed}
+      assert_receive {:DOWN, ^ref, :process, ^pid, :killed}, 1_000
     end
 
     # Its own group leader passes output on, so IO calls still get answered

@@ -25,6 +25,7 @@ defmodule PurpleFlow.Application do
   defp runner_children do
     [
       {Task.Supervisor, name: PurpleFlow.Runner.Connections},
+      PurpleFlow.Runner.Reaper,
       {PurpleFlow.Runner.Server,
        ip: {0, 0, 0, 0}, port: Application.fetch_env!(:purple_flow, :runner_port)}
     ]
@@ -68,6 +69,7 @@ defmodule PurpleFlow.Application do
 
       [
         {Task.Supervisor, name: PurpleFlow.Runner.Connections},
+        PurpleFlow.Runner.Reaper,
         PurpleFlow.Runner.Server
       ]
     end
