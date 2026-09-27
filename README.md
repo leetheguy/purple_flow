@@ -71,7 +71,8 @@ docker compose down
 This starts PurpleFlow, Postgres, the Code node runner, and the files service
 together, all behind one site and one sign-in: open `http://localhost:4000`,
 sign in with `PURPLEFLOW_ADMIN_USERNAME` / `PURPLEFLOW_ADMIN_PASSWORD`, and
-the side menu has Workflows, Files, and Credentials. Postgres
+the side menu has Workflows, Files, and Credentials. Three failed sign-ins
+lock that address out for four hours (a restart lifts it). Postgres
 has a health check, and the app container only starts once it passes;
 migrations run automatically on boot, and the container restarts on its own if
 the app dies. Code node scripts run in the `runner` container, which has no
@@ -80,7 +81,8 @@ secrets, no database, no internet, and no way to reach the app (see
 `docker-compose.yml` and `.env.example` for the environment variables to set
 (`SECRET_KEY_BASE`, `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
 `PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`,
-`WORKFLOWS_PATH`, `PUID`/`PGID`, `PURPLEFLOW_AGENT_TOKEN`, and
+`WORKFLOWS_PATH`, `PUID`/`PGID`, `PURPLEFLOW_AGENT_TOKEN`,
+`PURPLEFLOW_CLIENT_IP_HEADER` if a reverse proxy sits in front, and
 `PURPLEFLOW_RUNNER_SUBNET` if the runner's default network, `10.250.250.0/24`,
 collides with one of yours).
 

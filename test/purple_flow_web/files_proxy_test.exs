@@ -11,6 +11,7 @@ defmodule PurpleFlowWeb.FilesProxyTest do
   setup do
     System.put_env("PURPLEFLOW_ADMIN_USERNAME", "admin")
     System.put_env("PURPLEFLOW_ADMIN_PASSWORD", "hunter2")
+    PurpleFlowWeb.LoginThrottle.reset()
     System.put_env("PURPLEFLOW_AGENT_TOKEN", "agent-token")
     Application.put_env(:purple_flow, :files_url, "http://files:5000")
 

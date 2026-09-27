@@ -8,6 +8,7 @@ defmodule PurpleFlowWeb.RequireLoginTest do
   setup do
     System.put_env("PURPLEFLOW_ADMIN_USERNAME", "admin")
     System.put_env("PURPLEFLOW_ADMIN_PASSWORD", "hunter2")
+    PurpleFlowWeb.LoginThrottle.reset()
 
     on_exit(fn ->
       System.delete_env("PURPLEFLOW_ADMIN_USERNAME")

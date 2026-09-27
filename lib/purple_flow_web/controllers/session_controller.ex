@@ -22,12 +22,23 @@ defmodule PurpleFlowWeb.SessionController do
     username = params["username"] || ""
     return_to = Auth.safe_return_to(params["return_to"])
 
-    if Auth.valid_login?(username, params["password"]) do
-      conn |> Auth.sign_in() |> redirect(to: return_to)
-    else
-      conn
-      |> put_status(401)
-      |> render_form(return_to, username, "That username and password don't match.")
+    case Auth.check_login(conn, username, params["password"]) do
+      :ok ->
+        conn |> Auth.sign_in() |> redirect(to: return_to)
+
+      :invalid ->
+        conn
+        |> put_status(401)
+        |> render_form(return_to, username, "That username and password don't match.")
+
+      :locked ->
+        conn
+        |> put_status(429)
+        |> render_form(
+          return_to,
+          username,
+          "Too many failed sign-ins from this address. Try again in a few hours."
+        )
     end
   end
 

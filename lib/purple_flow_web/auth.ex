@@ -17,6 +17,8 @@ defmodule PurpleFlowWeb.Auth do
 
   import Plug.Conn
 
+  alias PurpleFlowWeb.LoginThrottle
+
   @session_key "signed_in"
 
   @doc "The admin login, or nil when sign-in isn't set up."
@@ -47,6 +49,47 @@ defmodule PurpleFlowWeb.Auth do
   end
 
   def valid_login?(_username, _password), do: false
+
+  @doc """
+  Checks a sign-in attempt from `conn`'s client, with lockout
+  (`PurpleFlowWeb.LoginThrottle`): `:ok`, `:invalid`, or `:locked`. A locked
+  out client is refused without checking the password.
+  """
+  def check_login(conn, username, password) do
+    ip = client_ip(conn)
+
+    cond do
+      LoginThrottle.locked?(ip) ->
+        :locked
+
+      valid_login?(username, password) ->
+        LoginThrottle.clear(ip)
+        :ok
+
+      true ->
+        LoginThrottle.fail(ip)
+        if LoginThrottle.locked?(ip), do: :locked, else: :invalid
+    end
+  end
+
+  @doc """
+  The client's IP address, for lockouts. Behind a reverse proxy every
+  request comes from the proxy, so `config :purple_flow, :client_ip_header`
+  (`PURPLEFLOW_CLIENT_IP_HEADER`, like `cf-connecting-ip` or
+  `x-forwarded-for`) names the header the proxy puts the real address in;
+  the last address in it is the one the proxy saw. Only for lockouts: the
+  runner check (`PurpleFlowWeb.Plugs.RejectRunner`) never trusts a header.
+  """
+  def client_ip(conn) do
+    with header when is_binary(header) <- Application.get_env(:purple_flow, :client_ip_header),
+         [value | _] <- get_req_header(conn, header),
+         address when address != "" <-
+           value |> String.split(",") |> List.last() |> String.trim() do
+      address
+    else
+      _ -> conn.remote_ip |> :inet.ntoa() |> to_string()
+    end
+  end
 
   @doc "Whether a session (a conn's, or a LiveView's session map) is signed in."
   def signed_in?(%Plug.Conn{} = conn), do: signed_in?(get_session(conn))
@@ -83,7 +126,7 @@ defmodule PurpleFlowWeb.Auth do
   @doc "Whether the request carries the admin login as HTTP Basic auth (for WebDAV clients)."
   def basic_login?(conn) do
     case Plug.BasicAuth.parse_basic_auth(conn) do
-      {username, password} -> valid_login?(username, password)
+      {username, password} -> check_login(conn, username, password) == :ok
       :error -> false
     end
   end

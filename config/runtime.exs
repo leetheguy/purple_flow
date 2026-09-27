@@ -55,6 +55,14 @@ if files_url = System.get_env("PURPLEFLOW_FILES_URL") do
   config :purple_flow, :files_url, String.trim_trailing(files_url, "/")
 end
 
+# Behind a reverse proxy, the header it puts the real client address in, like
+# "cf-connecting-ip" (Cloudflare) or "x-forwarded-for". Used only to lock
+# out addresses after failed sign-ins. Set it only when the app can't be
+# reached except through that proxy, or the header can be forged.
+if client_ip_header = System.get_env("PURPLEFLOW_CLIENT_IP_HEADER") do
+  config :purple_flow, :client_ip_header, String.downcase(client_ip_header)
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :purple_flow, PurpleFlowWeb.Endpoint,
