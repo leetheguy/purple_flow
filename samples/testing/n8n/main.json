@@ -1,0 +1,110 @@
+{
+ "id": "stressMain000001",
+ "name": "stress",
+ "active": false,
+ "settings": {
+  "executionOrder": "v1"
+ },
+ "connections": {
+  "Webhook": {
+   "main": [
+    [
+     {
+      "node": "fan_out",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "fan_out": {
+   "main": [
+    [
+     {
+      "node": "work",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "work": {
+   "main": [
+    [
+     {
+      "node": "summary",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "nodes": [
+  {
+   "id": "22222222-0000-4000-8000-000000000001",
+   "name": "Webhook",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    0
+   ],
+   "webhookId": "22222222-0000-4000-8000-0000000000aa",
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "stress",
+    "responseMode": "lastNode",
+    "options": {}
+   }
+  },
+  {
+   "id": "22222222-0000-4000-8000-000000000002",
+   "name": "fan_out",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "jsCode": "const b = $input.first().json.body || {};\nconst count = b.count ?? 100;\nconst sleep_ms = b.sleep_ms ?? 1000;\nreturn Array.from({ length: count }, (_, i) => ({ json: { n: i + 1, sleep_ms } }));"
+   }
+  },
+  {
+   "id": "22222222-0000-4000-8000-000000000003",
+   "name": "work",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    440,
+    0
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "http://127.0.0.1:5678/webhook/work",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json) }}",
+    "options": {
+     "timeout": 3600000
+    }
+   }
+  },
+  {
+   "id": "22222222-0000-4000-8000-000000000004",
+   "name": "summary",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    660,
+    0
+   ],
+   "parameters": {
+    "mode": "runOnceForAllItems",
+    "jsCode": "const items = $input.all().map(i => i.json);\nlet lo = Infinity, hi = -Infinity;\nfor (const i of items) { lo = Math.min(lo, i.done_at); hi = Math.max(hi, i.done_at); }\nreturn [{ json: { count: items.length, unique: new Set(items.map(i => i.n)).size, first_done_to_last_done_ms: hi - lo } }];"
+   }
+  }
+ ]
+}

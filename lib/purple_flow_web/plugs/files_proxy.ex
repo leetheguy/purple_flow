@@ -16,6 +16,10 @@ defmodule PurpleFlowWeb.Plugs.FilesProxy do
   `authorization` headers are not. dufs's own UI pages get the app's theme
   added (`priv/static/dufs/`).
 
+  dufs has a login too, so nothing else on its network gets in: user
+  `purpleflow`, password `PURPLEFLOW_AGENT_TOKEN` (see `docker-compose.yml`).
+  Every request passed through carries it.
+
   It sits in `PurpleFlowWeb.Endpoint` ahead of `Plug.Parsers`, so request
   bodies reach dufs untouched. The service's address is
   `config :purple_flow, :files_url` (`PURPLEFLOW_FILES_URL`). Without one
@@ -121,7 +125,7 @@ defmodule PurpleFlowWeb.Plugs.FilesProxy do
     [
       method: conn.method,
       url: files_url() <> conn.request_path <> query,
-      headers: for({k, v} <- conn.req_headers, k not in @not_forwarded, do: {k, v}),
+      headers: for({k, v} <- conn.req_headers, k not in @not_forwarded, do: {k, v}) ++ login(),
       body: body,
       # Passed through untouched: no redirects followed, nothing decoded.
       redirect: false,
@@ -133,6 +137,13 @@ defmodule PurpleFlowWeb.Plugs.FilesProxy do
     ]
     |> Keyword.merge(Application.get_env(:purple_flow, :files_req_options, []))
     |> Req.request()
+  end
+
+  defp login do
+    case System.get_env("PURPLEFLOW_AGENT_TOKEN") do
+      token when token in [nil, ""] -> []
+      token -> [{"authorization", "Basic " <> Base.encode64("purpleflow:" <> token)}]
+    end
   end
 
   defp respond(conn, %Req.Response{status: status, headers: headers, body: body}) do

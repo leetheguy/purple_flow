@@ -112,5 +112,36 @@ defmodule PurpleFlow.RunnerTest do
       assert_receive {:DOWN, ^ref, :process, ^script, :killed}
       assert [%{status: "timed_out"}] = rows(PurpleFlow.Runs.get(id), "slow")
     end
+
+    @spawner ~s|pid = spawn(fn -> :timer.sleep(:infinity) end)
+               send(String.to_existing_atom(input["to"]), {:started, pid})|
+
+    test "what a finished script started is killed", %{name: name} do
+      assert {:ok, _} = run(@spawner <> "\n:done", %{"to" => name})
+
+      assert_receive {:started, pid}
+      ref = Process.monitor(pid)
+      # :noproc if it was already gone by the time it's watched.
+      # Swept by the Reaper, at most 100 ms after the last sweep.
+      assert_receive {:DOWN, ^ref, :process, ^pid, reason} when reason in [:killed, :noproc],
+                     1_000
+    end
+
+    test "what a stopped script started is killed", %{name: name} do
+      caller = spawn(fn -> run(@spawner <> "\n" <> @sleeper, %{"to" => name}) end)
+
+      assert_receive {:started, pid}
+      assert_receive {:script, _script}
+      ref = Process.monitor(pid)
+      Process.exit(caller, :kill)
+
+      assert_receive {:DOWN, ^ref, :process, ^pid, :killed}, 1_000
+    end
+
+    # Its own group leader passes output on, so IO calls still get answered
+    # (an unanswered one would hang the script).
+    test "a script can still write output" do
+      assert {:ok, 1} = run(~s|IO.write(""); 1|)
+    end
   end
 end
