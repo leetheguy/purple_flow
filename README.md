@@ -1,8 +1,10 @@
 # Purple Flow
 
-## Human written intro
+Purple Flow makes building automated workflows as easy for AI as n8n makes it for people.
 
-Purple Flow makes building workflows as easy for AI as n8n makes automation for people.
+![alt text](image.png)
+
+## Human written intro
 
 I love n8n with all of my heart. It's an amazing tool that's quick to learn, quick to master, and so fun and easy to build with.
 
@@ -15,6 +17,8 @@ But, like every solution at all ever, it has its limitations. For me, those limi
 - No self-hosted middle rungs between "just me" and business for (currently) $960 per month
 - No Git version control without enterprise
 - Scalability and licensing challenges (can't easily turn your solution into a SaaS or sell it)
+
+### Origin story
 
 So I built Purple Flow. It's a minimal, first-principles reimagining of n8n made with Elixir. I borrowed the architectural decisions I loved and built everything else from scratch using OTP efficiency and reliability.
 
@@ -33,11 +37,52 @@ Most n8n nodes are convenience wrappers for APIs. Many of them don't cover every
   - workflow - calls sub-workflows to keep things tidy and reusable
   - if/else - except not really a node; flow control is a natural part of workflows
 
----
+### Getting started
+
+Details are in the AI written section, but here's a more human friendly summary of how to get started.
+
+1. Clone the repo.
+2. Inside the repo, copy `.env.example` to `.env` and fill in the fields.
+   - If you're behind Cloudflare or another proxy, set PURPLEFLOW_CLIENT_IP_HEADER. Without it, three failed sign-ins lock everyone out.
+3. Make the workflows folder its own repo: `git init workflows`.
+   - This lets you version control and protect your workflows.
+4. Copy AGENTS.md from samples to `workflows`
+   - Optionally copy the samples as well to help you and your favorite agent get your heads around the nitty gritty.
+5. Run `docker compose up -d --build`
+6. Visit `localhost:4000` (or your `PORT`) and sign in with your `PURPLEFLOW_ADMIN_USERNAME` and `PURPLEFLOW_ADMIN_PASSWORD`.
+7. Send your friendly neighborhood agent to `yourdomain.com/agents`.
+   - It will then want the `PURPLEFLOW_AGENT_TOKEN`.
+   - With that token comes great power; remind your agent to be responsible.
+   - (Muse has a dedicated system to keep the token out of your agent's hands and it works well with Purple Flow; just sayin') 
+8. Your agent can now build workflows that connect anything to anything, just like n8n, Make, Zapier, and friends.
+
+## Where are the connectors?
+
+The one catch is that you don't have a bunch of convenience nodes for connectors. But with AI, you don't need them. Just have your AI look up whatever API you want to access and create your workflows.
+
+I like using this simple pattern:
+- AI calls endpoint with consistent params: {"body": {"endpoint": "list_all", "verb": "GET/POST/PUT, etc.", "parameters": {}}}
+- A normalizer code node deciphers the request body and returns the expected fields as variables for the http request to slot into place.
+
+You can create credentials (useful for any data you want kept private) in the web interface. Pass your agent the credential name for it to use in your flows.
+
+### Security
+
+Purple Flow is still in early alpha, but security was of the utmost concern from the beginning.
+
+Workflows are stored and versioned locally. A Docker sidecar running [Dufs](https://github.com/sigoden/dufs) has access to the workflows folder and makes it available to agents and the web UI. That sidecar has no login, no port, and no access to the internet or the rest of the docker network. It's only reachable through an API endpoint with the agent token and the Web UI.
+
+Code nodes are pure Elixir. They also run in a dedicated sidecar with no outside access, no internet, no database, no credentials, and read only access to their own file systems. They also can't mount workflows.
+
+Credentials are encrypted in Postgres with `PURPLEFLOW_SECRET_KEY` and unavailable to either of the sidecars.
+
+Any secrets passed as plain text risk exposure and no level of security can help you there.
+
+### Free as in free beer
 
 Because you own everything, you can build full workflows for distribution to clients. And you can manage version control however you like.
 
-Because this is built on the BEAM VM, you can scale your workflows to thousands of simultaneous executions. (And that's conservative if you're careful.) That means you can turn a convenient personal tool into paid SaaS with just a little elbow grease.
+Because this is built on the BEAM VM, you can scale your workflows to thousands of simultaneous executions. (And that's conservative if you're careful.) That means you can turn a convenient personal tool into a paid SaaS with just a little elbow grease.
 
 ## AI written intro
 
@@ -56,7 +101,11 @@ trigger (webhook / cron / manual)
 
 Built-in nodes: HTTP, Postgres, Code, and "run another workflow". A new node type is just a module implementing `execute(input, config)`.
 
-The UI is an execution history viewer (Phoenix LiveView). Pick a run and see every step's input and output.
+The UI (Phoenix LiveView) is one site behind one sign-in, with a side menu (a menu button on small screens):
+
+- **Workflows**: every workflow, with a search box, its triggers, its last run, a link to its files, and a Run box. The Run box takes just the request body, and the run gets it as `input["body"]`, the same as from a webhook. Pick a workflow to see its runs, and a run to see every step's input and output.
+- **Files**: the workflows folder, to browse and edit in place.
+- **Credentials**: secrets that workflows use by name.
 
 ## Running it
 
@@ -69,17 +118,16 @@ docker compose down
 ```
 
 This starts PurpleFlow, Postgres, the Code node runner, and the files service
-together, all behind one site and one sign-in: open `http://localhost:4000`,
-sign in with `PURPLEFLOW_ADMIN_USERNAME` / `PURPLEFLOW_ADMIN_PASSWORD`, and
-the side menu has Workflows, Files, and Credentials. Three failed sign-ins
-lock that address out for four hours (a restart lifts it). Postgres
-has a health check, and the app container only starts once it passes;
-migrations run automatically on boot, and the container restarts on its own if
-the app dies. Code node scripts run in the `runner` container, which has no
-secrets, no database, no internet, and no way to reach the app (see
-[specs/100](specs/100_runner_container.md)). See
-`docker-compose.yml` and `.env.example` for the environment variables to set
-(`SECRET_KEY_BASE`, `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
+together, all behind one site and one sign-in: open `http://localhost:4000`
+and sign in with `PURPLEFLOW_ADMIN_USERNAME` / `PURPLEFLOW_ADMIN_PASSWORD`.
+Three failed sign-ins lock that address out for four hours (a restart lifts
+it). Postgres has a health check, and the app container only starts once it
+passes; migrations run automatically on boot, and the container restarts on
+its own if the app dies. Code node scripts run in the `runner` container,
+which has no secrets, no database, no internet, and no way to reach the app
+(see [specs/100](specs/100_runner_container.md)). See `docker-compose.yml`
+and `.env.example` for the environment variables to set (`SECRET_KEY_BASE`,
+`PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
 `PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`,
 `WORKFLOWS_PATH`, `PUID`/`PGID`, `PURPLEFLOW_AGENT_TOKEN`,
 `PURPLEFLOW_CLIENT_IP_HEADER` if a reverse proxy sits in front, and
@@ -94,8 +142,8 @@ its own git repository. Nothing commits automatically; you manage its history.
 
 - **The app only reads it** (mounted read-only) and picks up every change on
   its own within about two seconds. There's no reload step. If an edit breaks
-  a workflow, the last version that loaded keeps running, and the home page
-  says so.
+  a workflow, the last version that loaded keeps running, and the Workflows
+  page says so.
 - **People and agents edit it through the files service** (dufs), which the
   app serves behind its own sign-in. People use the **Files** page in the UI
   (click a file to edit it; Ctrl/Cmd+S saves). Agents use `/fs/` with
@@ -114,6 +162,17 @@ up`. Otherwise Docker creates it, and its empty `.git`, owned by root.
 
 See [specs/090](specs/090_workflow_files.md).
 
+### Inviting an agent
+
+Put an `AGENTS.md` at the top of the workflows folder explaining how to work
+there. The app serves it, with no sign-in, at `/agents`, and replaces every
+`BASE` in it with the site's address (from `PHX_HOST`). To bring in any
+agent, give it that link and your `PURPLEFLOW_AGENT_TOKEN`. The token lets it
+read and write workflow files and check what loaded, and nothing else: no
+UI, no run history, no credentials.
+
+### Local development
+
 For local development without Docker, you need Elixir and Postgres (dev login
 `postgres` / `postgres` on localhost):
 
@@ -125,6 +184,8 @@ mix phx.server      # http://localhost:4000
 
 Outside Docker there's no runner container, so Code node scripts run inside
 the app's own VM, with no isolation. The app logs a warning at boot saying so.
+There's no files service either: edit `workflows/` directly, and the Files
+page says so. With no admin login set, the UI is open.
 
 - Workflows live in `workflows/` (see "Workflow files" above), and edits there load on their own in dev too. Two annotated examples live in `samples/`: `hello` (webhook, per-item routes) and `users` (HTTP, per-item). Copy one into `workflows/` to try it.
 - Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See [specs/080](specs/080_credentials.md).

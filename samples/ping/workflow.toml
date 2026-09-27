@@ -1,0 +1,14 @@
+# Turns every "ing" into "ong": ping -> pong, doing chores -> doong chores.
+#   curl -X POST https://purple.leenathan.com/hooks/ping \
+#     -H 'content-type: application/json' -d '"ping"'
+# Also accepts {"text": "ping"}.
+
+[workflow]
+name = "ping"
+
+[trigger.webhook]
+path = "ping"
+
+[[steps]]
+name = "pong"
+node = "pong.toml"
