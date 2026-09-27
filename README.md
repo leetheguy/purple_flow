@@ -72,7 +72,7 @@ You can create credentials (useful for any data you want kept private) in the we
 
 Purple Flow is still in early alpha, but security was of the utmost concern from the beginning.
 
-Workflows are stored and versioned locally. A Docker sidecar running [Dufs](https://github.com/sigoden/dufs) has access to the workflows folder and makes it available to agents and the web UI. That sidecar has no login, no port, and no access to the internet or the rest of the docker network. It's only reachable through an API endpoint with the agent token and the Web UI.
+Workflows are stored and versioned locally. A Docker sidecar running [Dufs](https://github.com/sigoden/dufs) has access to the workflows folder and makes it available to agents and the web UI. That sidecar has no port and no access to the internet or the rest of the docker network, and it wants the agent token even from inside that network. It's only reachable through an API endpoint with the agent token and the Web UI.
 
 Code nodes are pure Elixir. They also run in a dedicated sidecar with no outside access, no internet, no database, no credentials, and read only access to their own file systems. They also can't mount workflows.
 
@@ -130,8 +130,8 @@ which has no secrets, no database, no internet, and no way to reach the app
 (see [specs/100](specs/100_runner_container.md)). See `docker-compose.yml`
 and `.env.example` for the environment variables to set (`SECRET_KEY_BASE`,
 `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
-`PURPLEFLOW_ADMIN_PASSWORD`, and optionally `PHX_HOST`, `DATABASE_URL`,
-`WORKFLOWS_PATH`, `PUID`/`PGID`, `PURPLEFLOW_AGENT_TOKEN`,
+`PURPLEFLOW_ADMIN_PASSWORD`, `PURPLEFLOW_AGENT_TOKEN`, and optionally
+`PHX_HOST`, `DATABASE_URL`, `WORKFLOWS_PATH`, `PUID`/`PGID`,
 `PURPLEFLOW_CLIENT_IP_HEADER` if a reverse proxy sits in front, and
 `PURPLEFLOW_RUNNER_SUBNET` if the runner's default network, `10.250.250.0/24`,
 collides with one of yours).

@@ -62,3 +62,7 @@ A run that was going when the app stopped is marked `interrupted` at the next bo
 - the `failed` route gets the error and the input
 - a crash, a raise, and a timeout each count as failures
 - kill stops running executions, saves them as `killed`, and marks the run `killed`
+
+## Log
+
+- 2026-09-27 — Open, from an audit against n8n's history: **No resume** stays as is for now. A run cut off by a restart is marked `interrupted` and nothing retries it, and a webhook request that arrives while the app is down gets no answer at all (the caller's own retries are what save it). Resuming or retrying interrupted runs could be an option later, per workflow.

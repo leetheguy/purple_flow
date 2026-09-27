@@ -20,6 +20,11 @@ defmodule PurpleFlow.Runner.Server do
   Each connection gets its own process, and each script its own process
   under that. If the connection closes before the script finishes (the app
   gave up on the step), the script's process is killed.
+
+  Either way, once the script is done, so is everything it started: each
+  script gets its own group leader, which every process it spawns inherits,
+  and every process under that leader is killed. A script that starts a
+  `Task` and returns doesn't leave it running.
   """
 
   use GenServer
@@ -76,7 +81,14 @@ defmodule PurpleFlow.Runner.Server do
     with {:ok, data} <- :gen_tcp.recv(socket, 0),
          {:ok, request} <- Jason.decode(data) do
       runner = self()
-      {pid, ref} = spawn_monitor(fn -> send(runner, {:response, self(), evaluate(request)}) end)
+      leader = start_leader(Process.group_leader())
+
+      {pid, ref} =
+        spawn_monitor(fn ->
+          Process.group_leader(self(), leader)
+          send(runner, {:response, self(), evaluate(request)})
+        end)
+
       # From here on, the connection closing arrives as a message.
       :ok = :inet.setopts(socket, active: :once)
 
@@ -92,14 +104,41 @@ defmodule PurpleFlow.Runner.Server do
           )
 
         {:tcp_closed, ^socket} ->
-          Process.exit(pid, :kill)
+          :ok
 
         {:tcp, ^socket, _} ->
-          Process.exit(pid, :kill)
+          :ok
       end
+
+      kill_group(pid, leader)
     end
 
     :gen_tcp.close(socket)
+  end
+
+  # A script's own group leader. It passes the script's output (`IO.puts`,
+  # `IO.inspect`) on to the runner's, and marks every process the script
+  # starts, so they can all be found and killed.
+  defp start_leader(parent), do: spawn(fn -> forward_io(parent) end)
+
+  defp forward_io(parent) do
+    receive do
+      message -> send(parent, message)
+    end
+
+    forward_io(parent)
+  end
+
+  # The script (by pid too, in case it hasn't taken its leader yet), then
+  # everything it started, then the leader itself.
+  defp kill_group(script, leader) do
+    Process.exit(script, :kill)
+
+    for pid <- Process.list(),
+        Process.info(pid, :group_leader) == {:group_leader, leader},
+        do: Process.exit(pid, :kill)
+
+    Process.exit(leader, :kill)
   end
 
   # Runs in the script's own process. Returns the encoded response.

@@ -183,18 +183,11 @@ defmodule PurpleFlow.WorkflowsTest do
   describe "cron" do
     defp job(name), do: PurpleFlow.Scheduler.find_job(String.to_atom("workflow:" <> name))
 
-    test "jobs follow the folder, and unchanged ones aren't re-registered", %{root: root} do
+    test "jobs follow the folder", %{root: root} do
       name = "cron_#{System.unique_integer([:positive])}"
       put(root, "c", name, ~s([trigger.cron]\nschedule = "0 * * * *"))
       server = start(root, cron: true)
       assert job(name)
-
-      # Taken away behind the watcher's back: an unchanged schedule mustn't
-      # bring it back, because it isn't registered again.
-      PurpleFlow.Scheduler.delete_job(String.to_atom("workflow:" <> name))
-      put(root, "other", "other_#{name}")
-      :ok = Workflows.reload(server)
-      refute job(name)
 
       put(root, "c", name, ~s([trigger.cron]\nschedule = "5 * * * *"))
       :ok = Workflows.reload(server)
@@ -204,6 +197,19 @@ defmodule PurpleFlow.WorkflowsTest do
       :ok = Workflows.reload(server)
       refute job(name)
       assert entry(server, "c") == nil
+    end
+
+    # A restarted Scheduler (or a restarted part of it) has no jobs.
+    test "a lost job is put back on the next tick, with nothing changed", %{root: root} do
+      name = "cron_#{System.unique_integer([:positive])}"
+      put(root, "c", name, ~s([trigger.cron]\nschedule = "0 * * * *"))
+      server = start(root, cron: true)
+
+      PurpleFlow.Scheduler.delete_job(String.to_atom("workflow:" <> name))
+      refute job(name)
+
+      :ok = Workflows.tick(server)
+      assert job(name).schedule == Crontab.CronExpression.Parser.parse!("0 * * * *")
     end
   end
 

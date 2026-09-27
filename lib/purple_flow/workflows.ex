@@ -9,6 +9,11 @@ defmodule PurpleFlow.Workflows do
   whenever a credential changes, since a workflow can fail only because a
   `creds.NAME` it uses wasn't set.
 
+  Cron jobs live in `PurpleFlow.Scheduler`, which forgets them if it (or a
+  part of it) restarts. So every reload and every tick checks the
+  Scheduler's jobs against the loaded workflows and puts back anything
+  missing: the workflow files are the truth, the Scheduler a copy.
+
   Reloading goes folder by folder. A folder that loads replaces what was
   running. A folder that fails keeps running its last good version, with
   the problems recorded next to it. Runs already going hold their own copy
@@ -88,7 +93,6 @@ defmodule PurpleFlow.Workflows do
       interval: Keyword.get(opts, :interval, Keyword.get(watch, :interval, 1_000)),
       cron?: Keyword.get(opts, :cron, true),
       folders: %{},
-      jobs: %{},
       reloaded_at: nil,
       loaded_fingerprint: nil,
       pending_fingerprint: nil
@@ -147,9 +151,9 @@ defmodule PurpleFlow.Workflows do
     fingerprint = fingerprint(folder_dir(state))
 
     cond do
-      fingerprint == state.loaded_fingerprint -> %{state | pending_fingerprint: nil}
+      fingerprint == state.loaded_fingerprint -> sync_cron(%{state | pending_fingerprint: nil})
       fingerprint == state.pending_fingerprint -> reload(state, fingerprint)
-      true -> %{state | pending_fingerprint: fingerprint}
+      true -> sync_cron(%{state | pending_fingerprint: fingerprint})
     end
   end
 
@@ -214,14 +218,13 @@ defmodule PurpleFlow.Workflows do
     log_problems(folders, state.folders)
     Phoenix.PubSub.broadcast(PurpleFlow.PubSub, topic(), :workflows_reloaded)
 
-    %{
+    sync_cron(%{
       state
       | folders: folders,
-        jobs: if(state.cron?, do: sync_cron(folders, state.jobs), else: state.jobs),
         reloaded_at: now,
         loaded_fingerprint: fingerprint,
         pending_fingerprint: nil
-    }
+    })
   end
 
   # Decides what each folder runs. Two folders can't claim the same name or
@@ -331,30 +334,43 @@ defmodule PurpleFlow.Workflows do
     end
   end
 
-  # Adds, replaces, and removes only the cron jobs whose schedules changed.
-  defp sync_cron(folders, jobs) do
+  # Makes the Scheduler's workflow jobs match the loaded workflows: adds
+  # what's missing, replaces what changed, removes what's gone, and leaves
+  # everything else alone.
+  defp sync_cron(%{cron?: false} = state), do: state
+
+  defp sync_cron(state) do
     wanted =
-      for %{workflow: %{cron: cron} = wf} <- Map.values(folders),
+      for {_folder, %{workflow: %{cron: cron} = wf}} <- state.folders,
           cron,
           into: %{},
-          do: {wf.name, cron}
+          do: {job_name(wf.name), {wf.name, Crontab.CronExpression.Parser.parse!(cron)}}
 
-    for {name, _} <- jobs,
-        not Map.has_key?(wanted, name),
-        do: PurpleFlow.Scheduler.delete_job(job_name(name))
+    registered =
+      for {job, %Quantum.Job{schedule: schedule}} <- PurpleFlow.Scheduler.jobs(),
+          workflow_job?(job),
+          into: %{},
+          do: {job, schedule}
 
-    for {name, schedule} <- wanted, jobs[name] != schedule do
-      PurpleFlow.Scheduler.delete_job(job_name(name))
-      add_job(name, schedule)
+    for {job, _} <- registered,
+        not Map.has_key?(wanted, job),
+        do: PurpleFlow.Scheduler.delete_job(job)
+
+    for {job, {name, schedule}} <- wanted, registered[job] != schedule do
+      PurpleFlow.Scheduler.delete_job(job)
+      add_job(job, name, schedule)
     end
 
-    wanted
+    state
+  catch
+    # The Scheduler is restarting. The next tick puts the jobs back.
+    :exit, _ -> state
   end
 
-  defp add_job(name, schedule) do
+  defp add_job(job, name, schedule) do
     PurpleFlow.Scheduler.new_job()
-    |> Quantum.Job.set_name(job_name(name))
-    |> Quantum.Job.set_schedule(Crontab.CronExpression.Parser.parse!(schedule))
+    |> Quantum.Job.set_name(job)
+    |> Quantum.Job.set_schedule(schedule)
     |> Quantum.Job.set_task(fn ->
       PurpleFlow.run(name, %{"scheduled_at" => DateTime.to_iso8601(DateTime.utc_now())},
         trigger: "cron"
@@ -364,6 +380,9 @@ defmodule PurpleFlow.Workflows do
   end
 
   defp job_name(name), do: String.to_atom("workflow:" <> name)
+
+  defp workflow_job?(job),
+    do: is_atom(job) and String.starts_with?(Atom.to_string(job), "workflow:")
 
   # -- helpers --
 

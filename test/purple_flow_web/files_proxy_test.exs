@@ -53,6 +53,8 @@ defmodule PurpleFlowWeb.FilesProxyTest do
     |> recycle()
   end
 
+  @dufs_login "Basic " <> Base.encode64("purpleflow:agent-token")
+
   defp agent(conn), do: put_req_header(conn, "authorization", "Bearer agent-token")
 
   test "a signed-in browser gets through, without passing on its cookie", %{conn: conn} do
@@ -61,9 +63,11 @@ defmodule PurpleFlowWeb.FilesProxyTest do
     assert sent["path"] == "/fs/hello/workflow.toml"
     assert sent["query"] == "view"
     refute Map.has_key?(sent["headers"], "cookie")
+    assert sent["headers"]["authorization"] == @dufs_login
   end
 
-  test "an agent's token gets through, and isn't passed on", %{conn: conn} do
+  test "an agent's token gets through, and dufs gets the app's own login instead",
+       %{conn: conn} do
     sent =
       conn
       |> agent()
@@ -74,7 +78,7 @@ defmodule PurpleFlowWeb.FilesProxyTest do
     assert sent["method"] == "PUT"
     # The body arrives exactly as sent, not parsed by the app.
     assert sent["body"] == ~s({"not": "parsed"})
-    refute Map.has_key?(sent["headers"], "authorization")
+    assert sent["headers"]["authorization"] == @dufs_login
   end
 
   test "WebDAV methods and headers pass through", %{conn: conn} do
@@ -97,7 +101,10 @@ defmodule PurpleFlowWeb.FilesProxyTest do
       |> put_req_header("authorization", "Basic #{header}")
       |> dispatch(@endpoint, "PROPFIND", "/fs/")
 
-    assert json_response(conn, 200)["method"] == "PROPFIND"
+    sent = json_response(conn, 200)
+    assert sent["method"] == "PROPFIND"
+    # Not the admin login: that stays in the app.
+    assert sent["headers"]["authorization"] == @dufs_login
   end
 
   test "no login: a WebDAV client is asked for Basic auth", %{conn: conn} do
