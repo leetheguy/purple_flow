@@ -22,6 +22,9 @@ defmodule PurpleFlowWeb.Router do
   # For Docker's healthcheck, which has no login. Says only "ok".
   get "/health", PurpleFlowWeb.HealthController, :show
 
+  # Instructions for visiting agents, before they have a token. Public.
+  get "/agents", PurpleFlowWeb.AgentsController, :show
+
   scope "/", PurpleFlowWeb do
     pipe_through :browser
 
