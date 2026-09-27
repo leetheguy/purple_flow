@@ -26,10 +26,16 @@ defmodule PurpleFlowWeb.WorkflowsLive do
      socket
      |> assign(:page_title, "Workflows")
      |> assign(:run_form, to_form(%{"input" => "{}"}))
+     |> assign(:search, "")
+     |> assign(:files?, Application.get_env(:purple_flow, :files_url) != nil)
      |> load()}
   end
 
   @impl true
+  def handle_event("search", %{"value" => query}, socket) do
+    {:noreply, socket |> assign(:search, query) |> load()}
+  end
+
   def handle_event("run", %{"workflow" => name, "input" => text}, socket) do
     with {:ok, body} <- decode(text),
          {:ok, run_id} <- PurpleFlow.run(name, manual_input(body), trigger: "manual") do
@@ -47,9 +53,26 @@ defmodule PurpleFlowWeb.WorkflowsLive do
     {loaded, not_loaded} = Enum.split_with(folders, & &1.workflow)
 
     socket
-    |> assign(:workflows, Enum.sort_by(loaded, & &1.workflow.name))
+    |> assign(:any_workflows?, loaded != [])
+    |> assign(
+      :workflows,
+      loaded
+      |> Enum.filter(&matches?(&1, socket.assigns.search))
+      |> Enum.sort_by(& &1.workflow.name)
+    )
     |> assign(:not_loaded, not_loaded)
     |> assign(:statuses, Runs.last_statuses())
+  end
+
+  # By name, folder, webhook path, or cron schedule, ignoring case.
+  defp matches?(_entry, ""), do: true
+
+  defp matches?(%{workflow: wf, folder: folder}, query) do
+    query = String.downcase(String.trim(query))
+
+    [wf.name, folder, wf.webhook, wf.cron]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.any?(&String.contains?(String.downcase(&1), query))
   end
 
   # Shaped like a webhook's input, so a workflow reads input["body"] either way.
@@ -68,9 +91,25 @@ defmodule PurpleFlowWeb.WorkflowsLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} active={:workflows}>
-      <div class="flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-xl font-semibold">Workflows</h1>
-        <p class="text-xs text-base-content/50">Edits to workflow files load on their own.</p>
+        <div :if={@any_workflows?} class="relative w-full sm:w-72">
+          <.icon
+            name="hero-magnifying-glass-micro"
+            class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-base-content/40 pointer-events-none"
+          />
+          <input
+            type="search"
+            name="q"
+            id="workflows-search"
+            value={@search}
+            placeholder="Search workflows"
+            autocomplete="off"
+            phx-keyup="search"
+            phx-debounce="150"
+            class="w-full rounded-md border border-base-300 bg-base-100 pl-8 pr-3 py-1.5 text-sm outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15"
+          />
+        </div>
       </div>
 
       <div
@@ -85,7 +124,11 @@ defmodule PurpleFlowWeb.WorkflowsLive do
         </div>
       </div>
 
-      <p :if={@workflows == []} class="text-base-content/60">
+      <p :if={@any_workflows? and @workflows == []} id="no-matches" class="text-base-content/60">
+        No workflows match “{@search}”.
+      </p>
+
+      <p :if={!@any_workflows?} class="text-base-content/60">
         No workflows yet. Add one under <code>{Workflows.dir()}/</code>; it loads within a couple of seconds.
       </p>
 
@@ -107,7 +150,18 @@ defmodule PurpleFlowWeb.WorkflowsLive do
                 <span :if={wf.cron}>cron <code>{wf.cron}</code></span>
               </p>
             </div>
-            <.status_badge :if={@statuses[wf.name]} status={@statuses[wf.name]} />
+            <div class="flex items-center gap-2">
+              <.status_badge :if={@statuses[wf.name]} status={@statuses[wf.name]} />
+              <.link
+                :if={@files?}
+                navigate={~p"/files/#{entry.folder}" <> "/"}
+                id={"files-#{wf.name}"}
+                title="Open this workflow's files"
+                class="inline-flex items-center gap-1.5 rounded-md border border-base-300 px-2 py-1 text-xs text-base-content/70 transition hover:border-violet-500/50 hover:bg-violet-500/5 hover:text-violet-700 dark:hover:text-violet-300"
+              >
+                <.icon name="hero-folder-open-micro" class="size-4" /> Files
+              </.link>
+            </div>
           </div>
 
           <div
