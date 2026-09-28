@@ -1,0 +1,9 @@
+# GMAIL is an OAuth credential (Credentials page, Type: OAuth). The app hands
+# this step a working access token, renewing it when needed.
+module = "PurpleFlow.Nodes.Http"
+
+[config]
+method = "POST"
+url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+headers = { authorization = "Bearer {{ creds.GMAIL }}" }
+body = "{{ input }}"

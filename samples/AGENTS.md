@@ -269,6 +269,8 @@ Never put a password, API key, or token in a file. Refer to secrets by name with
 
 You can't create secrets or see their values. A person adds them in the app. If your workflow uses a name that hasn't been set, it won't load, and the problem list says which name is missing. Tell the person you're working with that name so they can add it.
 
+Some secrets are **OAuth logins** (Gmail, Google Drive, and other services where you "sign in with" an account). The person connects those in the app too. In your workflow they work the same way: `{{ creds.GMAIL }}` is a working access token, kept fresh by the app, so an HTTP step sends it as `authorization = "Bearer {{ creds.GMAIL }}"`. If the service stops accepting the login, the step fails with a message saying it needs reconnecting; pass that on to the person. To ask for one, tell the person the service, the name you'll use, and the scopes it needs (for sending Gmail: `https://www.googleapis.com/auth/gmail.send`).
+
 ## How data flows
 
 - **One item, one run.** A step runs once for every item it gets, and each run gets exactly one item.

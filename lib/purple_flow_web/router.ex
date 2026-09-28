@@ -36,6 +36,10 @@ defmodule PurpleFlowWeb.Router do
   scope "/", PurpleFlowWeb do
     pipe_through [:browser, :signed_in]
 
+    # Connecting an OAuth credential: specs/200_oauth_credentials.md.
+    get "/credentials/oauth/callback", OAuthController, :callback
+    get "/credentials/:id/connect", OAuthController, :connect
+
     live_session :signed_in, on_mount: {PurpleFlowWeb.Auth, :require_login} do
       live "/", WorkflowsLive
       live "/workflows/:name", RunsLive
