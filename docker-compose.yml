@@ -34,6 +34,9 @@ services:
     # them through the files service, below. See specs/090_workflow_files.md.
     volumes:
       - ${WORKFLOWS_PATH:-./workflows}:/app/workflows:ro
+      # Files runs carry, like webhook uploads. Each run's are deleted when
+      # it ends. See specs/190_run_files.md.
+      - purple_flow_run_files:/app/run_files
     networks:
       - purple_flow
       - runner
@@ -161,3 +164,4 @@ networks:
 
 volumes:
   purple_flow_db_data:
+  purple_flow_run_files:

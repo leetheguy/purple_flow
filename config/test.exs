@@ -38,6 +38,7 @@ config :phoenix,
 # PurpleFlow: test workflows, and no boot-time DB cleanup (the DB is sandboxed per test).
 config :purple_flow,
   workflows_dir: "test/support/workflows",
+  run_files_dir: Path.join(System.tmp_dir!(), "purple_flow_test_run_files"),
   mark_interrupted_on_boot: false,
   # The app's own Workflows process doesn't watch in tests: tests that need
   # watching start their own on a temp folder and tick it by hand.

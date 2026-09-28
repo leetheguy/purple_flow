@@ -33,6 +33,34 @@ defmodule PurpleFlow.SshNodeTest do
     assert byte_size(stdout) == 200 * byte_size(chunk)
   end
 
+  test "stdin_file sends a run file's bytes, bigger than the flow control window" do
+    run_id = PurpleFlow.Id.generate()
+    on_exit(fn -> PurpleFlow.RunFiles.delete_run(run_id) end)
+    bytes = :crypto.strong_rand_bytes(3_000_000)
+    source = Path.join(System.tmp_dir!(), "pf_ssh_#{run_id}")
+    File.write!(source, bytes)
+    ref = PurpleFlow.RunFiles.save(run_id, source, "blob.bin", nil)
+
+    server = SshServer.start!(fn "cat", stdin -> [{:out, stdin}] end)
+
+    assert {:ok, %{"stdout" => ^bytes}} =
+             Ssh.execute(nil, config(server, %{"command" => "cat", "stdin_file" => ref}))
+  end
+
+  test "stdin_file that isn't a file, or is gone, fails before connecting" do
+    config = config(%{port: 1}, %{"command" => "cat"})
+
+    assert {:error, "not a file" <> _} = Ssh.execute(nil, Map.put(config, "stdin_file", "x"))
+
+    gone = %{"file" => PurpleFlow.Id.generate() <> "/" <> PurpleFlow.Id.generate()}
+    assert {:error, "file " <> _} = Ssh.execute(nil, Map.put(config, "stdin_file", gone))
+  end
+
+  test "stdin and stdin_file together fail to load" do
+    config = config(%{port: 22}, %{"command" => "cat", "stdin" => "a", "stdin_file" => "b"})
+    assert {:error, "takes stdin or stdin_file, not both"} = Ssh.prepare(config, ".", ".")
+  end
+
   test "stdin that isn't text is sent as JSON" do
     server = SshServer.start!(fn "cat", stdin -> [{:out, stdin}] end)
 

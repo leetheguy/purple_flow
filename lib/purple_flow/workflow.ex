@@ -11,6 +11,7 @@ defmodule PurpleFlow.Workflow do
     respond: :result,
     auth: nil,
     auth_header: nil,
+    max_upload: 100_000_000,
     cron: nil,
     steps: []
   ]
@@ -22,6 +23,7 @@ defmodule PurpleFlow.Workflow do
           respond: :result | :immediately | :stream,
           auth: String.t() | nil,
           auth_header: String.t() | nil,
+          max_upload: non_neg_integer(),
           cron: String.t() | nil,
           steps: [PurpleFlow.Workflow.Step.t()]
         }

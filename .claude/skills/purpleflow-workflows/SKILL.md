@@ -51,6 +51,7 @@ respond = "result"             # default: reply with the run's output (or a Resp
                                # "stream" = server-sent events: each last-step item as it's made, then `end`
 auth = "SYNC_HOOK_TOKEN"       # optional: callers must send `Authorization: Bearer <credential value>`, else 401
 auth_header = "x-telegram-bot-api-secret-token"  # optional, needs auth: read the bare token from this header instead
+max_upload = 100000000         # optional: most bytes per request, files included. Default 100 MB; 0 = no limit; over it = 413
 
 [trigger.cron]                 # optional
 schedule = "0 * * * *"
@@ -133,7 +134,7 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 | module | config | output |
 |---|---|---|
 | `PurpleFlow.Nodes.Http` | `url`, `method` (GET), `headers`, `query`, `body` (maps are sent as JSON), `stream` (`"sse"`, `"ndjson"`, `"lines"`) | response body. Non-2xx is an error. No retries. With `stream`: one item per event/line as it arrives (SSE: `{"event", "data", "id"}`), and returns `[]` |
-| `PurpleFlow.Nodes.Ssh` | `host`, `port` (22), `user`, `password` or `private_key`, `host_key` (optional `SHA256:...` fingerprint), `command`, `stdin`, `connect_timeout` (seconds, 30; 0 = no limit), `stream` (`"lines"`, `"ndjson"`) | `{"stdout", "stderr", "exit_status"}`. Non-zero exit is an error. With `stream`: one item per stdout line as it arrives, and returns `[]` |
+| `PurpleFlow.Nodes.Ssh` | `host`, `port` (22), `user`, `password` or `private_key`, `host_key` (optional `SHA256:...` fingerprint), `command`, `stdin` or `stdin_file` (a file reference), `connect_timeout` (seconds, 30; 0 = no limit), `stream` (`"lines"`, `"ndjson"`) | `{"stdout", "stderr", "exit_status"}`. Non-zero exit is an error. With `stream`: one item per stdout line as it arrives, and returns `[]` |
 | `PurpleFlow.Nodes.Postgres` | `database_url`, `query`, `params` | list of row maps, so the next step runs per row |
 | `PurpleFlow.Nodes.Code` | `file` (an `.exs` next to the node file) | whatever the script returns |
 | `PurpleFlow.Nodes.Batch` | `size`, `wait` (ms, optional) | `{"items": [...]}`, one per batch. The last partial batch goes when nothing more can reach it |
@@ -156,6 +157,10 @@ if input["amount"] > 1000, do: {:ok, input, "big"}, else: {:ok, input, "small"}
 ```
 
 Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
+
+## Files
+
+A webhook takes uploads (`multipart/form-data`). Each file is saved with the run, and the input holds a reference where the file was: `input.body.doc` = `{"file": "<run>/<id>", "name", "type", "size"}`. Send one on with an SSH step: `stdin_file = "{{ input.body.doc }}"`, `command = "cat > /srv/in/report.pdf"`. A run's files are deleted when it ends. Code scripts see the reference only, not the bytes. See `specs/190_run_files.md`.
 
 ## Gotchas
 

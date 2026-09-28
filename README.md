@@ -32,8 +32,13 @@ Most n8n nodes are convenience wrappers for APIs. Many of them don't cover every
   - manual
 - nodes
   - http - your trusty http request node
+  - ssh - run commands on other machines (and send them uploaded files)
   - postgres - only one db for now; but http can cover anything with a REST interface
   - code - just a reference to an actual .exs code script
+  - batch - gathers items into groups for bulk work
+  - wait - pauses each item for a while or until a time
+  - respond - answers the webhook early while the run keeps going
+  - noop - does nothing, on purpose
   - workflow - calls sub-workflows to keep things tidy and reusable
   - if/else - except not really a node; flow control is a natural part of workflows
 
@@ -103,6 +108,8 @@ trigger (webhook / cron / manual)
 
 Built-in nodes: HTTP and SSH (both can stream), Postgres, Code, Batch, Wait, Respond (answer the webhook early), Noop, and "run another workflow". A new node type is just a module implementing `execute(input, config)`.
 
+Webhooks take file uploads. A file is saved with its run (in its own volume), steps pass around a small reference to it, an SSH step can send it on (`stdin_file`), and it's deleted when the run ends. See [specs/190](specs/190_run_files.md).
+
 The UI (Phoenix LiveView) is one site behind one sign-in, with a side menu (a menu button on small screens):
 
 - **Workflows**: every workflow, with a search box, its triggers, its last run, a link to its files, and a Run box. The Run box takes just the request body, and the run gets it as `input["body"]`, the same as from a webhook. Pick a workflow to see its runs (and kill a running one), and a run to see every step's queue, what's running, how many succeeded, and every execution's input and output.
@@ -138,7 +145,9 @@ it). Postgres has a health check, and the app container only starts once it
 passes; migrations run automatically on boot, and the container restarts on
 its own if the app dies. Code node scripts run in the `runner` container,
 which has no secrets, no database, no internet, and no way to reach the app
-(see [specs/100](specs/100_runner_container.md)). See `docker-compose.yml`
+(see [specs/100](specs/100_runner_container.md)). Files uploaded to webhooks
+live in their own volume, `purple_flow_run_files`, only until their run ends.
+See `docker-compose.yml`
 and `.env.example` for the environment variables to set (`SECRET_KEY_BASE`,
 `PURPLEFLOW_SECRET_KEY`, `PURPLEFLOW_ADMIN_USERNAME`,
 `PURPLEFLOW_ADMIN_PASSWORD`, `PURPLEFLOW_AGENT_TOKEN`, and optionally
@@ -204,7 +213,7 @@ the app's own VM, with no isolation. The app logs a warning at boot saying so.
 There's no files service either: edit `workflows/` directly, and the Files
 page says so. With no admin login set, the UI is open.
 
-- Workflows live in `workflows/` (see "Workflow files" above), and edits there load on their own in dev too. Two annotated examples live in `samples/`: `hello` (webhook, per-item routes) and `users` (HTTP, per-item). Copy one into `workflows/` to try it.
+- Workflows live in `workflows/` (see "Workflow files" above), and edits there load on their own in dev too. Annotated examples live in `samples/`: `hello` (webhook, per-item routes), `users` (HTTP, per-item), and `ping`; `samples/testing/` holds the pressure tests. Copy one into `workflows/` to try it. `samples/AGENTS.md` is the guide to put at the top of the workflows folder for visiting agents.
 - Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See [specs/080](specs/080_credentials.md).
 
 The design is in [specs/](specs/000_overview.md).

@@ -17,6 +17,12 @@ safe by blocking the blade. So:
 - When a choice isn't clearly the user's to make or ours, don't guess: ask,
   or note it as an open question in the spec's log.
 
+**Changing what the app does?** Keep the docs in step, in the same commit:
+`samples/AGENTS.md` (the guide visiting agents read at `/agents`, copied into
+the workflows folder), `README.md`, and
+`.claude/skills/purpleflow-workflows/SKILL.md`. A new node, option, trigger
+setting, or change in behavior belongs in all three.
+
 **Working on workflows?** Read `.claude/skills/purpleflow-workflows/SKILL.md` first. It covers the workflow files, nodes, templates, credentials, and how to check and run them.
 
 **Writing or changing a spec?** Specs in `specs/` are a history, not a

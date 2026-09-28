@@ -12,6 +12,7 @@ defmodule PurpleFlow.Nodes.Ssh do
       host_key = "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"  # optional
       command = "tail -n 100 /var/log/app.log"
       stdin = "{{ input.text }}"                # optional
+      stdin_file = "{{ input.body.upload }}"    # optional, instead: a file's bytes
       connect_timeout = 30                      # seconds to connect and log in; 0 = no limit
       stream = "lines"                          # optional: "lines" or "ndjson"
 
@@ -20,13 +21,17 @@ defmodule PurpleFlow.Nodes.Ssh do
 
   `command` runs in the user's shell on the server, templates and all.
 
+  `stdin_file` takes a file reference (a webhook upload, see
+  `PurpleFlow.RunFiles`) and sends that file's bytes as standard input, so
+  `command = "cat > /srv/uploads/report.pdf"` copies it to the server.
+
   `host_key` is the server's key fingerprint, as `ssh-keygen -lf` prints
   it; when set, any other key is refused before logging in. Without it,
   any key is accepted.
 
   With `stream`, the command's standard output is read as it arrives and
   each line in it is handed on right away (`PurpleFlow.Node.emit/2`), as
-  text or decoded JSON. See `specs/170_ssh.md`.
+  text or decoded JSON. See `specs/170_ssh.md` and `specs/190_run_files.md`.
   """
 
   @behaviour PurpleFlow.Node
@@ -50,6 +55,9 @@ defmodule PurpleFlow.Nodes.Ssh do
       not Map.has_key?(config, "password") and not Map.has_key?(config, "private_key") ->
         {:error, "needs a password or a private_key"}
 
+      Map.has_key?(config, "stdin") and Map.has_key?(config, "stdin_file") ->
+        {:error, "takes stdin or stdin_file, not both"}
+
       config["stream"] not in [nil | @protocols] ->
         {:error, ~s(stream must be "lines" or "ndjson", not #{inspect(config["stream"])})}
 
@@ -60,9 +68,10 @@ defmodule PurpleFlow.Nodes.Ssh do
 
   @impl true
   def execute(_input, config) do
-    with {:ok, conn} <- connect(config) do
+    with {:ok, stdin} <- stdin(config),
+         {:ok, conn} <- connect(config) do
       try do
-        run(conn, config)
+        run(conn, config, stdin)
       after
         :ssh.close(conn)
       end
@@ -119,7 +128,7 @@ defmodule PurpleFlow.Nodes.Ssh do
 
   # Opens a channel, runs the command, feeds it stdin, and reads until the
   # channel closes.
-  defp run(conn, config) do
+  defp run(conn, config, stdin) do
     command = config |> Map.fetch!("command") |> to_string()
 
     # If the connection itself goes away, reading stops instead of waiting forever.
@@ -128,7 +137,7 @@ defmodule PurpleFlow.Nodes.Ssh do
     with {:ok, channel} <- :ssh_connection.session_channel(conn, :infinity),
          :success <-
            :ssh_connection.exec(conn, channel, String.to_charlist(command), :infinity) do
-      if stdin = config["stdin"], do: :ok = :ssh_connection.send(conn, channel, stdin(stdin))
+      send_stdin(conn, channel, stdin)
       :ok = :ssh_connection.send_eof(conn, channel)
 
       read(conn, channel, %{
@@ -145,8 +154,25 @@ defmodule PurpleFlow.Nodes.Ssh do
     end
   end
 
-  defp stdin(value) when is_binary(value), do: value
-  defp stdin(value), do: Jason.encode!(value)
+  # What goes to the command's standard input: nothing, text, or a file.
+  defp stdin(%{"stdin_file" => ref}) do
+    with {:ok, path} <- PurpleFlow.RunFiles.path(ref), do: {:ok, {:file, path}}
+  end
+
+  defp stdin(%{"stdin" => value}) when is_binary(value), do: {:ok, value}
+  defp stdin(%{"stdin" => value}), do: {:ok, Jason.encode!(value)}
+  defp stdin(_config), do: {:ok, nil}
+
+  defp send_stdin(_conn, _channel, nil), do: :ok
+
+  # A file goes in pieces; `send` waits while the server's window is full.
+  defp send_stdin(conn, channel, {:file, path}) do
+    path
+    |> File.stream!(65_536)
+    |> Enum.each(&(:ok = :ssh_connection.send(conn, channel, &1)))
+  end
+
+  defp send_stdin(conn, channel, text), do: :ok = :ssh_connection.send(conn, channel, text)
 
   defp read(conn, channel, state) do
     receive do

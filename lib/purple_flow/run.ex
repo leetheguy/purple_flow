@@ -594,6 +594,8 @@ defmodule PurpleFlow.Run do
           status
       end
 
+    # A run's files only mean something inside it. See `PurpleFlow.RunFiles`.
+    PurpleFlow.RunFiles.delete_run(state.id)
     announce_finished(state, status)
     {:stop, :normal, %{state | finished: true}}
   end

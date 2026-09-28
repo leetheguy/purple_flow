@@ -19,6 +19,10 @@ defmodule PurpleFlowWeb.WebhookController do
   item a last step produces, as it's produced, then an `end` event with the
   run's status. See `specs/150_streaming.md`.
 
+  Files sent as a multipart form are saved with the run (up to the
+  webhook's `max_upload` bytes, default 100 MB), and the input holds a
+  reference to each; see `PurpleFlow.RunFiles`.
+
   Unknown path: 404.
 
   With `auth = "NAME"`, the caller must send `Authorization: Bearer <value>`,
@@ -28,6 +32,8 @@ defmodule PurpleFlowWeb.WebhookController do
   """
 
   use PurpleFlowWeb, :controller
+
+  alias PurpleFlow.RunFiles
 
   # With nothing else to send, a comment line this often keeps proxies from
   # hanging up on a stream.
@@ -46,9 +52,12 @@ defmodule PurpleFlowWeb.WebhookController do
   end
 
   defp authorize(conn, workflow) do
-    if authorized?(conn, workflow),
-      do: respond(conn, workflow, input(conn, workflow)),
-      else: send_resp(conn, 401, "")
+    if authorized?(conn, workflow) do
+      run_id = PurpleFlow.Id.generate()
+      respond(conn, workflow, input(conn, workflow, run_id), run_id)
+    else
+      send_resp(conn, 401, "")
+    end
   end
 
   defp authorized?(_conn, %{auth: nil}), do: true
@@ -75,18 +84,19 @@ defmodule PurpleFlowWeb.WebhookController do
 
   defp token(value, _header), do: {:ok, value}
 
-  defp respond(conn, %{respond: :immediately} = workflow, input) do
-    case PurpleFlow.run(workflow.name, input, trigger: "webhook") do
-      {:ok, run_id} ->
+  defp respond(conn, %{respond: :immediately} = workflow, input, run_id) do
+    case PurpleFlow.run(workflow.name, input, trigger: "webhook", id: run_id) do
+      {:ok, ^run_id} ->
         conn |> put_resp_header("x-run-id", run_id) |> put_status(202) |> json(%{run_id: run_id})
 
       {:error, message} ->
+        # The run never started, so nothing else will delete its files.
+        RunFiles.delete_run(run_id)
         conn |> put_status(500) |> json(%{error: message})
     end
   end
 
-  defp respond(conn, %{respond: :stream} = workflow, input) do
-    run_id = PurpleFlow.Id.generate()
+  defp respond(conn, %{respond: :stream} = workflow, input, run_id) do
     opts = [trigger: "webhook", id: run_id, stream_to: self()]
 
     case PurpleFlow.run(workflow.name, input, opts) do
@@ -99,20 +109,28 @@ defmodule PurpleFlowWeb.WebhookController do
         |> stream_events(run_id)
 
       {:error, message} ->
+        # The run never started, so nothing else will delete its files.
+        RunFiles.delete_run(run_id)
         conn |> put_status(500) |> json(%{error: message})
     end
   end
 
-  defp respond(conn, workflow, input) do
-    run_id = PurpleFlow.Id.generate()
+  defp respond(conn, workflow, input, run_id) do
     conn = put_resp_header(conn, "x-run-id", run_id)
 
     opts = [trigger: "webhook", id: run_id, respond_to: self()]
 
     case PurpleFlow.run_and_wait(workflow.name, input, opts) do
-      {:responded, reply} -> send_reply(conn, reply)
-      {:ok, output} -> conn |> put_status(200) |> json(output)
-      {:error, message} -> conn |> put_status(500) |> json(%{error: message, run_id: run_id})
+      {:responded, reply} ->
+        send_reply(conn, reply)
+
+      {:ok, output} ->
+        conn |> put_status(200) |> json(output)
+
+      # Ended, or never started: either way its files can go.
+      {:error, message} ->
+        RunFiles.delete_run(run_id)
+        conn |> put_status(500) |> json(%{error: message, run_id: run_id})
     end
   end
 
@@ -163,15 +181,28 @@ defmodule PurpleFlowWeb.WebhookController do
     end
   end
 
-  defp input(conn, workflow) do
+  defp input(conn, workflow, run_id) do
     dropped = [workflow.auth_header | @dropped_headers]
 
     %{
-      "body" => body(conn.body_params),
+      "body" => conn.body_params |> body() |> save_uploads(run_id),
       "query" => conn.query_params,
       "headers" => conn.req_headers |> Enum.reject(fn {k, _} -> k in dropped end) |> Map.new()
     }
   end
+
+  # Uploaded files (multipart) are saved with the run, and the input holds
+  # a reference to each: `{"file", "name", "type", "size"}`.
+  defp save_uploads(%Plug.Upload{} = upload, run_id),
+    do: RunFiles.save(run_id, upload.path, upload.filename, upload.content_type)
+
+  defp save_uploads(map, run_id) when is_map(map) and not is_struct(map),
+    do: Map.new(map, fn {key, value} -> {key, save_uploads(value, run_id)} end)
+
+  defp save_uploads(list, run_id) when is_list(list),
+    do: Enum.map(list, &save_uploads(&1, run_id))
+
+  defp save_uploads(value, _run_id), do: value
 
   # A JSON body that isn't an object (like a list) arrives wrapped as "_json".
   defp body(%{"_json" => value}), do: value

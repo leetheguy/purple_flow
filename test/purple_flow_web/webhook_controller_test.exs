@@ -78,6 +78,43 @@ defmodule PurpleFlowWeb.WebhookControllerTest do
     assert_receive {:run_finished, ^run_id, "complete"}, 5_000
   end
 
+  describe "uploads" do
+    defp multipart(conn, path, file_bytes) do
+      boundary = "pfboundary"
+
+      body =
+        "--#{boundary}\r\n" <>
+          ~s(content-disposition: form-data; name="note"\r\n\r\nhello\r\n) <>
+          "--#{boundary}\r\n" <>
+          ~s(content-disposition: form-data; name="doc"; filename="report.pdf"\r\n) <>
+          "content-type: application/pdf\r\n\r\n" <>
+          file_bytes <> "\r\n--#{boundary}--\r\n"
+
+      conn
+      |> put_req_header("content-type", "multipart/form-data; boundary=#{boundary}")
+      |> post(path, body)
+    end
+
+    test "a file becomes a reference in the input, and is deleted when the run ends",
+         %{conn: conn} do
+      conn = multipart(conn, "/hooks/upload", "%PDF-1.7 tiny")
+      [run_id] = get_resp_header(conn, "x-run-id")
+
+      assert %{"body" => %{"note" => "hello", "doc" => doc}} = json_response(conn, 200)
+      assert %{"name" => "report.pdf", "type" => "application/pdf", "size" => 13} = doc
+      assert String.starts_with?(doc["file"], run_id <> "/")
+
+      refute File.exists?(Path.join(PurpleFlow.RunFiles.dir(), run_id))
+      assert {:error, "file " <> _} = PurpleFlow.RunFiles.path(doc)
+    end
+
+    test "a file over the webhook's max_upload gets 413 and starts no run", %{conn: conn} do
+      assert_error_sent 413, fn ->
+        multipart(conn, "/hooks/upload", String.duplicate("x", 2000))
+      end
+    end
+  end
+
   test "an unknown path is a 404", %{conn: conn} do
     assert %{"error" => _} = conn |> post("/hooks/nope") |> json_response(404)
   end

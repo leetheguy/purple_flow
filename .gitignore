@@ -36,6 +36,9 @@ npm-debug.log
 /assets/node_modules/
 
 
+# Files runs carry, in dev. Deleted as runs end.
+/run_files/
+
 # Credentials. Never commit.
 .env
 

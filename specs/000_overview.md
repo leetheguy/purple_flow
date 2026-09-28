@@ -93,6 +93,7 @@ purple_goo is not a dependency. Running purple_goo's pipeline as a PurpleFlow wo
 - [060 — UI](060_ui.md)
 - [170 — SSH node](170_ssh.md)
 - [180 — Noop, Wait, and Respond nodes](180_noop_wait_respond.md)
+- [190 — Run files](190_run_files.md)
 - [999 — To-do](999_todo.md)
 
 ## Log
@@ -106,3 +107,4 @@ purple_goo is not a dependency. Running purple_goo's pipeline as a PurpleFlow wo
 - 2026-09-27 — [170](170_ssh.md): a built-in SSH node runs commands on other machines and can stream their output. Erlang's `:ssh` application (part of OTP, not a new package) joins the dependencies. Spec 170 joins the list above.
 - 2026-09-28 — [180](180_noop_wait_respond.md): built-in Noop, Wait, and Respond nodes; a Respond step answers a waiting webhook caller early while the run carries on. Spec 180 joins the list above, as does [170](170_ssh.md), which was never added to it.
 - 2026-09-28 — [999](999_todo.md): planned and open work is listed in 999, a living to-do list, so this spec's "Later" section is no longer kept up to date. Its remaining items moved there.
+- 2026-09-28 — [190](190_run_files.md): runs can carry files. Webhook uploads are saved in a volume of their own, items hold a reference, and a run's files are deleted when it ends. Spec 190 joins the list above.

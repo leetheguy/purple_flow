@@ -128,6 +128,11 @@ if config_env() == :prod and role == :app do
 
   config :purple_flow, :workflows_dir, System.get_env("WORKFLOWS_DIR", "/app/workflows")
 
+  # Files runs carry (webhook uploads), deleted when each run ends.
+  config :purple_flow,
+         :run_files_dir,
+         System.get_env("PURPLEFLOW_RUN_FILES_DIR", "/app/run_files")
+
   config :purple_flow, PurpleFlowWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

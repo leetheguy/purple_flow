@@ -1,0 +1,10 @@
+[workflow]
+name = "upload"
+
+[trigger.webhook]
+path = "upload"
+max_upload = 1000
+
+[[steps]]
+name = "echo"
+node = "../echo/echo.toml"
