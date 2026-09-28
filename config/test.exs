@@ -44,6 +44,7 @@ config :purple_flow,
   # watching start their own on a temp folder and tick it by hand.
   workflows_watch: [interval: :manual, credentials: false],
   http_req_options: [plug: {Req.Test, PurpleFlow.Nodes.Http}],
+  oauth_req_options: [plug: {Req.Test, PurpleFlow.Credentials.OAuth}],
   files_req_options: [plug: {Req.Test, PurpleFlowWeb.Plugs.FilesProxy}]
 
 # Requests from here are refused, as from the Code node runner's network.

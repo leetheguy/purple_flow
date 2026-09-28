@@ -165,4 +165,98 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
     assert html =~ "TELEGRAM_TOKEN"
     refute html =~ "STRIPE_KEY"
   end
+
+  describe "OAuth" do
+    test "picking OAuth shows its fields, and saving goes to connect", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      refute has_element?(view, "#add-credential-form input[name='credential[client_id]']")
+
+      view
+      |> form("#add-credential-form", %{"credential" => %{"type" => "oauth"}})
+      |> render_change()
+
+      assert has_element?(view, "#add-credential-form input[name='credential[client_id]']")
+      assert has_element?(view, "#add-credential-form input[name='credential[client_secret]']")
+      assert has_element?(view, "#add-credential-form input[name='credential[scopes]']")
+      assert has_element?(view, "#callback-url-add")
+      refute has_element?(view, "#add-credential-form input[name='credential[key]']")
+
+      assert {:error, {:redirect, %{to: to}}} =
+               view
+               |> form("#add-credential-form", %{
+                 "credential" => %{
+                   "type" => "oauth",
+                   "name" => "GMAIL",
+                   "client_id" => "cid",
+                   "client_secret" => "shh",
+                   "scopes" => "https://www.googleapis.com/auth/gmail.send"
+                 }
+               })
+               |> render_submit()
+
+      [cred] = Credentials.list()
+      assert to == ~p"/credentials/#{cred.id}/connect"
+      assert %{type: "oauth", set: false} = cred
+      assert cred.oauth["auth_url"] =~ "accounts.google.com"
+    end
+
+    test "without a client ID it isn't saved", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> form("#add-credential-form", %{"credential" => %{"type" => "oauth"}})
+      |> render_change()
+
+      html =
+        view
+        |> form("#add-credential-form", %{"credential" => %{"type" => "oauth", "name" => "G"}})
+        |> render_submit()
+
+      assert html =~ "needs a client ID"
+      assert Credentials.list() == []
+    end
+
+    test "Reconnect is red until it's connected", %{conn: conn} do
+      {:ok, cred} =
+        Credentials.create("GMAIL", "", %{type: "oauth", oauth: %{"client_id" => "cid"}})
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      assert has_element?(view, "#reconnect-#{cred.id}.bg-red-500")
+      assert view |> element("#credential-state-#{cred.id}") |> render() =~ "not connected"
+
+      tokens =
+        Jason.encode!(%{"access_token" => "a", "refresh_token" => "r", "expires_at" => nil})
+
+      PurpleFlow.Repo.update!(
+        Ecto.Changeset.change(cred, key: PurpleFlow.Credentials.Cipher.encrypt(tokens))
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      refute has_element?(view, "#reconnect-#{cred.id}.bg-red-500")
+      assert view |> element("#credential-state-#{cred.id}") |> render() =~ "connected"
+    end
+
+    test "editing keeps the client secret when it's left blank", %{conn: conn} do
+      {:ok, cred} =
+        Credentials.create("GMAIL", "", %{
+          type: "oauth",
+          oauth: %{"client_id" => "cid"},
+          client_secret: "shh"
+        })
+
+      before = Credentials.fetch(cred.id).client_secret
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view |> element("#credential-#{cred.id} button[phx-click=edit]") |> render_click()
+
+      view
+      |> form("#edit-credential-form-#{cred.id}", %{
+        "credential" => %{"name" => "GMAIL", "client_id" => "cid2", "client_secret" => ""}
+      })
+      |> render_submit()
+
+      after_edit = Credentials.fetch(cred.id)
+      assert after_edit.client_secret == before
+      assert after_edit.oauth["client_id"] == "cid2"
+    end
+  end
 end

@@ -3,6 +3,9 @@ defmodule PurpleFlow.Credentials do
   Named secrets, encrypted at rest, referenced from a workflow as
   `{{ creds.NAME }}`.
 
+  A credential is plain text, or an OAuth login whose `get/1` is a working
+  access token (see `PurpleFlow.Credentials.OAuth`).
+
   A workflow only ever reads a credential, by name, through `get/1`. There
   is no way for a workflow, a node, or anything building either to create,
   set, or see one — that only happens through this module's other
@@ -11,34 +14,53 @@ defmodule PurpleFlow.Credentials do
 
   import Ecto.Query
 
-  alias PurpleFlow.Credentials.{Cipher, Credential}
+  alias PurpleFlow.Credentials.{Cipher, Credential, OAuth}
   alias PurpleFlow.Repo
 
   @doc """
-  Every active credential's `id`, `name`, `description`, and whether it's
-  set (`key` present) — never the key itself. Newest first.
+  Every active credential's `id`, `name`, `description`, `type`, and
+  whether it's set (`key` present) — never the key itself. OAuth ones also
+  have their settings (`oauth`) and `oauth_error`. Newest first.
   """
   def list do
     from(c in Credential,
       where: is_nil(c.archived_at),
       order_by: [desc: c.inserted_at],
-      select: %{id: c.id, name: c.name, description: c.description, set: not is_nil(c.key)}
+      select: %{
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        type: c.type,
+        oauth: c.oauth,
+        oauth_error: c.oauth_error,
+        set: not is_nil(c.key)
+      }
     )
     |> Repo.all()
   end
 
   @doc """
-  The decrypted value of the active credential named `name`, or `nil` if
-  it's unset, archived, or was never created. The only function that ever
-  produces a plaintext value.
+  The value of the active credential named `name`, or `nil` if it's unset,
+  archived, or was never created. The only function that ever produces a
+  plaintext value.
+
+  What the value is depends on the type: a text credential's decrypted
+  value, or an OAuth credential's working access token (renewed first if
+  it's expired), or `{:error, message}` if it can't be renewed.
   """
-  @spec get(String.t()) :: String.t() | nil
+  @spec get(String.t()) :: String.t() | nil | {:error, String.t()}
   def get(name) do
     case Repo.one(from c in Credential, where: c.name == ^name and is_nil(c.archived_at)) do
       %Credential{key: nil} -> nil
+      %Credential{type: "oauth"} = cred -> OAuth.access_token(cred)
       %Credential{key: key} -> Cipher.decrypt(key)
       nil -> nil
     end
+  end
+
+  @doc "The active credential with this `id`, or `nil`. For connecting an OAuth one."
+  def fetch(id) do
+    Repo.one(from c in Credential, where: c.id == ^id and is_nil(c.archived_at))
   end
 
   @doc """
@@ -60,18 +82,22 @@ defmodule PurpleFlow.Credentials do
   """
   def topic, do: "credentials"
 
-  @doc "Creates a new, active, unset credential."
-  def create(name, description) do
+  @doc """
+  Creates a new, active, unset credential. `attrs` may add `type`,
+  `oauth` (its settings), and `client_secret`.
+  """
+  def create(name, description, attrs \\ %{}) do
     %Credential{}
-    |> changeset(%{name: name, description: description})
+    |> changeset(Map.merge(attrs, %{name: name, description: description}))
     |> Repo.insert()
     |> announce()
   end
 
   @doc """
-  Updates `name`, `description`, and/or `key` on an existing credential.
-  `attrs` may include any of the three; a plaintext `key` is encrypted
-  before it's written.
+  Updates `name`, `description`, `key`, and, for OAuth, `oauth` and
+  `client_secret` on an existing credential. A plaintext `key` or
+  `client_secret` is encrypted before it's written; a blank one leaves the
+  stored value alone.
   """
   def update(id, attrs) do
     Repo.get!(Credential, id)
@@ -100,28 +126,40 @@ defmodule PurpleFlow.Credentials do
   defp announce(result), do: result
 
   defp changeset(credential, attrs) do
-    attrs = normalize_key(attrs)
+    attrs = attrs |> encrypt(:key) |> encrypt(:client_secret)
 
     credential
-    |> Ecto.Changeset.cast(attrs, [:name, :description, :key])
+    |> Ecto.Changeset.cast(attrs, [:name, :description, :key, :type, :oauth, :client_secret])
     |> Ecto.Changeset.validate_required([:name])
+    |> Ecto.Changeset.validate_inclusion(:type, ["text", "oauth"])
+    |> validate_oauth()
     |> validate_name()
     |> Ecto.Changeset.unique_constraint(:name)
   end
 
-  # A plaintext `key` in attrs (atom or string key, since this takes both
+  # A plaintext secret in attrs (atom or string key, since this takes both
   # internal calls and raw LiveView form params) gets encrypted before it's
   # cast into the changeset. Callers never pass an already-encrypted value.
-  # An empty or missing key means "leave the stored value alone." The
+  # An empty or missing one means "leave the stored value alone." The
   # encrypted value goes back under the same kind of key it came in under,
   # since Ecto rejects a map mixing atom and string keys.
-  defp normalize_key(attrs) do
-    field = if Map.has_key?(attrs, "key"), do: "key", else: :key
+  defp encrypt(attrs, name) do
+    field = if Map.has_key?(attrs, to_string(name)), do: to_string(name), else: name
 
     case Map.get(attrs, field) do
       value when is_binary(value) and value != "" -> Map.put(attrs, field, Cipher.encrypt(value))
       _ -> Map.delete(attrs, field)
     end
+  end
+
+  # An OAuth credential needs at least a client ID to connect with.
+  defp validate_oauth(changeset) do
+    oauth = Ecto.Changeset.get_field(changeset, :oauth) || %{}
+
+    if Ecto.Changeset.get_field(changeset, :type) == "oauth" and
+         String.trim(oauth["client_id"] || "") == "",
+       do: Ecto.Changeset.add_error(changeset, :oauth, "needs a client ID"),
+       else: changeset
   end
 
   defp validate_name(changeset) do

@@ -89,6 +89,7 @@ defmodule PurpleFlow.Template do
       {:creds, name} ->
         case Credentials.get(name) do
           nil -> fail("credential #{name} isn't set — set it at /credentials")
+          {:error, message} -> fail(message)
           value -> {value, [value | secrets]}
         end
 

@@ -128,6 +128,7 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 - You can't create a credential, see its value, or set it — there's no file to edit and no command for it. A human sets values at `/credentials`, directly, outside of anything you do.
 - If a workflow uses a `creds.NAME` that isn't set, it fails to load with a clear message. Tell whoever you're working with the name it needs, so they can set it at `/credentials` — that's the whole handoff.
 - Values are redacted as `[redacted]` in every saved record automatically.
+- **OAuth logins** (Gmail, Google Drive, …) are credentials too: a human picks Type: OAuth on `/credentials` and connects it. `{{ creds.NAME }}` is then a working access token, renewed by the app; use it as `authorization = "Bearer {{ creds.NAME }}"` in an HTTP step. If the provider refuses a renewal, the step fails with "needs reconnecting at /credentials"; tell the human. `samples/gmail/` sends email this way.
 
 ## Built-in nodes
 

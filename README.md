@@ -73,6 +73,8 @@ Doing it this way avoids complex routing and building out 500 workflows/sub-work
 
 You can create credentials (useful for any data you want kept private) in the web interface. Pass your agent the credential name for it to use in your flows.
 
+Credentials can also be OAuth logins (Gmail, Google Drive, and friends). Pick Type: OAuth, paste in your client ID and secret, hit Save, and click Allow on Google's page. Workflows use it like any other credential, and the app keeps it fresh; a red Reconnect button means it needs you again. `samples/gmail/` sends email from your own mailbox this way, with setup steps in its README.
+
 ### Security
 
 Purple Flow is still in early alpha, but security was of the utmost concern from the beginning.
@@ -114,7 +116,7 @@ The UI (Phoenix LiveView) is one site behind one sign-in, with a side menu (a me
 
 - **Workflows**: every workflow, with a search box, its triggers, its last run, a link to its files, and a Run box. The Run box takes just the request body, and the run gets it as `input["body"]`, the same as from a webhook. Pick a workflow to see its runs (and kill a running one), and a run to see every step's queue, what's running, how many succeeded, and every execution's input and output.
 - **Files**: the workflows folder, to browse and edit in place.
-- **Credentials**: secrets that workflows use by name.
+- **Credentials**: secrets that workflows use by name, as plain values or OAuth logins (connected once, kept fresh by the app).
 
 ### Under pressure
 
@@ -213,8 +215,8 @@ the app's own VM, with no isolation. The app logs a warning at boot saying so.
 There's no files service either: edit `workflows/` directly, and the Files
 page says so. With no admin login set, the UI is open.
 
-- Workflows live in `workflows/` (see "Workflow files" above), and edits there load on their own in dev too. Annotated examples live in `samples/`: `hello` (webhook, per-item routes), `users` (HTTP, per-item), and `ping`; `samples/testing/` holds the pressure tests. Copy one into `workflows/` to try it. `samples/AGENTS.md` is the guide to put at the top of the workflows folder for visiting agents.
-- Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See [specs/080](specs/080_credentials.md).
+- Workflows live in `workflows/` (see "Workflow files" above), and edits there load on their own in dev too. Annotated examples live in `samples/`: `hello` (webhook, per-item routes), `users` (HTTP, per-item), `ping`, and `gmail` (send email with an OAuth credential); `samples/testing/` holds the pressure tests. Copy one into `workflows/` to try it. `samples/AGENTS.md` is the guide to put at the top of the workflows folder for visiting agents.
+- Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See [specs/080](specs/080_credentials.md) and, for OAuth, [specs/200](specs/200_oauth_credentials.md). Connecting OAuth sends the browser back to `/credentials/oauth/callback` on this site's address (`PHX_HOST`), so that address must be one the provider accepts.
 
 The design is in [specs/](specs/000_overview.md).
 

@@ -1,0 +1,22 @@
+# Sends an email from your own Gmail or Google Workspace mailbox. It shows
+# up in your Sent folder like any other. Setup (once) is in README.md.
+#
+# Try it:
+#   curl -X POST localhost:4000/hooks/send-email -H 'content-type: application/json' \
+#     -d '{"to": "someone@example.com", "subject": "Hello", "text": "Sent from PurpleFlow."}'
+# The reply is Gmail's: {"id": ..., "threadId": ..., "labelIds": ["SENT"]}.
+
+[workflow]
+name = "send_email"
+
+[trigger.webhook]
+path = "send-email"
+
+[[steps]]
+name = "build"
+node = "build.toml"
+
+[[steps]]
+name = "send"
+node = "send.toml"
+after = ["build"]
