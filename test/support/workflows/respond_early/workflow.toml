@@ -1,0 +1,19 @@
+[workflow]
+name = "respond_early"
+
+[trigger.webhook]
+path = "respond-early"
+
+[[steps]]
+name = "answer"
+node = "answer.toml"
+
+[[steps]]
+name = "slow"
+node = "slow.toml"
+after = ["answer"]
+
+[[steps]]
+name = "answer_again"
+node = "answer_again.toml"
+after = ["slow"]

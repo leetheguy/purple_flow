@@ -47,7 +47,7 @@ name = "sync_records"          # unique
 
 [trigger.webhook]              # optional
 path = "sync-records"          # POST/GET /hooks/sync-records
-respond = "result"             # default: reply with the run's output. "immediately" = reply 202 + run_id.
+respond = "result"             # default: reply with the run's output (or a Respond step's answer, sooner). "immediately" = reply 202 + run_id.
                                # "stream" = server-sent events: each last-step item as it's made, then `end`
 auth = "SYNC_HOOK_TOKEN"       # optional: callers must send `Authorization: Bearer <credential value>`, else 401
 auth_header = "x-telegram-bot-api-secret-token"  # optional, needs auth: read the bare token from this header instead
@@ -138,6 +138,11 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 | `PurpleFlow.Nodes.Code` | `file` (an `.exs` next to the node file) | whatever the script returns |
 | `PurpleFlow.Nodes.Batch` | `size`, `wait` (ms, optional) | `{"items": [...]}`, one per batch. The last partial batch goes when nothing more can reach it |
 | `PurpleFlow.Nodes.Workflow` | `workflow` (name) | that workflow's output. Waits for it |
+| `PurpleFlow.Nodes.Noop` | none | its input, unchanged |
+| `PurpleFlow.Nodes.Wait` | `ms`, or `until` (ISO 8601 time) | its input, after waiting. The step's `timeout` covers the wait |
+| `PurpleFlow.Nodes.Respond` | `status` (200), `headers`, `body` (default: the input; text is sent as text, anything else as JSON) | its input. Answers the waiting webhook caller now; the run carries on |
+
+**Respond:** only answers a webhook with `respond = "result"` (the default). The first Respond step to run answers; later ones, and runs nobody waits on (`"immediately"`, `"stream"`, cron, the Run button, a child run of the Workflow node), answer no one. A run that ends without one answers with its output, as usual.
 
 **SSH:** keys and passwords come from credentials (`private_key = "{{ creds.DEPLOY_SSH_KEY }}"`). Set `host_key` to the server's fingerprint so a different server is refused; without it any key is accepted. `command` takes templates like anything else, so one step can run any command the workflow builds; it runs in the server's shell, templates and all.
 
@@ -155,7 +160,7 @@ Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
 ## Gotchas
 
 - **Webhook input is wrapped**: `%{"body" => ..., "query" => ..., "headers" => ...}`. Most webhook workflows start with a tiny Code step that returns `input["body"]` (see `samples/hello/numbers.exs`).
-- Webhook calls wait for the result by default. For runs that can take longer than ~100s (Cloudflare's limit), use `respond = "immediately"` or `respond = "stream"`.
+- Webhook calls wait for the result by default. For runs that can take longer than ~100s (Cloudflare's limit), use `respond = "immediately"`, `respond = "stream"`, or a Respond step that answers early.
 - A list output from an HTTP or Postgres node makes the next step run per item. That's usually what you want. If not, wrap it in an object in a Code step, or gather items with a Batch step.
 - A run with failed items still ends `complete`. Look at the steps' ok / total on its page, or the `step_runs` statuses.
 - **Edits load on their own**, about two seconds after the last save. There's no reload step. If an edit breaks a workflow, **its previous version keeps running**, so a webhook that still answers doesn't prove your change loaded. Check (below).
@@ -189,7 +194,7 @@ Loading catches bad TOML, missing files, paths that leave the workflows folder, 
 
 ## A new node type
 
-Only when HTTP, SSH, Postgres, and Code really can't do it. Add a module under `lib/purple_flow/nodes/`:
+Only when the built-in nodes really can't do it. Add a module under `lib/purple_flow/nodes/`:
 
 ```elixir
 defmodule PurpleFlow.Nodes.Slack do

@@ -57,6 +57,9 @@ defmodule PurpleFlow.Run do
       # Gets {:run_item, id, step, item} for every item a last step produces,
       # and {:run_finished, id, status} at the end.
       stream_to: Map.get(args, :stream_to),
+      # A webhook caller waiting for this run, until a Respond step answers
+      # it: gets {:run_respond, id, reply}. See `PurpleFlow.Node.respond/1`.
+      respond_to: Map.get(args, :respond_to),
       steps: Map.new(workflow.steps, &{&1.name, &1}),
       order: names,
       next: Map.new(names, &{&1, Workflow.next_steps(workflow, &1)}),
@@ -131,6 +134,15 @@ defmodule PurpleFlow.Run do
       # Ending, or an execution the run no longer knows: the item goes nowhere.
       _ -> {:reply, :ok, state}
     end
+  end
+
+  # Only the first answer goes to the caller; after it, nobody is waiting.
+  def handle_call({:respond, _reply}, _from, %{respond_to: nil} = state),
+    do: {:reply, :none, state}
+
+  def handle_call({:respond, reply}, _from, state) do
+    send(state.respond_to, {:run_respond, state.id, reply})
+    {:reply, :ok, %{state | respond_to: nil}}
   end
 
   def handle_call(:kill, _from, state) do

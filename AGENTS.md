@@ -32,6 +32,10 @@ something changes what an implemented spec says, append a dated entry to its
 linking the spec that changed it. A redesign too big for a log entry is a new
 spec: mark the old one `Status: superseded by [NNN](...)` and give the new one
 a `Replaces:` line. To know what's true now, read a spec and then its log.
+The one exception is `specs/999_todo.md`, the living list of planned work
+and open questions: it's always `draft` and kept current, not kept as
+history. Add to it when you leave something planned or open, and delete an
+item when it ships.
 
 **Starting/restarting the server?** Use `docker compose up -d --build`, not a
 bare `mix phx.server`. Docker waits for Postgres to be healthy before

@@ -118,7 +118,7 @@ Webhook options:
 
 ## Step files
 
-A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are six kinds.
+A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are nine kinds.
 
 **HTTP request**
 
@@ -213,6 +213,39 @@ workflow = "other_flow_name"
 ```
 
 The output is whatever that workflow outputs. This step waits for it to finish, with no time limit unless the step sets `timeout`. A workflow may run itself this way; see Guidelines.
+
+**Wait**
+
+```toml
+module = "PurpleFlow.Nodes.Wait"
+
+[config]
+ms = 5000                          # wait this many milliseconds
+# or: until = "2026-10-01T09:00:00Z"
+```
+
+Waits, then hands its input on unchanged. Each item waits on its own. The step's `timeout` covers the wait.
+
+**Answer the webhook now (Respond)**
+
+```toml
+module = "PurpleFlow.Nodes.Respond"
+
+[config]
+status = 202                       # default 200
+headers = { "x-job" = "{{ input.body.id }}" }  # optional
+body = { accepted = true }         # default: this step's input. Text is sent as text, anything else as JSON
+```
+
+Answers whoever called the webhook right away, and the run carries on without them. Use it to say "got it" quickly and keep working. It only answers a webhook that's waiting for the result (the default); the first Respond step to run answers, and any later one does nothing. The step hands its input on unchanged.
+
+**Do nothing (Noop)**
+
+```toml
+module = "PurpleFlow.Nodes.Noop"
+```
+
+Hands its input on unchanged. A named place for branches to meet, or a placeholder.
 
 ## Filling in values: `{{ }}`
 
@@ -310,7 +343,7 @@ If the workflow has a webhook, call it:
 curl -X POST "BASE/hooks/my-flow" -H "content-type: application/json" -d '{"hello": "world"}'
 ```
 
-The reply is the run's result, unless the webhook has `respond = "immediately"` or `respond = "stream"`. If it has `auth`, you need its secret, and you don't have that; ask the person to run it from the app instead.
+The reply is the run's result (or a Respond step's answer), unless the webhook has `respond = "immediately"` or `respond = "stream"`. If it has `auth`, you need its secret, and you don't have that; ask the person to run it from the app instead.
 
 Real runs do real things: HTTP steps really send requests, and database steps really read and write.
 

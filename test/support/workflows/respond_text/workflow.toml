@@ -1,0 +1,9 @@
+[workflow]
+name = "respond_text"
+
+[trigger.webhook]
+path = "respond-text"
+
+[[steps]]
+name = "answer"
+node = "answer.toml"

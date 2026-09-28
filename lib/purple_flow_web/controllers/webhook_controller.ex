@@ -7,7 +7,9 @@ defmodule PurpleFlowWeb.WebhookController do
 
   By default the reply waits for the run and is the run's output: `200`
   with the output as JSON, or `500 {"error": ...}` if the run failed.
-  The run ID is in the `x-run-id` header either way.
+  The run ID is in the `x-run-id` header either way. A Respond step
+  (`PurpleFlow.Nodes.Respond`) can answer sooner, with its own status,
+  headers, and body, while the run carries on.
 
   With `respond = "immediately"` the reply comes right away:
   `202 {"run_id": "..."}`. Use that for workflows that take longer than
@@ -105,10 +107,32 @@ defmodule PurpleFlowWeb.WebhookController do
     run_id = PurpleFlow.Id.generate()
     conn = put_resp_header(conn, "x-run-id", run_id)
 
-    case PurpleFlow.run_and_wait(workflow.name, input, trigger: "webhook", id: run_id) do
+    opts = [trigger: "webhook", id: run_id, respond_to: self()]
+
+    case PurpleFlow.run_and_wait(workflow.name, input, opts) do
+      {:responded, reply} -> send_reply(conn, reply)
       {:ok, output} -> conn |> put_status(200) |> json(output)
       {:error, message} -> conn |> put_status(500) |> json(%{error: message, run_id: run_id})
     end
+  end
+
+  # A Respond step's answer. Text goes as is, anything else as JSON, each
+  # with a content type unless the step set its own.
+  defp send_reply(conn, %{"status" => status, "headers" => headers, "body" => body}) do
+    conn =
+      Enum.reduce(headers, conn, fn {name, value}, conn -> put_resp_header(conn, name, value) end)
+
+    {type, body} =
+      if is_binary(body),
+        do: {"text/plain; charset=utf-8", body},
+        else: {"application/json; charset=utf-8", Jason.encode!(body)}
+
+    conn =
+      if get_resp_header(conn, "content-type") == [],
+        do: put_resp_header(conn, "content-type", type),
+        else: conn
+
+    send_resp(conn, status, body)
   end
 
   # Sends each item as the run produces it, until the run ends or the caller

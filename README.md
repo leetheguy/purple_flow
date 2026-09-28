@@ -101,7 +101,7 @@ trigger (webhook / cron / manual)
   -> the run saves its records in batches, and a Kill button stops it
 ```
 
-Built-in nodes: HTTP and SSH (both can stream), Postgres, Code, Batch, and "run another workflow". A new node type is just a module implementing `execute(input, config)`.
+Built-in nodes: HTTP and SSH (both can stream), Postgres, Code, Batch, Wait, Respond (answer the webhook early), Noop, and "run another workflow". A new node type is just a module implementing `execute(input, config)`.
 
 The UI (Phoenix LiveView) is one site behind one sign-in, with a side menu (a menu button on small screens):
 

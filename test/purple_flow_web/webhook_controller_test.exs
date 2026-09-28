@@ -51,6 +51,33 @@ defmodule PurpleFlowWeb.WebhookControllerTest do
     assert Jason.decode!(done) == %{"status" => "complete", "run_id" => run_id}
   end
 
+  test "a Respond step answers right away, and the run carries on", %{conn: conn} do
+    Phoenix.PubSub.subscribe(PurpleFlow.PubSub, "runs")
+    conn = post(conn, "/hooks/respond-early", %{"name" => "ada"})
+
+    assert json_response(conn, 201) == %{"accepted" => "ada"}
+    assert get_resp_header(conn, "x-greeting") == ["hi ada"]
+    [run_id] = get_resp_header(conn, "x-run-id")
+    assert PurpleFlow.Runs.get(run_id).run.status == "running"
+
+    # The second Respond step answers no one; the run still ends complete.
+    assert_receive {:run_finished, ^run_id, "complete"}, 5_000
+    %{steps: steps} = PurpleFlow.Runs.get(run_id)
+    assert Enum.all?(steps, &(&1.status == "ok"))
+    assert Enum.map(steps, & &1.step) |> Enum.sort() == ~w(answer answer_again slow)
+  end
+
+  test "a Respond step's text body is sent as text", %{conn: conn} do
+    Phoenix.PubSub.subscribe(PurpleFlow.PubSub, "runs")
+    conn = post(conn, "/hooks/respond-text")
+    assert response(conn, 200) == "pong"
+    assert ["text/plain" <> _] = get_resp_header(conn, "content-type")
+
+    # Let the run finish before the test's database sandbox goes away.
+    [run_id] = get_resp_header(conn, "x-run-id")
+    assert_receive {:run_finished, ^run_id, "complete"}, 5_000
+  end
+
   test "an unknown path is a 404", %{conn: conn} do
     assert %{"error" => _} = conn |> post("/hooks/nope") |> json_response(404)
   end

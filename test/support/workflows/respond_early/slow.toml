@@ -1,0 +1,5 @@
+module = "PurpleFlow.Test.FakeNode"
+
+[config]
+sleep = 300
+return = "done"

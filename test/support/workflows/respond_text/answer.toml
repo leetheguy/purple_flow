@@ -1,0 +1,4 @@
+module = "PurpleFlow.Nodes.Respond"
+
+[config]
+body = "pong"
