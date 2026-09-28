@@ -81,6 +81,27 @@ defmodule PurpleFlow.Node do
     end
   end
 
+  @doc """
+  Answers the webhook caller waiting on this run, if there is one and no
+  step has answered yet: `reply` is `%{"status" => 200, "headers" => %{},
+  "body" => ...}`. The run carries on. Returns `:ok` if the reply went to a
+  caller, `:none` if nobody was waiting. The Respond node uses it.
+
+  Outside a run (a test calling `execute` directly), it sends
+  `{:respond, reply}` to the calling process instead and returns `:ok`.
+  """
+  @spec respond(map()) :: :ok | :none
+  def respond(reply) do
+    case Process.get(:purple_flow_respond) do
+      nil ->
+        send(self(), {:respond, reply})
+        :ok
+
+      respond ->
+        respond.(reply)
+    end
+  end
+
   @doc "True if `module` is a real module that says it's a `PurpleFlow.Node`."
   def node_module?(module) do
     with true <- Code.ensure_loaded?(module),

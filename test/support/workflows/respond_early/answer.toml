@@ -1,0 +1,6 @@
+module = "PurpleFlow.Nodes.Respond"
+
+[config]
+status = 201
+headers = { "x-greeting" = "hi {{ input.body.name }}" }
+body = { accepted = "{{ input.body.name }}" }

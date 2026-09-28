@@ -96,6 +96,7 @@ defmodule PurpleFlow.Workflow.Loader do
         respond: respond_mode(get_in(toml, ["trigger", "webhook", "respond"])),
         auth: blank_to_nil(get_in(toml, ["trigger", "webhook", "auth"])),
         auth_header: auth_header(get_in(toml, ["trigger", "webhook", "auth_header"])),
+        max_upload: get_in(toml, ["trigger", "webhook", "max_upload"]) || 100_000_000,
         cron: get_in(toml, ["trigger", "cron", "schedule"]),
         steps: steps
       }
@@ -277,7 +278,16 @@ defmodule PurpleFlow.Workflow.Loader do
   # -- whole-workflow checks --
 
   defp check_triggers(workflow),
-    do: check_respond(workflow) ++ check_auth(workflow) ++ check_cron(workflow)
+    do:
+      check_respond(workflow) ++
+        check_auth(workflow) ++ check_max_upload(workflow) ++ check_cron(workflow)
+
+  defp check_max_upload(%Workflow{max_upload: n}) when is_integer(n) and n >= 0, do: []
+
+  defp check_max_upload(%Workflow{max_upload: n}),
+    do: [
+      "webhook max_upload must be a number of bytes, 0 or more (0 = no limit), not #{inspect(n)}"
+    ]
 
   defp check_respond(%Workflow{respond: {:bad, value}}) do
     [~s(webhook respond must be "result", "immediately", or "stream", not #{inspect(value)})]

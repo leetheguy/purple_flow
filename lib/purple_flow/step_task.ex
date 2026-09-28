@@ -32,6 +32,7 @@ defmodule PurpleFlow.StepTask do
     case Template.render(step.config, %{input: input, steps: steps}) do
       {:ok, config, secrets} ->
         Process.put(:purple_flow_emit, fn value, route -> emit(run, value, route, secrets) end)
+        Process.put(:purple_flow_respond, &respond(run, &1))
 
         case call_node(step.module, input, config, steps) do
           {:ok, output, route} ->
@@ -63,6 +64,15 @@ defmodule PurpleFlow.StepTask do
 
       {:error, message} ->
         raise "emitted #{message}"
+    end
+  end
+
+  # Answers the waiting webhook caller, if any. Not redacted: the reply is
+  # what the workflow chose to send, like an HTTP node's request body.
+  defp respond(run, reply) do
+    case to_json(reply) do
+      {:ok, reply} -> GenServer.call(run, {:respond, reply}, :infinity)
+      {:error, message} -> raise "reply #{message}"
     end
   end
 

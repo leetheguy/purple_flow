@@ -51,6 +51,70 @@ defmodule PurpleFlowWeb.WebhookControllerTest do
     assert Jason.decode!(done) == %{"status" => "complete", "run_id" => run_id}
   end
 
+  test "a Respond step answers right away, and the run carries on", %{conn: conn} do
+    Phoenix.PubSub.subscribe(PurpleFlow.PubSub, "runs")
+    conn = post(conn, "/hooks/respond-early", %{"name" => "ada"})
+
+    assert json_response(conn, 201) == %{"accepted" => "ada"}
+    assert get_resp_header(conn, "x-greeting") == ["hi ada"]
+    [run_id] = get_resp_header(conn, "x-run-id")
+    assert PurpleFlow.Runs.get(run_id).run.status == "running"
+
+    # The second Respond step answers no one; the run still ends complete.
+    assert_receive {:run_finished, ^run_id, "complete"}, 5_000
+    %{steps: steps} = PurpleFlow.Runs.get(run_id)
+    assert Enum.all?(steps, &(&1.status == "ok"))
+    assert Enum.map(steps, & &1.step) |> Enum.sort() == ~w(answer answer_again slow)
+  end
+
+  test "a Respond step's text body is sent as text", %{conn: conn} do
+    Phoenix.PubSub.subscribe(PurpleFlow.PubSub, "runs")
+    conn = post(conn, "/hooks/respond-text")
+    assert response(conn, 200) == "pong"
+    assert ["text/plain" <> _] = get_resp_header(conn, "content-type")
+
+    # Let the run finish before the test's database sandbox goes away.
+    [run_id] = get_resp_header(conn, "x-run-id")
+    assert_receive {:run_finished, ^run_id, "complete"}, 5_000
+  end
+
+  describe "uploads" do
+    defp multipart(conn, path, file_bytes) do
+      boundary = "pfboundary"
+
+      body =
+        "--#{boundary}\r\n" <>
+          ~s(content-disposition: form-data; name="note"\r\n\r\nhello\r\n) <>
+          "--#{boundary}\r\n" <>
+          ~s(content-disposition: form-data; name="doc"; filename="report.pdf"\r\n) <>
+          "content-type: application/pdf\r\n\r\n" <>
+          file_bytes <> "\r\n--#{boundary}--\r\n"
+
+      conn
+      |> put_req_header("content-type", "multipart/form-data; boundary=#{boundary}")
+      |> post(path, body)
+    end
+
+    test "a file becomes a reference in the input, and is deleted when the run ends",
+         %{conn: conn} do
+      conn = multipart(conn, "/hooks/upload", "%PDF-1.7 tiny")
+      [run_id] = get_resp_header(conn, "x-run-id")
+
+      assert %{"body" => %{"note" => "hello", "doc" => doc}} = json_response(conn, 200)
+      assert %{"name" => "report.pdf", "type" => "application/pdf", "size" => 13} = doc
+      assert String.starts_with?(doc["file"], run_id <> "/")
+
+      refute File.exists?(Path.join(PurpleFlow.RunFiles.dir(), run_id))
+      assert {:error, "file " <> _} = PurpleFlow.RunFiles.path(doc)
+    end
+
+    test "a file over the webhook's max_upload gets 413 and starts no run", %{conn: conn} do
+      assert_error_sent 413, fn ->
+        multipart(conn, "/hooks/upload", String.duplicate("x", 2000))
+      end
+    end
+  end
+
   test "an unknown path is a 404", %{conn: conn} do
     assert %{"error" => _} = conn |> post("/hooks/nope") |> json_response(404)
   end

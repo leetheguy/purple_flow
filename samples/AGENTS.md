@@ -112,13 +112,16 @@ Webhook options:
 
 | Option | Meaning |
 |---|---|
-| `respond = "immediately"` | reply right away instead of waiting for the result. Use this for anything that takes more than about a minute |
+| `respond = "result"` | the default: wait for the run and reply with its result (or a Respond step's answer, sooner) |
+| `respond = "immediately"` | reply right away with the run's ID instead of waiting for the result. Use this for anything that takes more than about a minute |
 | `respond = "stream"` | reply with a server-sent event stream: each result as it's made, then an `end` event (see Streaming) |
-| `auth = "SOME_NAME"` | callers must send `Authorization: Bearer <secret>`, where the secret is a stored credential named `SOME_NAME` |
+| `auth = "SOME_NAME"` | callers must send `Authorization: Bearer <secret>`, where the secret is a stored credential named `SOME_NAME`. Anyone else gets `401` and no run starts |
+| `auth_header = "x-some-header"` | with `auth`: read the secret from this header instead, as is, with no `Bearer ` in front (some services, like Telegram, send it that way) |
+| `max_upload = 100000000` | the most bytes one request may send, files included (default 100 MB; `0` = no limit). Bigger gets `413` (see Files) |
 
 ## Step files
 
-A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are six kinds.
+A step file names what kind of step it is (`module`) and how it's set up (`[config]`). There are nine kinds.
 
 **HTTP request**
 
@@ -148,7 +151,8 @@ user = "deploy"
 private_key = "{{ creds.DEPLOY_SSH_KEY }}"   # or: password = "{{ creds.DEPLOY_PASSWORD }}"
 host_key = "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
 command = "df -h /"
-stdin = "{{ input.text }}"                   # optional
+stdin = "{{ input.text }}"                   # optional: sent to the command's input
+# or: stdin_file = "{{ input.body.doc }}"   # a file's bytes instead (see Files)
 connect_timeout = 30                         # optional: seconds to connect; 0 = no limit
 ```
 
@@ -214,6 +218,39 @@ workflow = "other_flow_name"
 
 The output is whatever that workflow outputs. This step waits for it to finish, with no time limit unless the step sets `timeout`. A workflow may run itself this way; see Guidelines.
 
+**Wait**
+
+```toml
+module = "PurpleFlow.Nodes.Wait"
+
+[config]
+ms = 5000                          # wait this many milliseconds
+# or: until = "2026-10-01T09:00:00Z"
+```
+
+Waits, then hands its input on unchanged. Each item waits on its own. The step's `timeout` covers the wait.
+
+**Answer the webhook now (Respond)**
+
+```toml
+module = "PurpleFlow.Nodes.Respond"
+
+[config]
+status = 202                       # default 200
+headers = { "x-job" = "{{ input.body.id }}" }  # optional
+body = { accepted = true }         # default: this step's input. Text is sent as text, anything else as JSON
+```
+
+Answers whoever called the webhook right away, and the run carries on without them. Use it to say "got it" quickly and keep working. It only answers a webhook that's waiting for the result (the default); the first Respond step to run answers, and any later one does nothing. The step hands its input on unchanged.
+
+**Do nothing (Noop)**
+
+```toml
+module = "PurpleFlow.Nodes.Noop"
+```
+
+Hands its input on unchanged. A named place for branches to meet, or a placeholder.
+
 ## Filling in values: `{{ }}`
 
 Any text in `[config]` can include values from the run:
@@ -241,12 +278,12 @@ You can't create secrets or see their values. A person adds them in the app. If 
 - **Failures stop one item, not the run.** A failed item goes no further, and the rest carry on. To handle failures, add a step with `when = "failed"` after the step that might fail: it gets `{"error": "...", "input": <the item>}`. To stop everything on the first failure (an email blast, say), set `on_fail = "end_run"` on that step.
 - **Branching:** a Code step can send its result down a named route, and only steps with a matching `when` get it. Each item takes its own route.
 - **Joining back up:** a step with several `after` entries gets the items from all of them, one run per item.
-- **The result of the run** is the output of the last step: its output if it ran once, or all its items as a list if it ran more than once.
+- **The result of the run** is the output of the last step (the one nothing comes after): its output if it ran once, or all its items as a list if it ran more than once. With several last steps, it's `{"step_name": output, ...}`, one entry per step that ran.
 - **Kill:** a run that's stuck can be stopped from its page in the app.
 
 ## Streaming
 
-Two things stream:
+Three things stream:
 
 - **An HTTP step with `stream`** hands on each message of the response as it arrives (see HTTP request above).
 - **An SSH step with `stream`** hands on each line the command prints as it arrives (see SSH above).
@@ -276,7 +313,30 @@ A workflow started by a web request gets:
 {"body": <what the caller sent>, "query": <URL parameters>, "headers": <request headers>}
 ```
 
-Your first step usually wants `input.body`. Runs started with the Run button in the app get the same shape, so one workflow works both ways.
+Your first step usually wants `input.body`. Runs started with the Run button in the app get the same shape, so one workflow works both ways. The caller's `authorization` and `cookie` headers (and the `auth_header`, if set) are left out, so they're never saved.
+
+## Files
+
+A webhook can take files, sent as a form upload (`multipart/form-data`):
+
+```sh
+curl -F note=hello -F doc=@report.pdf "BASE/hooks/my-flow"
+```
+
+The file itself isn't put in the input. It's saved on the server, and the input holds a small reference to it where the file was:
+
+```json
+{"body": {"note": "hello", "doc": {"file": "0192…/0192…", "name": "report.pdf", "type": "application/pdf", "size": 48213}}, ...}
+```
+
+The reference moves through steps like any other value. To send the file somewhere, give it to an SSH step's `stdin_file`:
+
+```toml
+command = "cat > /srv/uploads/report.pdf"
+stdin_file = "{{ input.body.doc }}"
+```
+
+A run's files are deleted when the run ends, so use them within the run that received them. Code scripts see the reference, not the file's contents. `name` is whatever the uploader called the file; if you put it into an SSH `command`, the server's shell runs whatever it says.
 
 ## Check that your change worked
 
@@ -300,7 +360,7 @@ Wait until `reloaded_at` is later than your last save. Then check:
 - `"running_older_version": true`: your edit didn't load. `problems` says why, and the old version is still the one running.
 - A new workflow that failed shows up under `not_loaded`, with its problems.
 
-The checks catch broken file syntax, missing files, unknown step names, steps that loop back on themselves, misused `when`, bad step options, missing secrets, and script syntax errors.
+The checks catch broken file syntax, missing files, paths that leave the folder, unknown step kinds and step names, steps that loop back on themselves, misused `when`, bad step and webhook options, `{{ steps.x }}` naming a step that doesn't lead to this one, missing secrets, and script syntax errors.
 
 ## Try it
 
@@ -310,7 +370,7 @@ If the workflow has a webhook, call it:
 curl -X POST "BASE/hooks/my-flow" -H "content-type: application/json" -d '{"hello": "world"}'
 ```
 
-The reply is the run's result, unless the webhook has `respond = "immediately"` or `respond = "stream"`. If it has `auth`, you need its secret, and you don't have that; ask the person to run it from the app instead.
+The reply is the run's result (or a Respond step's answer), unless the webhook has `respond = "immediately"` or `respond = "stream"`. If it has `auth`, you need its secret, and you don't have that; ask the person to run it from the app instead.
 
 Real runs do real things: HTTP steps really send requests, and database steps really read and write.
 

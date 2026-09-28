@@ -90,6 +90,8 @@ ENV LC_ALL=en_US.UTF-8
 
 WORKDIR "/app"
 RUN chown nobody /app
+# The run_files volume starts with this folder's owner, so the app can write it.
+RUN mkdir /app/run_files && chown nobody /app/run_files
 
 # set runner ENV
 ENV MIX_ENV="prod"

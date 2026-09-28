@@ -17,7 +17,9 @@ defmodule PurpleFlow do
   `id:` (a run ID to use), and `stream_to:` (a pid that gets
   `{:run_item, run_id, step, item}` for every item a last step produces,
   as it's produced, then `{:run_finished, run_id, status}`; see
-  `specs/150_streaming.md`).
+  `specs/150_streaming.md`), and `respond_to:` (a pid that gets
+  `{:run_respond, run_id, reply}` when a Respond step answers the caller;
+  see `PurpleFlow.Nodes.Respond`).
   """
   @spec run(String.t(), term(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def run(workflow_name, input, opts \\ []) do
@@ -36,7 +38,8 @@ defmodule PurpleFlow do
         workflow: workflow,
         input: input,
         trigger: Keyword.get(opts, :trigger, "manual"),
-        stream_to: Keyword.get(opts, :stream_to)
+        stream_to: Keyword.get(opts, :stream_to),
+        respond_to: Keyword.get(opts, :respond_to)
       }
 
       case DynamicSupervisor.start_child(PurpleFlow.RunSupervisor, {PurpleFlow.Run, args}) do
@@ -48,7 +51,10 @@ defmodule PurpleFlow do
 
   @doc """
   Starts a run and waits for it to finish. Returns `{:ok, output}` or
-  `{:error, message}`. Used by the Workflow node.
+  `{:error, message}`. Used by the Workflow node and webhooks.
+
+  With `respond_to: self()`, it returns `{:responded, reply}` as soon as a
+  Respond step answers, without waiting for the rest of the run.
   """
   def run_and_wait(workflow_name, input, opts \\ []) do
     id = Keyword.get(opts, :id) || Id.generate()
@@ -59,6 +65,9 @@ defmodule PurpleFlow do
     try do
       with {:ok, ^id} <- run(workflow_name, input, Keyword.put(opts, :id, id)) do
         receive do
+          {:run_respond, ^id, reply} ->
+            {:responded, reply}
+
           {:run_finished, ^id, "complete"} ->
             {:ok, Runs.get(id).run.output}
 

@@ -48,7 +48,7 @@ defmodule PurpleFlowWeb.Endpoint do
   plug PurpleFlowWeb.Plugs.FilesProxy
 
   plug Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
+    parsers: [:urlencoded, PurpleFlowWeb.MultipartParser, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
 

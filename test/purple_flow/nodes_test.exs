@@ -155,4 +155,78 @@ defmodule PurpleFlow.NodesTest do
       assert {:error, _} = PurpleFlow.Nodes.Workflow.execute(%{}, %{"workflow" => "nope"})
     end
   end
+
+  describe "Noop" do
+    test "hands its input on unchanged" do
+      assert {:ok, %{"a" => [1, 2]}} = PurpleFlow.Nodes.Noop.execute(%{"a" => [1, 2]}, %{})
+    end
+  end
+
+  describe "Wait" do
+    alias PurpleFlow.Nodes.Wait
+
+    test "waits ms, then hands its input on" do
+      {time, result} = :timer.tc(fn -> Wait.execute("x", %{"ms" => 50}) end, :millisecond)
+      assert result == {:ok, "x"}
+      assert time >= 50
+    end
+
+    test "ms may arrive as text from a template" do
+      assert {:ok, 1} = Wait.execute(1, %{"ms" => "5"})
+      assert {:error, "Wait ms must be" <> _} = Wait.execute(1, %{"ms" => "soon"})
+    end
+
+    test "until waits for a time; a past time doesn't wait" do
+      soon = DateTime.utc_now() |> DateTime.add(50, :millisecond) |> DateTime.to_iso8601()
+      {time, {:ok, 1}} = :timer.tc(fn -> Wait.execute(1, %{"until" => soon}) end, :millisecond)
+      assert time >= 40
+
+      assert {:ok, 1} = Wait.execute(1, %{"until" => "2000-01-01T00:00:00Z"})
+      assert {:error, "Wait until must be" <> _} = Wait.execute(1, %{"until" => "tomorrow"})
+    end
+
+    test "prepare wants exactly one of ms or until, and checks plain values" do
+      assert {:ok, _} = Wait.prepare(%{"ms" => 10}, ".", ".")
+      assert {:ok, _} = Wait.prepare(%{"ms" => "{{ input.ms }}"}, ".", ".")
+      assert {:ok, _} = Wait.prepare(%{"until" => "2030-01-01T00:00:00Z"}, ".", ".")
+      assert {:error, _} = Wait.prepare(%{}, ".", ".")
+      assert {:error, _} = Wait.prepare(%{"ms" => 1, "until" => "2030-01-01T00:00:00Z"}, ".", ".")
+      assert {:error, _} = Wait.prepare(%{"ms" => -1}, ".", ".")
+      assert {:error, _} = Wait.prepare(%{"until" => "noon"}, ".", ".")
+    end
+  end
+
+  describe "Respond" do
+    alias PurpleFlow.Nodes.Respond
+
+    test "answers with the input by default and hands it on" do
+      assert {:ok, %{"a" => 1}} = Respond.execute(%{"a" => 1}, %{})
+
+      assert_received {:respond, %{"status" => 200, "headers" => %{}, "body" => %{"a" => 1}}}
+    end
+
+    test "status, headers, and body come from config" do
+      config = %{"status" => "201", "headers" => %{"X-Id" => 7}, "body" => "made"}
+      assert {:ok, "in"} = Respond.execute("in", config)
+
+      assert_received {:respond,
+                       %{"status" => 201, "headers" => %{"x-id" => "7"}, "body" => "made"}}
+    end
+
+    test "a bad status or header is an error, and nothing is sent" do
+      assert {:error, "Respond status" <> _} = Respond.execute(1, %{"status" => 99})
+
+      assert {:error, "Respond header" <> _} =
+               Respond.execute(1, %{"headers" => %{"a" => "x\ny"}})
+
+      assert {:error, "Respond headers" <> _} = Respond.execute(1, %{"headers" => "a"})
+      refute_received {:respond, _}
+    end
+
+    test "prepare checks plain values and leaves templates for later" do
+      assert {:ok, _} = Respond.prepare(%{"status" => "{{ input.status }}"}, ".", ".")
+      assert {:error, _} = Respond.prepare(%{"status" => 700}, ".", ".")
+      assert {:error, _} = Respond.prepare(%{"headers" => []}, ".", ".")
+    end
+  end
 end

@@ -14,8 +14,14 @@ defmodule PurpleFlow.Application do
   def start(_type, _args) do
     children =
       case Application.get_env(:purple_flow, :role, :app) do
-        :runner -> runner_children()
-        :app -> app_children()
+        :runner ->
+          runner_children()
+
+        :app ->
+          # Files left by runs a stopped app cut off. Before anything can
+          # start a run, so no new run's files are swept.
+          PurpleFlow.RunFiles.sweep()
+          app_children()
       end
 
     opts = [strategy: :one_for_one, name: PurpleFlow.Supervisor]
