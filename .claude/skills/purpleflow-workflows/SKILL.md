@@ -39,6 +39,10 @@ The workflows folder is its own git repo, separate from the app. Nobody commits 
   WebDAV works too (`MKCOL`, `MOVE` with a `Destination` header), so tools like rclone can mount `http://localhost:4000/fs/` with the token as a bearer token.
 - **In a dev checkout** (`mix phx.server`), it's just `workflows/` in the repo; edit the files directly.
 
+### Comments (shown to people)
+
+Start `workflow.toml` and **every node `.toml`** with a `#` comment for a person skimming: what the workflow does, what starts it, and what comes out; for a step, one or two sentences on what it does. The leading `#` lines (before the first setting) are what the Workflows page and the canvas (`/workflows/<name>/canvas`, a box per step with arrows along `after`) show. `.exs` comments aren't shown. See `specs/210_canvas.md`.
+
 ### workflow.toml
 
 ```toml

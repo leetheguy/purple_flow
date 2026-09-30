@@ -1,6 +1,7 @@
 defmodule PurpleFlowWeb.WorkflowsLive do
   @moduledoc """
-  Home page: every loaded workflow, its triggers, its last run, and a Run
+  Home page: every loaded workflow, its triggers, the comment at the top of
+  its `workflow.toml`, its last run, a link to its canvas, and a Run
   button with a JSON box for the request body. A manual run's input has the
   same shape as a webhook's: `%{"body" => ..., "query" => %{}, "headers" => %{}}`. Also lists workflows that failed to load,
   and flags ones whose latest edit failed and are still running an older
@@ -263,7 +264,7 @@ defmodule PurpleFlowWeb.WorkflowsLive do
         if(@entry.stale?, do: "border-amber-500/50", else: "border-base-300")
       ]}
     >
-      <div class="flex items-start justify-between gap-4">
+      <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div class="space-y-1">
           <.link navigate={~p"/workflows/#{@wf.name}"} class="font-semibold hover:underline">{@wf.name}</.link>
           <p class="text-xs text-base-content/60 space-x-3">
@@ -275,6 +276,14 @@ defmodule PurpleFlowWeb.WorkflowsLive do
         <div class="flex items-center gap-2">
           <.status_badge :if={@statuses[@wf.name]} status={@statuses[@wf.name]} />
           <.link
+            navigate={~p"/workflows/#{@wf.name}/canvas"}
+            id={"canvas-#{@wf.name}"}
+            title="See this workflow's steps as a diagram"
+            class="inline-flex items-center gap-1.5 rounded-md border border-base-300 px-2 py-1 text-xs text-base-content/70 transition hover:border-violet-500/50 hover:bg-violet-500/5 hover:text-violet-700 dark:hover:text-violet-300"
+          >
+            <.icon name="hero-rectangle-group-micro" class="size-4" /> Canvas
+          </.link>
+          <.link
             :if={@files?}
             navigate={~p"/files/#{Path.split(@entry.folder)}" <> "/"}
             id={"files-#{@wf.name}"}
@@ -285,6 +294,13 @@ defmodule PurpleFlowWeb.WorkflowsLive do
           </.link>
         </div>
       </div>
+
+      <p
+        :if={@wf.comment}
+        id={"comment-#{@wf.name}"}
+        class="whitespace-pre-line break-words text-sm text-base-content/70"
+        phx-no-format
+      >{@wf.comment}</p>
 
       <div
         :if={@entry.stale?}

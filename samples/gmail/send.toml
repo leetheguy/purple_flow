@@ -1,3 +1,5 @@
+# Sends the email with Gmail's API.
+#
 # GMAIL is an OAuth credential (Credentials page, Type: OAuth). The app hands
 # this step a working access token, renewing it when needed.
 module = "PurpleFlow.Nodes.Http"

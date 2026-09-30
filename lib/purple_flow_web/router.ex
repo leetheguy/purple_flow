@@ -43,6 +43,7 @@ defmodule PurpleFlowWeb.Router do
     live_session :signed_in, on_mount: {PurpleFlowWeb.Auth, :require_login} do
       live "/", WorkflowsLive
       live "/workflows/:name", RunsLive
+      live "/workflows/:name/canvas", CanvasLive
       live "/runs/:id", RunLive
       live "/files", FilesLive
       live "/files/*path", FilesLive

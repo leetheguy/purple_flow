@@ -1,3 +1,4 @@
+# Keeps a few fields of each user and drops the rest.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

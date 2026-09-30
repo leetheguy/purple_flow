@@ -1,3 +1,5 @@
+# Takes the list of numbers out of the request body. A list splits into
+# items, so each number goes on by itself.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

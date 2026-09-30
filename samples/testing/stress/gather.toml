@@ -1,3 +1,4 @@
+# Gathers every item into one batch, once the last one is in.
 module = "PurpleFlow.Nodes.Batch"
 
 # Bigger than any count: everything goes in one batch, once the last item is in.

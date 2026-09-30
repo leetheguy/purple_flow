@@ -1,3 +1,4 @@
+# Always fails: the branch of each diamond that doesn't make it.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

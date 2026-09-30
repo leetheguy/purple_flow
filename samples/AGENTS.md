@@ -60,6 +60,23 @@ A run works like this. Something starts it (a web request, a schedule, or a pers
 
 Only folders containing a `workflow.toml` are workflows. Other files are ignored.
 
+## Comments for people
+
+People look at workflows too, mostly on the app's canvas: a picture of the workflow, one box per step with arrows between them. Each box shows the step's name and **the comment at the top of its step file**. The top box, and the Workflows page, show **the comment at the top of `workflow.toml`**. So always leave both, written for a person skimming, not for you:
+
+- At the top of `workflow.toml`: what the workflow is for, what starts it, and what comes out. A `Try it:` line with a `curl` is welcome.
+- At the top of every step file (the `.toml`, not the `.exs`): one or two plain sentences on what the step does, and anything surprising (a route it sends items down, a credential it needs).
+
+```toml
+# Looks up each new signup in the CRM and sends the ones it finds to "known".
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "lookup.exs"
+```
+
+The comment is the `#` lines before the first setting. Comments further down are fine for notes on a setting, but they don't show up anywhere. Keep them current when a step changes.
+
 Workflows can go in subfolders to keep things organized, as deep as you like:
 
 ```
@@ -76,6 +93,8 @@ A folder without a `workflow.toml` is just a group, and the server looks inside 
 ## workflow.toml
 
 ```toml
+# Fetches new orders every hour and flags the big ones.
+
 [workflow]
 name = "my_flow"               # must be unique across all workflows
 

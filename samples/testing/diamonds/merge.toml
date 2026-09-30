@@ -1,3 +1,5 @@
+# Where the two branches of a diamond meet again. Only the counting
+# branch's item gets here.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

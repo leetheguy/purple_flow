@@ -1,3 +1,4 @@
+# Sends each number down the "big" route (over 10) or the "small" one.
 module = "PurpleFlow.Nodes.Code"
 
 [config]
