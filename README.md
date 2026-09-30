@@ -185,8 +185,7 @@ Keep your sessions short and lazy load your skills to keep your agents sharp and
 
 ### Security
 
-PurpleFlow is still in early alpha, but security was of the utmost concern
-from the beginning.
+PurpleFlow is still early, but security is of the utmost concern.
 
 Before announcing Purple Flow, I ran a post-mortem on N8N's struggles with
 security and other issues over the years. With AI's assistance, I had
