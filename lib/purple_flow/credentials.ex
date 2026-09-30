@@ -94,7 +94,25 @@ defmodule PurpleFlow.Credentials do
   end
 
   @doc """
-  Updates `name`, `description`, `key`, and, for OAuth, `oauth` and
+  Creates an unset text credential for each `{name, description}`, and
+  announces the change once, not once each, so workflows reload once.
+  Returns `{created_names, [{name, changeset}]}` for the ones that failed.
+  """
+  def create_stubs(stubs) do
+    results =
+      for {name, description} <- stubs do
+        {name,
+         %Credential{} |> changeset(%{name: name, description: description}) |> Repo.insert()}
+      end
+
+    created = for {name, {:ok, _}} <- results, do: name
+    failed = for {name, {:error, changeset}} <- results, do: {name, changeset}
+    if created != [], do: announce({:ok, created})
+    {created, failed}
+  end
+
+  @doc """
+  Updates `name`,`description`, `key`, and, for OAuth, `oauth` and
   `client_secret` on an existing credential. A plaintext `key` or
   `client_secret` is encrypted before it's written; a blank one leaves the
   stored value alone.

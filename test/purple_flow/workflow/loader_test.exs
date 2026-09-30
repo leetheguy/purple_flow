@@ -91,6 +91,41 @@ defmodule PurpleFlow.Workflow.LoaderTest do
     assert Loader.leading_comment("#\n#\nname = 1") == nil
   end
 
+  test "credential_names lists webhook auth and creds refs, even when the workflow doesn't load" do
+    path =
+      write_workflow(
+        """
+        [workflow]
+        name = "creds"
+
+        [trigger.webhook]
+        path = "creds"
+        auth = "HOOK_TOKEN"
+
+        [[steps]]
+        name = "a"
+        node = "a.toml"
+
+        [[steps]]
+        name = "b"
+        node = "b.toml"
+        after = "nowhere"
+
+        [[steps]]
+        name = "c"
+        node = "missing.toml"
+        """,
+        %{
+          "a.toml" => fake_node(%{"h" => "Bearer {{ creds.API_KEY }}", "x" => "{{ input.x }}"}),
+          "b.toml" => fake_node(%{"list" => ["{{ creds.DB_PASS }}", "{{creds.API_KEY}}"]})
+        }
+      )
+
+    assert {:error, _} = Loader.load(path)
+    assert Loader.credential_names(path) == ["API_KEY", "DB_PASS", "HOOK_TOKEN"]
+    assert Loader.credential_names("/nonexistent/workflow.toml") == []
+  end
+
   test "every problem is reported together" do
     text =
       problems(

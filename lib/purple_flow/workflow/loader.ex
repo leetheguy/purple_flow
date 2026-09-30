@@ -122,6 +122,37 @@ defmodule PurpleFlow.Workflow.Loader do
     end
   end
 
+  @doc """
+  Every credential name a `workflow.toml` uses, sorted: its webhook `auth`
+  and every `{{ creds.NAME }}` in its steps' node files. Read straight from
+  the files, so it works whether or not the workflow loads, and a file that
+  can't be read just adds nothing.
+  """
+  def credential_names(path, root \\ nil) do
+    dir = Path.dirname(path)
+    root = root || Path.dirname(dir)
+
+    case read_toml(path) do
+      {:ok, toml} ->
+        auth = get_in(toml, ["trigger", "webhook", "auth"])
+
+        from_steps =
+          for %{"node" => node_file} when is_binary(node_file) <- List.wrap(toml["steps"]),
+              {:ok, node_path} <- [inside(node_file, dir, root, "")],
+              {:ok, node} <- [read_toml(node_path)],
+              {:creds, name} <- Template.refs(Map.get(node, "config", %{})),
+              do: name
+
+        [auth | from_steps]
+        |> Enum.filter(&(is_binary(&1) and &1 != ""))
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      {:error, _} ->
+        []
+    end
+  end
+
   # -- steps --
 
   defp load_steps(toml, dir, root) do
