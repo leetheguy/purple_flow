@@ -11,7 +11,8 @@ defmodule PurpleFlow.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -27,7 +28,12 @@ defmodule PurpleFlow.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [
+        precommit: :test,
+        coveralls: :test,
+        "coveralls.lcov": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -48,6 +54,7 @@ defmodule PurpleFlow.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.2.0"},
       {:lazy_html, ">= 0.1.0", only: :test},
+      {:excoveralls, "~> 0.18", only: :test},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
       {:heroicons,

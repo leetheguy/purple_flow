@@ -64,8 +64,17 @@ jobs:
       - run: mix deps.unlock --check-unused
       - run: mix format --check-formatted
 
-      # The credential tests need a key; any random one will do.
-      - name: mix test
+      # The credential tests need a key; any random one will do. Coverage is
+      # written to cover/lcov.info for the README badge.
+      - name: mix test (with coverage)
         run: |
           export PURPLEFLOW_SECRET_KEY="$(openssl rand -base64 32)"
-          mix test
+          mix coveralls.lcov
+
+      # A Coveralls outage (or the repo not being enabled there) never turns
+      # CI red; only the tests above can.
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          file: cover/lcov.info
+          fail-on-error: false

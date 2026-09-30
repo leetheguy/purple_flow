@@ -1,5 +1,7 @@
 # PurpleFlow
 
+[![Coverage Status](https://coveralls.io/repos/github/leetheguy/purple_flow/badge.svg?branch=master)](https://coveralls.io/github/leetheguy/purple_flow?branch=master)
+
 PurpleFlow makes building automated workflows as easy for AI as n8n makes
 it for people.
 
