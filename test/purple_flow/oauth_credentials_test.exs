@@ -140,4 +140,119 @@ defmodule PurpleFlow.OAuthCredentialsTest do
 
     assert challenge == Base.url_encode64(:crypto.hash(:sha256, "verifier"), padding: false)
   end
+
+  describe "renewing, when things go wrong" do
+    test "a token without an expiry is used until the provider refuses it" do
+      oauth!(%{"access_token" => "old", "refresh_token" => "r1", "expires_at" => expires_in(-5)})
+      token_endpoint(fn conn, _params -> Req.Test.json(conn, %{"access_token" => "forever"}) end)
+
+      assert Credentials.get("GMAIL") == "forever"
+
+      token_endpoint(fn _conn, _params -> flunk("shouldn't renew") end)
+      assert Credentials.get("GMAIL") == "forever"
+    end
+
+    test "saved tokens without an access token are renewed first" do
+      oauth!(%{"refresh_token" => "r1"})
+      token_endpoint(fn conn, _params -> Req.Test.json(conn, %{"access_token" => "a1"}) end)
+
+      assert Credentials.get("GMAIL") == "a1"
+    end
+
+    test "an expired token with no refresh token says to reconnect" do
+      oauth!(%{"access_token" => "old", "expires_at" => expires_in(-5)})
+      token_endpoint(fn _conn, _params -> flunk("nothing to renew with") end)
+
+      assert {:error, message} = Credentials.get("GMAIL")
+      assert message =~ "needs reconnecting at /credentials (no refresh token was given)"
+      assert [%{oauth_error: "no refresh token was given"}] = Credentials.list()
+    end
+
+    test "a provider outage fails the step but doesn't ask for a reconnect" do
+      oauth!(%{"access_token" => "old", "refresh_token" => "r1", "expires_at" => expires_in(-5)})
+
+      token_endpoint(fn conn, _params ->
+        conn |> Plug.Conn.put_status(503) |> Req.Test.json(%{"error" => "backend_error"})
+      end)
+
+      assert {:error, "credential GMAIL couldn't be renewed: backend_error"} =
+               Credentials.get("GMAIL")
+
+      assert [%{oauth_error: nil}] = Credentials.list()
+
+      token_endpoint(fn conn, _params -> Req.Test.transport_error(conn, :timeout) end)
+      assert {:error, "credential GMAIL couldn't be renewed: " <> why} = Credentials.get("GMAIL")
+      assert why =~ "timeout"
+      assert [%{oauth_error: nil}] = Credentials.list()
+    end
+
+    test "a refusal with no description says the status" do
+      oauth!(%{"access_token" => "old", "refresh_token" => "r1", "expires_at" => expires_in(-5)})
+      token_endpoint(fn conn, _params -> Plug.Conn.send_resp(conn, 401, "") end)
+
+      assert {:error, message} = Credentials.get("GMAIL")
+      assert message =~ "needs reconnecting at /credentials (HTTP 401)"
+    end
+
+    test "a credential saved without a client secret sends an empty one" do
+      {:ok, cred} =
+        Credentials.create("NOSECRET", "", %{type: "oauth", oauth: %{"client_id" => "cid"}})
+
+      tokens = %{"access_token" => "old", "refresh_token" => "r1", "expires_at" => expires_in(-5)}
+      cred |> Ecto.Changeset.change(key: Cipher.encrypt(Jason.encode!(tokens))) |> Repo.update!()
+
+      token_endpoint(fn conn, params ->
+        assert %{"client_id" => "cid", "client_secret" => ""} = params
+        Req.Test.json(conn, %{"access_token" => "new", "expires_in" => 3600})
+      end)
+
+      assert Credentials.get("NOSECRET") == "new"
+    end
+  end
+
+  describe "connecting" do
+    test "trades the code for tokens and saves them" do
+      cred = oauth!(nil)
+
+      token_endpoint(fn conn, params ->
+        assert %{
+                 "grant_type" => "authorization_code",
+                 "code" => "c0de",
+                 "redirect_uri" => "https://pf.test/cb",
+                 "code_verifier" => "verifier"
+               } = params
+
+        Req.Test.json(conn, %{"access_token" => "a1", "refresh_token" => "r1", "expires_in" => 60})
+      end)
+
+      assert {:ok, %Credential{oauth_error: nil}} =
+               OAuth.connect(cred, "c0de", "https://pf.test/cb", "verifier")
+
+      assert Credentials.set?("GMAIL")
+    end
+
+    test "a refused code is an error, and nothing is saved" do
+      cred = oauth!(nil)
+
+      token_endpoint(fn conn, _params ->
+        conn |> Plug.Conn.put_status(400) |> Req.Test.json(%{"error" => "invalid_grant"})
+      end)
+
+      assert {:error, "invalid_grant"} = OAuth.connect(cred, "bad", "https://pf.test/cb", "v")
+      refute Credentials.set?("GMAIL")
+    end
+
+    test "a provider with its own authorize address keeps its query string" do
+      {:ok, cred} =
+        Credentials.create("OTHER", "", %{
+          type: "oauth",
+          oauth: %{"client_id" => "cid", "auth_url" => "https://idp.test/auth?tenant=t1"}
+        })
+
+      assert "https://idp.test/auth?tenant=t1&" <> query =
+               OAuth.authorize_url(cred, "https://pf.test/cb", "s", "v")
+
+      assert %{"client_id" => "cid", "scope" => ""} = URI.decode_query(query)
+    end
+  end
 end
