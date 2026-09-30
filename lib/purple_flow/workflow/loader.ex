@@ -92,6 +92,7 @@ defmodule PurpleFlow.Workflow.Loader do
       workflow = %Workflow{
         name: name,
         dir: dir,
+        comment: file_comment(path),
         webhook: get_in(toml, ["trigger", "webhook", "path"]),
         respond: respond_mode(get_in(toml, ["trigger", "webhook", "respond"])),
         auth: blank_to_nil(get_in(toml, ["trigger", "webhook", "auth"])),
@@ -156,7 +157,8 @@ defmodule PurpleFlow.Workflow.Loader do
       {:ok,
        struct!(
          Step,
-         [name: name, module: module, config: config, node_path: node_path] ++ options
+         [name: name, module: module, config: config, node_path: node_path] ++
+           [comment: file_comment(node_path)] ++ options
        )}
     else
       {:error, problem} -> {:error, [problem]}
@@ -412,6 +414,31 @@ defmodule PurpleFlow.Workflow.Loader do
 
   defp template_problem(_step, {:input, _}), do: nil
   defp template_problem(_step, {:bad, path}), do: "don't know what {{ #{path} }} means"
+
+  @doc """
+  The comment at the top of a TOML file's text: the `#` lines before the
+  first line of anything else, without their `#` (and one space after it).
+  Blank lines between them are kept as blank lines. `nil` if there are none.
+  """
+  def leading_comment(text) do
+    text
+    |> String.split(~r/\r?\n/)
+    |> Enum.take_while(&(String.trim(&1) == "" or String.starts_with?(String.trim(&1), "#")))
+    |> Enum.map(&(&1 |> String.trim() |> String.replace(~r/^#+ ?/, "") |> String.trim_trailing()))
+    |> Enum.join("\n")
+    |> String.trim()
+    |> case do
+      "" -> nil
+      comment -> comment
+    end
+  end
+
+  defp file_comment(path) do
+    case File.read(path) do
+      {:ok, text} -> leading_comment(text)
+      {:error, _} -> nil
+    end
+  end
 
   # -- small helpers --
 

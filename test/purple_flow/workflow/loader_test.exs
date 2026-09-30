@@ -61,6 +61,36 @@ defmodule PurpleFlow.Workflow.LoaderTest do
     assert c.ancestors == ["a", "b"]
   end
 
+  test "comments at the top of workflow.toml and node files are kept for people to read" do
+    workflow =
+      load_workflow!(
+        """
+          # Says hello.
+        #
+        ##   Twice, indented.
+
+        [workflow]
+        # Not this one: it's after the first setting.
+        name = "commented"
+
+        [[steps]]
+        name = "a"
+        node = "a.toml"
+
+        [[steps]]
+        name = "b"
+        node = "b.toml"
+        after = ["a"]
+        """,
+        %{"a.toml" => "#Greets.\r\n" <> fake_node(), "b.toml" => "\n\n" <> fake_node()}
+      )
+
+    assert workflow.comment == "Says hello.\n\n  Twice, indented."
+    assert [%{comment: "Greets."}, %{comment: nil}] = workflow.steps
+    assert Loader.leading_comment("") == nil
+    assert Loader.leading_comment("#\n#\nname = 1") == nil
+  end
+
   test "every problem is reported together" do
     text =
       problems(

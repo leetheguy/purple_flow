@@ -1,3 +1,4 @@
+# Shouts about a big number.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

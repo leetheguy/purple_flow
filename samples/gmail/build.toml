@@ -1,3 +1,5 @@
+# Builds the email (to, subject, text, and so on) in the form Gmail's API
+# takes: the whole message, base64url-encoded.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

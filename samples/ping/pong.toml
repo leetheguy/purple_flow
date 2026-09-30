@@ -1,3 +1,4 @@
+# Turns every "ing" in the text into "ong".
 module = "PurpleFlow.Nodes.Code"
 
 [config]

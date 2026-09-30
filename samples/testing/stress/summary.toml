@@ -1,3 +1,5 @@
+# Counts the items that made it, and the time from the first finishing
+# to the last.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

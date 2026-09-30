@@ -2,11 +2,15 @@ defmodule PurpleFlow.Workflow do
   @moduledoc """
   A loaded workflow: its name, triggers, and steps, as read from
   `workflows/<name>/workflow.toml`. See `PurpleFlow.Workflow.Loader`.
+
+  `comment` is the comment at the top of `workflow.toml`, for people to read
+  (see `PurpleFlow.Workflow.Loader.leading_comment/1`).
   """
 
   defstruct [
     :name,
     :dir,
+    comment: nil,
     webhook: nil,
     respond: :result,
     auth: nil,
@@ -19,6 +23,7 @@ defmodule PurpleFlow.Workflow do
   @type t :: %__MODULE__{
           name: String.t(),
           dir: String.t(),
+          comment: String.t() | nil,
           webhook: String.t() | nil,
           respond: :result | :immediately | :stream,
           auth: String.t() | nil,
@@ -36,6 +41,8 @@ defmodule PurpleFlow.Workflow do
     `ancestors` is every step you reach by following `after` backward. Those
     are the only earlier outputs this step is allowed to see.
 
+    `comment` is the comment at the top of the step's node file.
+
     `timeout` is in milliseconds, `0` for no limit. `max_queue` is `nil` for
     no limit.
     """
@@ -46,6 +53,7 @@ defmodule PurpleFlow.Workflow do
       :config,
       :node_path,
       :when,
+      comment: nil,
       after: [],
       ancestors: [],
       timeout: 0,
@@ -62,6 +70,7 @@ defmodule PurpleFlow.Workflow do
             config: map(),
             node_path: String.t(),
             when: String.t() | nil,
+            comment: String.t() | nil,
             after: [String.t()],
             ancestors: [String.t()],
             timeout: non_neg_integer(),

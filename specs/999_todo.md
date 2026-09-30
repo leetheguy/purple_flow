@@ -32,7 +32,8 @@ It replaces the "Later" sections in [000](000_overview.md), [090](090_workflow_f
 ## Ideas
 
 - Rollback of a run's side effects. From [000](000_overview.md).
-- A visual workflow builder (canvas to TOML). From [000](000_overview.md).
+- A visual workflow builder (canvas to TOML). From [000](000_overview.md). The read-only canvas is [210](210_canvas.md); editing on it would build on that.
+- Canvas extras, if wanted: a run's status on each box, and routing arrows that skip rows around the boxes in between. From [210](210_canvas.md).
 - Multi-tenant hosting. From [000](000_overview.md).
 - Separate files-service logins per agent, or per-folder permissions. From [090](090_workflow_files.md).
 - Collapsible folder groups on the Workflows page. From [110](110_workflow_folders.md).

@@ -1,3 +1,4 @@
+# Starts the run with one item for the diamonds to pass along.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

@@ -1,3 +1,4 @@
+# Makes `count` items, so the next step runs that many times.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

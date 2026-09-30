@@ -1,3 +1,4 @@
+# Sleeps `sleep_ms` for each item, standing in for real work.
 module = "PurpleFlow.Nodes.Code"
 
 [config]

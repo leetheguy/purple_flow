@@ -328,8 +328,18 @@ r
 Create the folder and run `git init` in it before the first `docker compose
 up`. Otherwise Docker creates it, and its empty `.git`, owned by root.
 
-See [specs/090](specs/090_workflow_files.md) and
-[specs/110](specs/110_workflow_folders.md).
+- **Comments are for people.** The comment at the top of `workflow.toml`
+  shows on the Workflows page, and each workflow's **Canvas** button shows
+  it as boxes pointing at boxes: one per step, top to bottom, labeled with
+  its kind, its name, and the comment at the top of its step file. Drag (a
+  finger, or the right mouse button) to move around, pinch or scroll to
+  zoom. Tapping a box opens its step file, or, for a Workflow step, the
+  other workflow's canvas. The agent guide asks agents to write these
+  comments.
+
+See [specs/090](specs/090_workflow_files.md),
+[specs/110](specs/110_workflow_folders.md), and
+[specs/210](specs/210_canvas.md).
 
 ### Inviting an agent
 
