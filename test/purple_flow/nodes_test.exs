@@ -92,9 +92,60 @@ defmodule PurpleFlow.NodesTest do
              ]
     end
 
-    test "an unknown stream protocol fails at load time" do
+    test "an unknown stream protocol fails at load time; known ones and none pass" do
       assert {:error, "stream must be" <> _} =
                Http.prepare(%{"stream" => "carrier pigeon"}, ".", ".")
+
+      for protocol <- ~w(sse ndjson lines) do
+        assert {:ok, _} = Http.prepare(%{"stream" => protocol}, ".", ".")
+      end
+
+      assert {:ok, %{}} = Http.prepare(%{}, ".", ".")
+    end
+
+    test "a map body is sent as JSON, anything else as text" do
+      Req.Test.stub(Http, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+
+        Req.Test.json(conn, %{
+          "type" => Plug.Conn.get_req_header(conn, "content-type"),
+          "body" => body
+        })
+      end)
+
+      assert {:ok, %{"type" => ["application/json"], "body" => ~s({"a":1})}} =
+               Http.execute(nil, %{
+                 "url" => "http://api.test/",
+                 "method" => "POST",
+                 "body" => %{"a" => 1}
+               })
+
+      assert {:ok, %{"type" => [], "body" => "42"}} =
+               Http.execute(nil, %{"url" => "http://api.test/", "method" => "PUT", "body" => 42})
+    end
+
+    test "a JSON error body is shown in the error, cut to 500 characters" do
+      Req.Test.stub(Http, fn conn ->
+        conn
+        |> Plug.Conn.put_status(422)
+        |> Req.Test.json(%{"error" => String.duplicate("x", 600)})
+      end)
+
+      assert {:error, "HTTP 422: " <> preview} = Http.execute(nil, %{"url" => "http://api.test/"})
+      assert String.starts_with?(preview, ~s({"error":"xxx))
+      assert String.length(preview) == 500
+    end
+
+    test "a request that never gets an answer is an error" do
+      Req.Test.stub(Http, &Req.Test.transport_error(&1, :econnrefused))
+
+      assert {:error, "request failed: " <> why} =
+               Http.execute(nil, %{"url" => "http://api.test/"})
+
+      assert why =~ "connection refused"
+
+      assert {:error, "request failed: " <> _} =
+               Http.execute(nil, %{"url" => "http://api.test/", "stream" => "lines"})
     end
   end
 
@@ -115,6 +166,44 @@ defmodule PurpleFlow.NodesTest do
                  "query" => "SELECT $1::int + 1 AS n, $2::text AS word",
                  "params" => [1, "hi"]
                })
+    end
+
+    test "a statement with no result columns gives no rows", %{url: url} do
+      assert {:ok, []} =
+               Postgres.execute(nil, %{"database_url" => url, "query" => "DO $$ BEGIN END $$"})
+    end
+
+    test "UUIDs come back as text, other raw bytes as base64", %{url: url} do
+      assert {:ok, [%{"id" => "5f0c8a3e-6d1b-4c8e-9a51-2b7f0e4d9c11", "raw" => "3q2+7w=="}]} =
+               Postgres.execute(nil, %{
+                 "database_url" => url,
+                 "query" =>
+                   "SELECT '5f0c8a3e-6d1b-4c8e-9a51-2b7f0e4d9c11'::uuid AS id, '\\xdeadbeef'::bytea AS raw"
+               })
+    end
+
+    test "many items at once with a new URL share one pool", %{url: url} do
+      # A query string makes a URL no other test uses, so its pool starts here.
+      url = url <> "?pool=#{System.unique_integer([:positive])}"
+
+      results =
+        1..20
+        |> Enum.map(fn _ ->
+          Task.async(fn ->
+            Postgres.execute(nil, %{"database_url" => url, "query" => "SELECT 1 AS one"})
+          end)
+        end)
+        |> Task.await_many()
+
+      assert Enum.uniq(results) == [{:ok, [%{"one" => 1}]}]
+      assert [_one] = Registry.lookup(PurpleFlow.Nodes.Postgres.Pools, url)
+    end
+
+    test "a database_url that isn't a Postgres URL is an error" do
+      for url <- ["mysql://u:p@host/db", "postgres://host", "not a url"] do
+        assert {:error, "database_url should look like" <> _} =
+                 Postgres.execute(nil, %{"database_url" => url, "query" => "SELECT 1"})
+      end
     end
 
     test "a bad query is an error", %{url: url} do

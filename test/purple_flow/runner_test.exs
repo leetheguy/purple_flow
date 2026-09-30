@@ -144,4 +144,59 @@ defmodule PurpleFlow.RunnerTest do
       assert {:ok, 1} = run(~s|IO.write(""); 1|)
     end
   end
+
+  describe "talking to a runner elsewhere" do
+    # A stand-in runner on a free port: it reads one request and does
+    # whatever `reply` says with the socket.
+    defp fake_runner(reply) do
+      {:ok, listen} = :gen_tcp.listen(0, [:binary, packet: 4, active: false, reuseaddr: true])
+      {:ok, port} = :inet.port(listen)
+
+      start_supervised!(
+        {Task,
+         fn ->
+           {:ok, socket} = :gen_tcp.accept(listen)
+           {:ok, _request} = :gen_tcp.recv(socket, 0)
+           reply.(socket)
+         end}
+      )
+
+      use_runner({"127.0.0.1", port})
+    end
+
+    defp use_runner(address) do
+      original = Application.get_env(:purple_flow, :runner_address)
+      Application.put_env(:purple_flow, :runner_address, address)
+      on_exit(fn -> Application.put_env(:purple_flow, :runner_address, original) end)
+    end
+
+    test "uses the configured address" do
+      fake_runner(&:gen_tcp.send(&1, ~s({"ok": "from afar"})))
+      assert {:ok, "from afar"} = run("1")
+    end
+
+    test "a runner that answers with something else is an error" do
+      fake_runner(&:gen_tcp.send(&1, ~s({"what": 1})))
+      assert {:error, "the Code runner sent back something unexpected"} = run("1")
+    end
+
+    test "a runner that hangs up without answering is an error" do
+      fake_runner(&:gen_tcp.close/1)
+      assert {:error, "lost the Code runner: " <> _} = run("1")
+    end
+
+    test "a runner that isn't there is an error" do
+      # A port that was free a moment ago, with nothing listening now.
+      {:ok, listen} = :gen_tcp.listen(0, [])
+      {:ok, port} = :inet.port(listen)
+      :gen_tcp.close(listen)
+      use_runner({"127.0.0.1", port})
+
+      assert {:error, "can't reach the Code runner at 127.0.0.1:" <> _} = run("1")
+    end
+  end
+
+  test "input that can't be sent as JSON is an error, before connecting" do
+    assert {:error, "input isn't JSON: " <> _} = run("input", {:not, :json})
+  end
 end
