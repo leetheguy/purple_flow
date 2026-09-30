@@ -1,6 +1,12 @@
 # PurpleFlow
 
-[![Coverage Status](https://coveralls.io/repos/github/leetheguy/purple_flow/badge.svg?branch=master)](https://coveralls.io/github/leetheguy/purple_flow?branch=master)
+[![CI](https://github.com/leetheguy/purple_flow/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/leetheguy/purple_flow/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/leetheguy/purple_flow/badge.svg)](https://coveralls.io/github/leetheguy/purple_flow)
+
+![Elixir 1.20](https://img.shields.io/badge/elixir-1.20-purple.svg) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+[![AI automation engineer for hire](https://img.shields.io/badge/AI_automation_engineer-for_hire-orange)](https://leenathan.com)
+
+
 
 PurpleFlow makes building automated workflows as easy for AI as n8n makes
 it for people.

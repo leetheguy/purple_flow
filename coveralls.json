@@ -1,0 +1,5 @@
+{
+  "skip_files": [
+    "lib/purple_flow_web/components/core_components.ex"
+  ]
+}
