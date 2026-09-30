@@ -16,6 +16,8 @@ It replaces the "Later" sections in [000](000_overview.md), [090](090_workflow_f
 - **Agent node**, wrapping purple_goo's agent call, and running purple_goo's pipeline as a workflow. From [000](000_overview.md).
 - **Run-a-workflow endpoint for agents**, so testing a workflow doesn't need a webhook on it. From [090](090_workflow_files.md).
 - **Run retention.** Runs and their step records are kept in Postgres forever, so the database only grows. An option to prune them after some age or count. (A run's files don't need it: they're deleted when the run ends, [190](190_run_files.md).)
+- **Code scripts reading file bytes**, not just a file's reference, so a script can parse a file's contents (PDF, CSV, etc.) instead of only moving it around. Same gap as the "Code scripts and files" open question below; called out again because it's the one real blocker found migrating Decapod's workflows (n8n's Extract From File node).
+- **Signed requests on the HTTP node** (starting with AWS SigV4, for S3), plus sending a file's bytes as a request body. Found migrating Decapod's workflows: S3 is popular enough elsewhere that it's worth solving for, even setting personal taste aside.
 
 ## Open questions
 
@@ -34,3 +36,4 @@ It replaces the "Later" sections in [000](000_overview.md), [090](090_workflow_f
 - Multi-tenant hosting. From [000](000_overview.md).
 - Separate files-service logins per agent, or per-folder permissions. From [090](090_workflow_files.md).
 - Collapsible folder groups on the Workflows page. From [110](110_workflow_folders.md).
+- An MCP client node/capability, only if widely requested — found migrating Decapod's workflows, but MCP itself is still unsettled enough (powerful, but not widely adopted) that it's not worth building speculatively.
