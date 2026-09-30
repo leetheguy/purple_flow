@@ -6,8 +6,17 @@ it for people.
 It was also designed to build and orchestrate AI swarms that build and orchestrate AI swarms.
 
 ![A screenshot of the PurpleFlow UI](image.png)
+![A screenshot of the PurpleFlow Canvas](image-1.png)
 
 ## Human written intro
+
+Hi! I'm Lee Nathan. I'm an AI enthusiast, an automation engineer and an AI-assisted software architect. And this is Purple Flow, a project that perfectly encapsulates all three. If you know someone who could use my services, I'd love to talk.
+
+https://leenathan.com/
+
+</shameless_plug>
+
+---
 
 I love n8n with all of my heart. It's an amazing tool that's quick to
 learn, quick to master, and so fun and easy to build with.
