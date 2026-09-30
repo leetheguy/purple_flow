@@ -1,8 +1,6 @@
 # PurpleFlow
 
-[![CI](https://github.com/leetheguy/purple_flow/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/leetheguy/purple_flow/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/leetheguy/purple_flow/badge.svg)](https://coveralls.io/github/leetheguy/purple_flow)
-
-[![Coverage Status](https://coveralls.io/repos/github/leetheguy/purple_flow/badge.svg?branch=master)](https://coveralls.io/github/leetheguy/purple_flow?branch=master)
+[![CI](https://github.com/leetheguy/purple_flow/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/leetheguy/purple_flow/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/leetheguy/purple_flow/badge.svg?branch=master)](https://coveralls.io/github/leetheguy/purple_flow?branch=master)
 
 
 ![Elixir 1.20](https://img.shields.io/badge/elixir-1.20-purple.svg) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
