@@ -146,6 +146,11 @@ You can create credentials (useful for any data you want kept private) in
 the web interface. Pass your agent the credential name for it to use in
 your flows.
 
+Imported a pile of workflows? When they use credential names that don't
+exist yet, a **Create N missing** button appears under the search box on
+`/credentials`. It makes an empty text credential for each one, described
+with the workflows that need it, so you only have to fill in the values.
+
 Credentials can also be OAuth logins (Gmail, Google Drive, and friends).
 
 ## Lazy load your skills

@@ -2,6 +2,7 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
   use PurpleFlowWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import PurpleFlow.WorkflowHelpers, only: [fake_node: 1]
 
   alias PurpleFlow.Credentials
 
@@ -257,6 +258,73 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
       after_edit = Credentials.fetch(cred.id)
       assert after_edit.client_secret == before
       assert after_edit.oauth["client_id"] == "cid2"
+    end
+  end
+
+  describe "creating missing credentials" do
+    setup do
+      dir = Path.join(System.tmp_dir!(), "pf_missing_creds_#{System.unique_integer([:positive])}")
+
+      write = fn rel, text ->
+        path = Path.join(dir, rel)
+        File.mkdir_p!(Path.dirname(path))
+        File.write!(path, text)
+      end
+
+      for name <- ~w(one two) do
+        write.("#{name}/workflow.toml", """
+        [workflow]
+        name = "#{name}"
+
+        [[steps]]
+        name = "s"
+        node = "s.toml"
+        """)
+      end
+
+      write.(
+        "one/s.toml",
+        fake_node(%{"a" => "{{ creds.SHARED }}", "b" => "{{ creds.ONLY_ONE }}"})
+      )
+
+      write.("two/s.toml", fake_node(%{"a" => "{{ creds.SHARED }}", "b" => "{{ creds.EXISTS }}"}))
+
+      original = Application.get_env(:purple_flow, :workflows_dir)
+      Application.put_env(:purple_flow, :workflows_dir, dir)
+      :ok = PurpleFlow.Workflows.reload()
+
+      on_exit(fn ->
+        Application.put_env(:purple_flow, :workflows_dir, original)
+        PurpleFlow.Workflows.reload()
+        File.rm_rf!(dir)
+      end)
+
+      :ok
+    end
+
+    test "one button creates a stub for every name workflows use that doesn't exist", %{
+      conn: conn
+    } do
+      {:ok, _} = Credentials.create("EXISTS", "")
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      assert view |> element("#missing-credentials") |> render() =~ "ONLY_ONE, SHARED"
+      refute view |> element("#missing-credentials") |> render() =~ "EXISTS"
+
+      view |> element("#create-missing-credentials") |> render_click()
+
+      refute has_element?(view, "#missing-credentials")
+
+      stubs = Map.new(Credentials.list(), &{&1.name, &1})
+      assert %{set: false, type: "text", description: "Needed by one, two"} = stubs["SHARED"]
+      assert %{set: false, description: "Needed by one"} = stubs["ONLY_ONE"]
+      assert map_size(stubs) == 3
+    end
+
+    test "no button when nothing is missing", %{conn: conn} do
+      for name <- ~w(SHARED ONLY_ONE EXISTS), do: {:ok, _} = Credentials.create(name, "")
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      refute has_element?(view, "#missing-credentials")
     end
   end
 end

@@ -66,9 +66,16 @@ defmodule PurpleFlow.Workflows do
   The whole picture: `%{reloaded_at: time, folders: [folder]}`, one entry per
   workflow folder, sorted. Each has `folder`, `path`, `workflow` (the running
   version, or `nil`), `loaded_at`, `problems`, and `stale?` (true when the
-  folder's latest edit failed and an older version is still running).
+  folder's latest edit failed and an older version is still running), and
+  `credentials`, the credential names it uses.
   """
   def status(server \\ __MODULE__), do: GenServer.call(server, :status)
+
+  @doc """
+  Every credential name a workflow folder uses (loaded or not), as
+  `%{name => [folder]}`. See `PurpleFlow.Workflow.Loader.credential_names/2`.
+  """
+  def credential_names(server \\ __MODULE__), do: GenServer.call(server, :credential_names)
 
   @doc "Reads the workflows folder again, right now."
   def reload(server \\ __MODULE__), do: GenServer.call(server, :reload)
@@ -127,6 +134,15 @@ defmodule PurpleFlow.Workflows do
 
   def handle_call(:status, _from, state) do
     {:reply, %{reloaded_at: state.reloaded_at, folders: sorted(state)}, state}
+  end
+
+  def handle_call(:credential_names, _from, state) do
+    names =
+      for entry <- sorted(state), name <- entry.credentials, reduce: %{} do
+        acc -> Map.update(acc, name, [entry.folder], &(&1 ++ [entry.folder]))
+      end
+
+    {:reply, names, state}
   end
 
   def handle_call(:reload, _from, state), do: {:reply, :ok, reload_now(state)}
@@ -214,7 +230,14 @@ defmodule PurpleFlow.Workflows do
       |> Loader.find()
       |> Map.new(fn path -> {folder(path, dir), {path, Loader.load(path, dir)}} end)
 
-    folders = settle(results, state.folders, now)
+    folders =
+      results
+      |> settle(state.folders, now)
+      |> Map.new(fn {folder, entry} ->
+        {path, _result} = results[folder]
+        {folder, Map.put(entry, :credentials, Loader.credential_names(path, dir))}
+      end)
+
     log_problems(folders, state.folders)
     Phoenix.PubSub.broadcast(PurpleFlow.PubSub, topic(), :workflows_reloaded)
 

@@ -19,6 +19,11 @@ defmodule PurpleFlowWeb.CredentialsLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    # Workflows reload after credentials change, and when files change, so
+    # this hears about both and keeps the missing list current.
+    if connected?(socket),
+      do: Phoenix.PubSub.subscribe(PurpleFlow.PubSub, PurpleFlow.Workflows.topic())
+
     {:ok,
      socket
      |> assign(:page_title, "Credentials")
@@ -135,23 +140,64 @@ defmodule PurpleFlowWeb.CredentialsLive do
     end
   end
 
+  # One unset text credential for every name a workflow uses that doesn't
+  # exist yet, each described with the workflows that need it.
+  def handle_event("create_missing", _params, socket) do
+    stubs =
+      for {name, folders} <- socket.assigns.missing,
+          do: {name, "Needed by " <> Enum.join(folders, ", ")}
+
+    {created, failed} = Credentials.create_stubs(stubs)
+
+    socket =
+      case failed do
+        [] ->
+          put_flash(socket, :info, "Created #{count(length(created))}. Fill in their values.")
+
+        _ ->
+          put_flash(
+            socket,
+            :error,
+            "Created #{count(length(created))}. Couldn't create " <>
+              Enum.map_join(failed, "; ", fn {name, cs} -> "#{name}: #{error_message(cs)}" end)
+          )
+      end
+
+    {:noreply, load(socket)}
+  end
+
   def handle_event("archive", %{"id" => id}, socket) do
     {:ok, _} = Credentials.archive(String.to_integer(id))
     {:noreply, socket |> load() |> put_flash(:info, "Credential archived")}
   end
 
+  @impl true
+  def handle_info(:workflows_reloaded, socket), do: {:noreply, load(socket)}
+
   defp load(socket) do
     query = String.downcase(socket.assigns.search)
+    all = Credentials.list()
+    existing = MapSet.new(all, & &1.name)
+
+    # Names workflows use with no active credential at all. Ones that exist
+    # but aren't set yet aren't missing: they have a row to fill in.
+    missing =
+      for {name, folders} <- PurpleFlow.Workflows.credential_names(),
+          name not in existing,
+          do: {name, folders}
 
     credentials =
-      Credentials.list()
+      all
       |> Enum.filter(fn c ->
         query == "" or String.contains?(String.downcase(c.name), query) or
           String.contains?(String.downcase(c.description), query)
       end)
 
-    assign(socket, :credentials, credentials)
+    socket |> assign(:credentials, credentials) |> assign(:missing, Enum.sort(missing))
   end
+
+  defp count(1), do: "1 credential"
+  defp count(n), do: "#{n} credentials"
 
   defp empty_form do
     to_form(
@@ -212,6 +258,27 @@ defmodule PurpleFlowWeb.CredentialsLive do
         id="credentials-search"
         class="w-full font-mono text-sm rounded-md border border-base-300 bg-base-100 px-3 py-2"
       />
+
+      <div
+        :if={@missing != []}
+        id="missing-credentials"
+        class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+      >
+        <.icon name="hero-exclamation-triangle-micro" class="size-4 text-amber-600 shrink-0" />
+        <span class="min-w-0 flex-1">
+          Workflows use {count(length(@missing))} that don't exist:
+          <span class="font-mono">{Enum.map_join(@missing, ", ", &elem(&1, 0))}</span>
+        </span>
+        <button
+          id="create-missing-credentials"
+          type="button"
+          phx-click="create_missing"
+          phx-disable-with="Creating..."
+          class={[@button, "shrink-0 bg-violet-600 text-white hover:bg-violet-500"]}
+        >
+          Create {length(@missing)} missing
+        </button>
+      </div>
 
       <div id="credentials" class="rounded-lg border border-base-300 divide-y divide-base-300">
         <.form
