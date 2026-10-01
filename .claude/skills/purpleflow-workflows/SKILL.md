@@ -130,7 +130,8 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 
 - Reference a credential by name: `{{ creds.NAME }}`. That's the only interaction a workflow file has with one.
 - You can't create a credential, see its value, or set it — there's no file to edit and no command for it. A human sets values at `/credentials`, directly, outside of anything you do.
-- If a workflow uses a `creds.NAME` that isn't set, it fails to load with a clear message. Tell whoever you're working with the name it needs, so they can set it at `/credentials` — that's the whole handoff. After importing many workflows, the human can click **Create N missing** under the search box on `/credentials` to make an empty text credential for every name that doesn't exist yet, then fill in the values.
+- If a workflow uses a `creds.NAME` that isn't set, it fails to load with a clear message. Tell whoever you're working with the name it needs, so they can set it at `/credentials` — that's the whole handoff. After importing many workflows, the human can click **Create N missing** under the search box on `/credentials` to make an empty credential for every name that doesn't exist yet, then fill in the values.
+- A credential is a **String** (one line, the default) or **Text** (keeps line breaks). When you hand off a name whose value spans lines, like an SSH private key or a certificate, tell the human to make it Text.
 - Values are redacted as `[redacted]` in every saved record automatically.
 - **OAuth logins** (Gmail, Google Drive, …) are credentials too: a human picks Type: OAuth on `/credentials` and connects it. `{{ creds.NAME }}` is then a working access token, renewed by the app; use it as `authorization = "Bearer {{ creds.NAME }}"` in an HTTP step. If the provider refuses a renewal, the step fails with "needs reconnecting at /credentials"; tell the human. `samples/gmail/` sends email this way.
 

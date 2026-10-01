@@ -3,8 +3,9 @@ defmodule PurpleFlow.Credentials do
   Named secrets, encrypted at rest, referenced from a workflow as
   `{{ creds.NAME }}`.
 
-  A credential is plain text, or an OAuth login whose `get/1` is a working
-  access token (see `PurpleFlow.Credentials.OAuth`).
+  A credential is a plain value (a one-line string, or text that can span
+  lines), or an OAuth login whose `get/1` is a working access token (see
+  `PurpleFlow.Credentials.OAuth`).
 
   A workflow only ever reads a credential, by name, through `get/1`. There
   is no way for a workflow, a node, or anything building either to create,
@@ -44,8 +45,8 @@ defmodule PurpleFlow.Credentials do
   archived, or was never created. The only function that ever produces a
   plaintext value.
 
-  What the value is depends on the type: a text credential's decrypted
-  value, or an OAuth credential's working access token (renewed first if
+  What the value is depends on the type: a string or text credential's
+  decrypted value, or an OAuth credential's working access token (renewed first if
   it's expired), or `{:error, message}` if it can't be renewed.
   """
   @spec get(String.t()) :: String.t() | nil | {:error, String.t()}
@@ -94,7 +95,7 @@ defmodule PurpleFlow.Credentials do
   end
 
   @doc """
-  Creates an unset text credential for each `{name, description}`, and
+  Creates an unset string credential for each `{name, description}`, and
   announces the change once, not once each, so workflows reload once.
   Returns `{created_names, [{name, changeset}]}` for the ones that failed.
   """
@@ -149,7 +150,7 @@ defmodule PurpleFlow.Credentials do
     credential
     |> Ecto.Changeset.cast(attrs, [:name, :description, :key, :type, :oauth, :client_secret])
     |> Ecto.Changeset.validate_required([:name])
-    |> Ecto.Changeset.validate_inclusion(:type, ["text", "oauth"])
+    |> Ecto.Changeset.validate_inclusion(:type, ["string", "text", "oauth"])
     |> validate_oauth()
     |> validate_name()
     |> Ecto.Changeset.unique_constraint(:name)

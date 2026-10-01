@@ -24,6 +24,25 @@ defmodule PurpleFlow.CredentialsTest do
     test "get/1 on a name that was never created is nil" do
       assert Credentials.get("NOPE") == nil
     end
+
+    test "a new credential is a string unless it says otherwise" do
+      {:ok, plain} = Credentials.create("A", "")
+      assert plain.type == "string"
+
+      {:ok, text} = Credentials.create("B", "", %{type: "text"})
+      assert text.type == "text"
+
+      assert {:error, changeset} = Credentials.create("C", "", %{type: "blob"})
+      assert %{type: [_]} = errors_on(changeset)
+    end
+
+    test "a text credential keeps its line breaks" do
+      key = "-----BEGIN KEY-----\nline one\nline two\n-----END KEY-----\n"
+      {:ok, cred} = Credentials.create("SSH_KEY", "", %{type: "text"})
+      {:ok, _} = Credentials.update(cred.id, %{key: key})
+
+      assert Credentials.get("SSH_KEY") == key
+    end
   end
 
   describe "set?/1" do

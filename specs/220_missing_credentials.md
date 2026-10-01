@@ -24,3 +24,7 @@ A stub is always text. For an OAuth login, archive the stub and add it again as 
 
 - Loader: `credential_names` finds webhook `auth` and `creds` references in node configs, nested in lists, once each and sorted, for a workflow that fails to load; a missing file gives none.
 - Credentials page: the notice lists names used by workflows that don't exist, not ones that do; the button creates unset text stubs described with the folders that use them, and the notice goes away; no notice when nothing is missing.
+
+## Log
+
+- 2026-10-01 — [230](230_credential_value_types.md): stubs are **String** credentials, the new name for a one-line value. A stub can be switched to Text from its edit row.

@@ -157,10 +157,13 @@ your flows.
 
 Imported a pile of workflows? When they use credential names that don't
 exist yet, a **Create N missing** button appears under the search box on
-`/credentials`. It makes an empty text credential for each one, described
+`/credentials`. It makes an empty credential for each one, described
 with the workflows that need it, so you only have to fill in the values.
 
 Credentials can also be OAuth logins (Gmail, Google Drive, and friends).
+
+A credential is a **String** (one line, the default) or **Text**, a box that
+keeps line breaks, for values like SSH private keys and certificates.
 
 ## Lazy load your skills
 

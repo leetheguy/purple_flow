@@ -64,7 +64,9 @@ defmodule PurpleFlowWeb.CredentialsLive do
   end
 
   def handle_event("add", %{"credential" => params}, socket) do
-    with {:ok, cred} <- Credentials.create(params["name"], params["description"] || ""),
+    attrs = %{type: value_type(params["type"])}
+
+    with {:ok, cred} <- Credentials.create(params["name"], params["description"] || "", attrs),
          {:ok, _} <- Credentials.update(cred.id, %{key: params["key"]}) do
       {:noreply,
        socket
@@ -99,13 +101,24 @@ defmodule PurpleFlowWeb.CredentialsLive do
     form =
       to_form(
         Map.merge(
-          %{"name" => cred.name, "description" => cred.description, "key" => ""},
+          %{
+            "type" => cred.type,
+            "name" => cred.name,
+            "description" => cred.description,
+            "key" => ""
+          },
           if(cred.type == "oauth", do: Map.put(settings(cred), "client_secret", ""), else: %{})
         ),
         as: :credential
       )
 
     {:noreply, socket |> assign(:editing_id, id) |> assign(:edit_form, form)}
+  end
+
+  # Picking String or Text while editing swaps the value field to match.
+  def handle_event("change_edit", %{"credential" => params}, socket) do
+    form = to_form(Map.merge(socket.assigns.edit_form.params, params), as: :credential)
+    {:noreply, assign(socket, :edit_form, form)}
   end
 
   def handle_event("cancel_edit", _params, socket) do
@@ -124,7 +137,7 @@ defmodule PurpleFlowWeb.CredentialsLive do
             oauth: oauth_settings(params),
             client_secret: params["client_secret"]
           }),
-        else: Map.put(attrs, :key, params["key"])
+        else: Map.merge(attrs, %{key: params["key"], type: value_type(params["type"])})
 
     case Credentials.update(id, attrs) do
       {:ok, _} ->
@@ -140,7 +153,7 @@ defmodule PurpleFlowWeb.CredentialsLive do
     end
   end
 
-  # One unset text credential for every name a workflow uses that doesn't
+  # One unset string credential for every name a workflow uses that doesn't
   # exist yet, each described with the workflows that need it.
   def handle_event("create_missing", _params, socket) do
     stubs =
@@ -202,7 +215,7 @@ defmodule PurpleFlowWeb.CredentialsLive do
   defp empty_form do
     to_form(
       Map.merge(
-        %{"type" => "text", "name" => "", "description" => "", "key" => ""},
+        %{"type" => "string", "name" => "", "description" => "", "key" => ""},
         Map.merge(OAuth.defaults(), %{"client_id" => "", "client_secret" => "", "scopes" => ""})
       ),
       as: :credential
@@ -218,6 +231,11 @@ defmodule PurpleFlowWeb.CredentialsLive do
       {field, if(value == "", do: defaults[field] || "", else: value)}
     end)
   end
+
+  # A plain credential's type from the form: "text" can span lines, anything
+  # else is a one-line "string".
+  defp value_type("text"), do: "text"
+  defp value_type(_type), do: "string"
 
   defp settings(cred), do: Map.merge(OAuth.defaults(), cred.oauth || %{})
 
@@ -289,8 +307,13 @@ defmodule PurpleFlowWeb.CredentialsLive do
           class={[@row, "p-3"]}
         >
           <select id="add-credential-type" name="credential[type]" class={@input}>
-            <option value="text" selected={@add_form[:type].value != "oauth"}>Text</option>
-            <option value="oauth" selected={@add_form[:type].value == "oauth"}>OAuth</option>
+            <option
+              :for={{value, label} <- [{"string", "String"}, {"text", "Text"}, {"oauth", "OAuth"}]}
+              value={value}
+              selected={type_option(@add_form[:type].value) == value}
+            >
+              {label}
+            </option>
           </select>
           <input
             type="text"
@@ -316,12 +339,12 @@ defmodule PurpleFlowWeb.CredentialsLive do
               class={[@input, "font-mono"]}
             />
           <% else %>
-            <input
-              type="text"
-              name="credential[key]"
+            <.value_field
+              id="add-credential-key"
+              type={@add_form[:type].value}
               value={@add_form[:key].value}
               placeholder="Value"
-              class={[@input, "font-mono"]}
+              input={@input}
             />
           <% end %>
           <div class="col-span-2 md:col-span-1 flex gap-2 justify-end">
@@ -357,10 +380,28 @@ defmodule PurpleFlowWeb.CredentialsLive do
             :if={@editing_id == cred.id}
             for={@edit_form}
             id={"edit-credential-form-#{cred.id}"}
+            phx-change="change_edit"
             phx-submit="save"
             class={@row}
           >
-            <.type_badge type={cred.type} />
+            <%= if cred.type == "oauth" do %>
+              <.type_badge type={cred.type} />
+            <% else %>
+              <select
+                id={"edit-credential-type-#{cred.id}"}
+                name="credential[type]"
+                class={@input}
+                title="String is one line; Text can span lines"
+              >
+                <option
+                  :for={{value, label} <- [{"string", "String"}, {"text", "Text"}]}
+                  value={value}
+                  selected={value_type(@edit_form[:type].value) == value}
+                >
+                  {label}
+                </option>
+              </select>
+            <% end %>
             <input
               type="text"
               name="credential[name]"
@@ -382,12 +423,12 @@ defmodule PurpleFlowWeb.CredentialsLive do
                 class={[@input, "font-mono"]}
               />
             <% else %>
-              <input
-                type="text"
-                name="credential[key]"
+              <.value_field
+                id={"edit-credential-key-#{cred.id}"}
+                type={@edit_form[:type].value}
                 value=""
                 placeholder={if cred.set, do: "Leave blank to keep current value", else: "Value"}
-                class={[@input, "font-mono"]}
+                input={@input}
               />
             <% end %>
             <div class="col-span-2 md:col-span-1 flex gap-2 justify-end">
@@ -517,8 +558,50 @@ defmodule PurpleFlowWeb.CredentialsLive do
   defp type_badge(assigns) do
     ~H"""
     <span class="text-xs uppercase tracking-wide text-base-content/50">
-      {if @type == "oauth", do: "OAuth", else: "Text"}
+      {case @type do
+        "oauth" -> "OAuth"
+        "text" -> "Text"
+        _ -> "String"
+      end}
     </span>
+    """
+  end
+
+  defp type_option("oauth"), do: "oauth"
+  defp type_option(type), do: value_type(type)
+
+  # The value input: one line for a string, a box that keeps line breaks
+  # (an SSH key, a certificate) for text.
+  attr :id, :string, required: true
+  attr :type, :string, required: true
+  attr :value, :string, required: true
+  attr :placeholder, :string, required: true
+  attr :input, :string, required: true
+
+  defp value_field(%{type: "text"} = assigns) do
+    ~H"""
+    <textarea
+      id={@id}
+      name="credential[key]"
+      rows="3"
+      placeholder={@placeholder}
+      autocomplete="off"
+      spellcheck="false"
+      class={[@input, "font-mono resize-y"]}
+    >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
+    """
+  end
+
+  defp value_field(assigns) do
+    ~H"""
+    <input
+      type="text"
+      id={@id}
+      name="credential[key]"
+      value={@value}
+      placeholder={@placeholder}
+      class={[@input, "font-mono"]}
+    />
     """
   end
 

@@ -167,6 +167,79 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
     refute html =~ "STRIPE_KEY"
   end
 
+  describe "String and Text" do
+    test "a new credential is a String, with a one-line value field", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      assert has_element?(view, "#add-credential-type option[value=string][selected]")
+      assert has_element?(view, "input#add-credential-key")
+
+      view
+      |> form("#add-credential-form", %{"credential" => %{"name" => "TOKEN", "key" => "t0k"}})
+      |> render_submit()
+
+      assert [%{type: "string"}] = Credentials.list()
+    end
+
+    test "picking Text gives a box that keeps line breaks", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      view
+      |> form("#add-credential-form", %{"credential" => %{"type" => "text"}})
+      |> render_change()
+
+      assert has_element?(view, "textarea#add-credential-key")
+      refute has_element?(view, "input#add-credential-key")
+
+      key = "-----BEGIN KEY-----\nline one\nline two\n-----END KEY-----"
+
+      html =
+        view
+        |> form("#add-credential-form", %{
+          "credential" => %{"type" => "text", "name" => "SSH_KEY", "key" => key}
+        })
+        |> render_submit()
+
+      assert Credentials.get("SSH_KEY") == key
+      assert [%{type: "text"} = cred] = Credentials.list()
+      assert has_element?(view, "#credential-#{cred.id}", "Text")
+      refute html =~ "line one"
+    end
+
+    test "editing can switch a String to Text", %{conn: conn} do
+      {:ok, cred} = Credentials.create("SSH_KEY", "")
+      {:ok, _} = Credentials.update(cred.id, %{key: "one line"})
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view |> element("#credential-#{cred.id} button[phx-click=edit]") |> render_click()
+      assert has_element?(view, "input#edit-credential-key-#{cred.id}")
+
+      view
+      |> form("#edit-credential-form-#{cred.id}", %{"credential" => %{"type" => "text"}})
+      |> render_change()
+
+      assert has_element?(view, "textarea#edit-credential-key-#{cred.id}")
+
+      view
+      |> form("#edit-credential-form-#{cred.id}", %{
+        "credential" => %{"type" => "text", "name" => "SSH_KEY", "description" => "", "key" => ""}
+      })
+      |> render_submit()
+
+      assert [%{type: "text"}] = Credentials.list()
+      assert Credentials.get("SSH_KEY") == "one line"
+    end
+
+    test "an OAuth credential's type can't be changed from its edit row", %{conn: conn} do
+      {:ok, cred} =
+        Credentials.create("GMAIL", "", %{type: "oauth", oauth: %{"client_id" => "cid"}})
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view |> element("#credential-#{cred.id} button[phx-click=edit]") |> render_click()
+
+      refute has_element?(view, "#edit-credential-type-#{cred.id}")
+    end
+  end
+
   describe "OAuth" do
     test "picking OAuth shows its fields, and saving goes to connect", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/credentials")
@@ -316,7 +389,7 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
       refute has_element?(view, "#missing-credentials")
 
       stubs = Map.new(Credentials.list(), &{&1.name, &1})
-      assert %{set: false, type: "text", description: "Needed by one, two"} = stubs["SHARED"]
+      assert %{set: false, type: "string", description: "Needed by one, two"} = stubs["SHARED"]
       assert %{set: false, description: "Needed by one"} = stubs["ONLY_ONE"]
       assert map_size(stubs) == 3
     end

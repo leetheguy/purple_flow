@@ -63,3 +63,7 @@ Text credentials look as they do now. OAuth adds:
 - **Sample:** `samples/gmail` runs end to end with Gmail stubbed, sending the built message with the credential's token, which stays out of the saved records.
 
 A sample, `samples/gmail/`, sends an email with a Code step (Gmail wants the whole message base64url-encoded) and an HTTP step using `{{ creds.GMAIL }}`, with a README for setting up the Google side.
+
+## Log
+
+- 2026-10-01 — [230](230_credential_value_types.md): `type` is `"string"` (the default; every `"text"` credential became one), `"text"` (a value that can span lines), or `"oauth"`. String and Text read the same way: `get/1` returns the decrypted value.
