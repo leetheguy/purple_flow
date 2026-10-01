@@ -53,6 +53,7 @@ See the README's "Running it" section for details.
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
+- Test coverage must be over 90% before any commit. Check it with `mix coveralls` (the `[TOTAL]` line); if a change drops it to 90% or below, add tests until it's back over. `coveralls.json` sets `minimum_coverage` to 90, so below that `mix coveralls` and CI fail. Tests need `PURPLEFLOW_SECRET_KEY` set (any `openssl rand -base64 32` will do) and a Postgres that takes `postgres`/`postgres`, at `POSTGRES_HOST`/`POSTGRES_PORT` (default `localhost:5432`)
 - CI (`.github/workflows/ci.yml`) runs the same checks on every push and pull request, in check mode (`mix format --check-formatted`, `mix deps.unlock --check-unused`), so run `mix precommit` before pushing and a red CI check is yours to fix
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 
