@@ -1,0 +1,6 @@
+# Sends one chunk, then kills itself.
+module = "PurpleFlow.Test.FakeNode"
+
+[config]
+stream_reply = ["data: 1\n\n"]
+crash = true

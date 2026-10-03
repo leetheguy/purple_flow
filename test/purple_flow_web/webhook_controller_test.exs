@@ -78,6 +78,53 @@ defmodule PurpleFlowWeb.WebhookControllerTest do
     assert_receive {:run_finished, ^run_id, "complete"}, 5_000
   end
 
+  describe "an OpenAI Chat step" do
+    setup :set_req_test_to_shared
+    defp set_req_test_to_shared(context), do: Req.Test.set_req_test_to_shared(context)
+
+    test "streams its answer to the caller, and the run carries on with the whole message",
+         %{conn: conn} do
+      Phoenix.PubSub.subscribe(PurpleFlow.PubSub, "runs")
+
+      sse =
+        ~s(data: {"choices":[{"delta":{"content":"Hi "}}]}\n\n) <>
+          ~s(data: {"choices":[{"delta":{"content":"there"},"finish_reason":"stop"}]}\n\n) <>
+          "data: [DONE]\n\n"
+
+      Req.Test.stub(PurpleFlow.Nodes.OpenAIChat, fn conn ->
+        Plug.Conn.send_resp(conn, 200, sse)
+      end)
+
+      conn =
+        post(conn, "/hooks/chat/v1/chat/completions", %{
+          "model" => "m",
+          "messages" => [%{"role" => "user", "content" => "hi"}]
+        })
+
+      assert conn.status == 200
+      assert ["text/event-stream" <> _] = get_resp_header(conn, "content-type")
+      assert conn.resp_body == sse
+
+      # The caller is answered before the step after it finishes.
+      [run_id] = get_resp_header(conn, "x-run-id")
+      assert_receive {:run_finished, ^run_id, "complete"}, 5_000
+      %{steps: steps} = PurpleFlow.Runs.get(run_id)
+      save = Enum.find(steps, &(&1.step == "save"))
+      assert %{"content" => "Hi there", "finish_reason" => "stop"} = save.input
+    end
+
+    test "a step that dies mid-answer ends the stream", %{conn: conn} do
+      Phoenix.PubSub.subscribe(PurpleFlow.PubSub, "runs")
+      conn = post(conn, "/hooks/stream-reply-dies")
+
+      assert conn.status == 200
+      assert conn.resp_body == "data: 1\n\n"
+
+      [run_id] = get_resp_header(conn, "x-run-id")
+      assert_receive {:run_finished, ^run_id, _}, 5_000
+    end
+  end
+
   describe "uploads" do
     defp multipart(conn, path, file_bytes) do
       boundary = "pfboundary"

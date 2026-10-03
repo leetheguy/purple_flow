@@ -145,6 +145,17 @@ defmodule PurpleFlow.Run do
     {:reply, :ok, %{state | respond_to: nil}}
   end
 
+  # A streamed answer: the caller learns which execution sends the chunks,
+  # and the execution learns where to send them.
+  def handle_call({:respond_stream, _reply, _pid}, _from, %{respond_to: nil} = state),
+    do: {:reply, :none, state}
+
+  def handle_call({:respond_stream, reply, pid}, _from, state) do
+    ref = make_ref()
+    send(state.respond_to, {:run_respond, state.id, Map.put(reply, "stream", {pid, ref})})
+    {:reply, {:ok, {state.respond_to, ref}}, %{state | respond_to: nil}}
+  end
+
   def handle_call(:kill, _from, state) do
     # Ending first, so what the stopped executions leave behind goes nowhere.
     state = stop_everything(state, {"killed", nil})

@@ -45,7 +45,8 @@ config :purple_flow,
   workflows_watch: [interval: :manual, credentials: false],
   http_req_options: [plug: {Req.Test, PurpleFlow.Nodes.Http}],
   oauth_req_options: [plug: {Req.Test, PurpleFlow.Credentials.OAuth}],
-  files_req_options: [plug: {Req.Test, PurpleFlowWeb.Plugs.FilesProxy}]
+  files_req_options: [plug: {Req.Test, PurpleFlowWeb.Plugs.FilesProxy}],
+  openai_chat_req_options: [plug: {Req.Test, PurpleFlow.Nodes.OpenAIChat}]
 
 # Requests from here are refused, as from the Code node runner's network.
 config :purple_flow, :runner_subnet, "10.250.250.0/24"

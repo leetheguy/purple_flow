@@ -1,0 +1,10 @@
+# Starts a streamed answer, then dies.
+[workflow]
+name = "stream_reply_dies"
+
+[trigger.webhook]
+path = "stream-reply-dies"
+
+[[steps]]
+name = "dies"
+node = "dies.toml"

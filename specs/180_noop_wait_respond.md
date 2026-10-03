@@ -75,3 +75,7 @@ Since a Respond step may run once per item, a step reached by many items answers
 - **Wait:** `ms` waits at least that long; `ms` as text; `until` in the future waits, in the past doesn't; bad values are errors; `prepare` wants exactly one of the two and checks plain values, not templates.
 - **Respond:** default reply is the input with status 200; config sets status, headers (lowercased), and body; bad status or headers are errors and send nothing; `prepare` checks plain values.
 - **Webhook:** a Respond step's status, headers, and JSON body reach the caller while the run is still running; a second Respond step answers no one and the run ends `complete`; a text body is sent as text.
+
+## Log
+
+- 2026-10-03 — [240](240_openai_chat.md): a step can also answer with a stream, `PurpleFlow.Node.respond_stream/2` with `respond_chunk/2` and `respond_done/1`, under the same rules (a waiting caller, first answer only). The OpenAI Chat node uses it.

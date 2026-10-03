@@ -102,6 +102,44 @@ defmodule PurpleFlow.Node do
     end
   end
 
+  @doc """
+  Like `respond/1`, but the answer is a stream: the webhook caller gets
+  `status` and `headers` now, then each `respond_chunk/2` as it's sent, until
+  `respond_done/1` (or the execution ends). The run carries on. Returns
+  `{:ok, sink}` if a caller was waiting and nothing had answered yet,
+  `:none` otherwise. The OpenAI Chat node uses it.
+
+  Outside a run (a test calling `execute` directly), it sends
+  `{:respond_stream, status, headers}` to the calling process, and the
+  chunks and the end come to it as `{:respond_chunk, ref, data}` and
+  `{:respond_done, ref}`.
+  """
+  @spec respond_stream(integer(), map()) :: {:ok, {pid(), reference()}} | :none
+  def respond_stream(status, headers) do
+    case Process.get(:purple_flow_respond_stream) do
+      nil ->
+        send(self(), {:respond_stream, status, headers})
+        {:ok, {self(), make_ref()}}
+
+      respond_stream ->
+        respond_stream.(status, headers)
+    end
+  end
+
+  @doc "Sends the next part of a streamed answer (see `respond_stream/2`)."
+  @spec respond_chunk({pid(), reference()}, iodata()) :: :ok
+  def respond_chunk({caller, ref}, data) do
+    send(caller, {:respond_chunk, ref, data})
+    :ok
+  end
+
+  @doc "Ends a streamed answer (see `respond_stream/2`)."
+  @spec respond_done({pid(), reference()}) :: :ok
+  def respond_done({caller, ref}) do
+    send(caller, {:respond_done, ref})
+    :ok
+  end
+
   @doc "True if `module` is a real module that says it's a `PurpleFlow.Node`."
   def node_module?(module) do
     with true <- Code.ensure_loaded?(module),

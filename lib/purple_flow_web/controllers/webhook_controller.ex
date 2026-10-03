@@ -9,7 +9,9 @@ defmodule PurpleFlowWeb.WebhookController do
   with the output as JSON, or `500 {"error": ...}` if the run failed.
   The run ID is in the `x-run-id` header either way. A Respond step
   (`PurpleFlow.Nodes.Respond`) can answer sooner, with its own status,
-  headers, and body, while the run carries on.
+  headers, and body, while the run carries on. An OpenAI Chat step
+  (`PurpleFlow.Nodes.OpenAIChat`) can answer with a stream instead; see
+  `specs/240_openai_chat.md`.
 
   With `respond = "immediately"` the reply comes right away:
   `202 {"run_id": "..."}`. Use that for workflows that take longer than
@@ -134,6 +136,17 @@ defmodule PurpleFlowWeb.WebhookController do
     end
   end
 
+  # A streamed answer (`PurpleFlow.Node.respond_stream/2`): the step sends
+  # the chunks straight here until it says it's done, or dies.
+  defp send_reply(conn, %{"status" => status, "headers" => headers, "stream" => {pid, ref}}) do
+    monitor = Process.monitor(pid)
+
+    headers
+    |> Enum.reduce(conn, fn {name, value}, conn -> put_resp_header(conn, name, value) end)
+    |> send_chunked(status)
+    |> relay(pid, ref, monitor)
+  end
+
   # A Respond step's answer. Text goes as is, anything else as JSON, each
   # with a content type unless the step set its own.
   defp send_reply(conn, %{"status" => status, "headers" => headers, "body" => body}) do
@@ -151,6 +164,36 @@ defmodule PurpleFlowWeb.WebhookController do
         else: conn
 
     send_resp(conn, status, body)
+  end
+
+  # Passes a step's streamed answer on to the caller. A keep-alive comment
+  # goes out when there's nothing to send, as with `respond = "stream"`.
+  # Hanging up doesn't stop the step or the run.
+  defp relay(conn, pid, ref, monitor) do
+    receive do
+      {:respond_chunk, ^ref, data} ->
+        case chunk(conn, data) do
+          {:ok, conn} -> relay(conn, pid, ref, monitor)
+          {:error, _closed} -> stop_relay(conn, monitor)
+        end
+
+      {:respond_done, ^ref} ->
+        stop_relay(conn, monitor)
+
+      {:DOWN, ^monitor, :process, ^pid, _reason} ->
+        conn
+    after
+      @keep_alive_ms ->
+        case chunk(conn, ": keep-alive\n\n") do
+          {:ok, conn} -> relay(conn, pid, ref, monitor)
+          {:error, _closed} -> stop_relay(conn, monitor)
+        end
+    end
+  end
+
+  defp stop_relay(conn, monitor) do
+    Process.demonitor(monitor, [:flush])
+    conn
   end
 
   # Sends each item as the run produces it, until the run ends or the caller

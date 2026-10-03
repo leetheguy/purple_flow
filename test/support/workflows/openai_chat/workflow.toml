@@ -1,0 +1,15 @@
+# Streams a chat answer back to the caller, then saves it.
+[workflow]
+name = "openai_chat"
+
+[trigger.webhook]
+path = "chat/v1/chat/completions"
+
+[[steps]]
+name = "chat"
+node = "chat.toml"
+
+[[steps]]
+name = "save"
+node = "save.toml"
+after = ["chat"]

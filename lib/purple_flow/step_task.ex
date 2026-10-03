@@ -33,6 +33,7 @@ defmodule PurpleFlow.StepTask do
       {:ok, config, secrets} ->
         Process.put(:purple_flow_emit, fn value, route -> emit(run, value, route, secrets) end)
         Process.put(:purple_flow_respond, &respond(run, &1))
+        Process.put(:purple_flow_respond_stream, &respond_stream(run, &1, &2))
 
         case call_node(step.module, input, config, steps) do
           {:ok, output, route} ->
@@ -72,6 +73,15 @@ defmodule PurpleFlow.StepTask do
   defp respond(run, reply) do
     case to_json(reply) do
       {:ok, reply} -> GenServer.call(run, {:respond, reply}, :infinity)
+      {:error, message} -> raise "reply #{message}"
+    end
+  end
+
+  # Takes the waiting webhook caller, if any, for a streamed answer. The
+  # caller watches this process, so an execution that dies ends the stream.
+  defp respond_stream(run, status, headers) do
+    case to_json(%{"status" => status, "headers" => headers}) do
+      {:ok, reply} -> GenServer.call(run, {:respond_stream, reply, self()}, :infinity)
       {:error, message} -> raise "reply #{message}"
     end
   end

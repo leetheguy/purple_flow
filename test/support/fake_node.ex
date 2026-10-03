@@ -12,12 +12,20 @@ defmodule PurpleFlow.Test.FakeNode do
   - `"explode"`: return a list of this many copies of the input
   - `"emit"`: emit each of these values while running (`"emit_sleep"` ms
     apart), then wait `"after_emit"` ms and return `[]`
+  - `"stream_reply"`: answer the waiting webhook caller with a stream of
+    these chunks, without ending it, before anything else (so `"crash"`
+    after it leaves the stream open)
   """
 
   @behaviour PurpleFlow.Node
 
   @impl true
   def execute(input, config) do
+    if chunks = config["stream_reply"] do
+      {:ok, sink} = PurpleFlow.Node.respond_stream(200, %{"content-type" => "text/event-stream"})
+      Enum.each(chunks, &PurpleFlow.Node.respond_chunk(sink, &1))
+    end
+
     if ms = config["sleep"], do: Process.sleep(ms)
     if config["sleep_input"], do: Process.sleep(input)
     if config["raise"], do: raise("kaboom")

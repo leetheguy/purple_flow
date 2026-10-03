@@ -262,6 +262,20 @@ body = { accepted = true }         # default: this step's input. Text is sent as
 
 Answers whoever called the webhook right away, and the run carries on without them. Use it to say "got it" quickly and keep working. It only answers a webhook that's waiting for the result (the default); the first Respond step to run answers, and any later one does nothing. The step hands its input on unchanged.
 
+**Stream a chat answer to the caller (OpenAI Chat)**
+
+```toml
+module = "PurpleFlow.Nodes.OpenAIChat"
+
+[config]
+url = "https://openrouter.ai/api/v1/chat/completions"
+headers = { authorization = "Bearer {{ creds.OPENROUTER_API_KEY }}" }
+body = "{{ steps.build.output }}"  # model, messages, ...; streaming is turned on for you
+respond = true                     # default: stream the answer to whoever called the webhook
+```
+
+Calls any OpenAI-compatible chat API and streams its answer straight back to the webhook caller in the same format (`data: {...}` events, then `data: [DONE]`), so a chat app (LibreChat, Open WebUI, an OpenAI SDK) pointed at your webhook sees an ordinary OpenAI stream. The caller's connection closes when the answer is done. Like Respond, it only answers a webhook waiting for the result (the default), and only if nothing has answered yet. Its output is the whole message, `{"content", "reasoning", "tool_calls", "finish_reason", "model", "id", "usage"}`, so steps after it (saving the conversation, say) run after the caller has the answer. A non-2xx response goes to the caller as it is and fails the step.
+
 **Do nothing (Noop)**
 
 ```toml

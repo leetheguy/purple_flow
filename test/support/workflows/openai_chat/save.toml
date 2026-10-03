@@ -1,0 +1,5 @@
+# Stands in for saving the conversation.
+module = "PurpleFlow.Test.FakeNode"
+
+[config]
+sleep = 100

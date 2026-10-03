@@ -251,7 +251,9 @@ queue
 ```
 
 Built-in nodes: HTTP and SSH (both can stream), Postgres, Code, Batch,
-Wait, Respond (answer the webhook early), Noop, and "run another workflow".
+Wait, Respond (answer the webhook early), OpenAI Chat (stream a chat answer
+back to the caller in OpenAI's format, so chat apps can point at a webhook),
+Noop, and "run another workflow".
 A new node type is just a module implementing `execute(input, config)`.
 
 Webhooks take file uploads. A file is saved with its run (in its own

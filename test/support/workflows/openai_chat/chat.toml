@@ -1,0 +1,6 @@
+# Asks the model, streaming its answer to the caller.
+module = "PurpleFlow.Nodes.OpenAIChat"
+
+[config]
+url = "http://llm.test/v1/chat/completions"
+body = "{{ input.body }}"

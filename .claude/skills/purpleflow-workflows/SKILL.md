@@ -148,6 +148,9 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 | `PurpleFlow.Nodes.Noop` | none | its input, unchanged |
 | `PurpleFlow.Nodes.Wait` | `ms`, or `until` (ISO 8601 time) | its input, after waiting. The step's `timeout` covers the wait |
 | `PurpleFlow.Nodes.Respond` | `status` (200), `headers`, `body` (default: the input; text is sent as text, anything else as JSON) | its input. Answers the waiting webhook caller now; the run carries on |
+| `PurpleFlow.Nodes.OpenAIChat` | `url`, `headers`, `body` (a table: model, messages, …; `stream` is set for you), `respond` (true) | the whole message once it's done: `{"content", "reasoning", "tool_calls", "finish_reason", "model", "id", "usage"}`. Streams the answer to the waiting webhook caller as it arrives, in OpenAI's format |
+
+**OpenAI Chat:** for chat apps that speak OpenAI's API. Point the app at a webhook (`path = "chat/v1/chat/completions"` makes the base URL `/hooks/chat/v1`), build the request in earlier steps, and this node calls the provider with streaming on and passes each event straight to the caller, ending with `data: [DONE]` and closing the connection. It answers like Respond does (default `respond = "result"`, first one only). Steps after it get the whole message and run after the caller has it. A non-2xx response goes to the caller as it is and fails the step; an `error` mid-stream is passed on, then fails it. Nodes of your own can stream an answer the same way with `PurpleFlow.Node.respond_stream/2`, `respond_chunk/2`, and `respond_done/1`. See `specs/240_openai_chat.md`.
 
 **Respond:** only answers a webhook with `respond = "result"` (the default). The first Respond step to run answers; later ones, and runs nobody waits on (`"immediately"`, `"stream"`, cron, the Run button, a child run of the Workflow node), answer no one. A run that ends without one answers with its output, as usual.
 
