@@ -296,6 +296,11 @@ docker compose up -d --build   # http://localhost:4000
 docker compose down
 ```
 
+Production forces HTTPS, except for requests to `localhost` and to the
+container's own name: other containers on the same Docker network can call
+`http://purple_flow:4000/hooks/...` directly, without a trip out to your
+public address.
+
 This starts PurpleFlow, Postgres, the Code node runner, and the files
 service
 together, all behind one site and one sign-in: open `http://localhost:4000`

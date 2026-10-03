@@ -16,7 +16,10 @@ config :purple_flow, PurpleFlowWeb.Endpoint,
     rewrite_on: [:x_forwarded_proto],
     exclude: [
       # paths: ["/health"],
-      hosts: ["localhost", "127.0.0.1"]
+      # "purple_flow" is the app's container name: other containers on the
+      # same Docker network call it by that over plain HTTP, and a redirect
+      # to the public https address would drop their Authorization header.
+      hosts: ["localhost", "127.0.0.1", "purple_flow"]
     ]
   ]
 
