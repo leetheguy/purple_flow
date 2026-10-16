@@ -190,7 +190,7 @@ query = "select * from orders where status = $1"
 params = ["{{ input.status }}"]
 ```
 
-The output is a list of rows. Always put values in `params` (`$1`, `$2`, …), never in the query text itself.
+The output is a list of rows. Always put values in `params` (`$1`, `$2`, …), never in the query text itself. Each database gets a pool of up to 10 connections, closed after a minute with no queries.
 
 **Code**
 

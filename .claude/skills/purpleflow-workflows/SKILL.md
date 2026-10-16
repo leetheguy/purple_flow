@@ -156,7 +156,7 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 
 **SSH:** keys and passwords come from credentials (`private_key = "{{ creds.DEPLOY_SSH_KEY }}"`). Set `host_key` to the server's fingerprint so a different server is refused; without it any key is accepted. `command` takes templates like anything else, so one step can run any command the workflow builds; it runs in the server's shell, templates and all.
 
-**Postgres:** values always go in `params` as `$1`, `$2`, …, never pasted into `query`. Params arrive as text or numbers, so cast in SQL when needed: `$1::text::timestamptz`.
+**Postgres:** values always go in `params` as `$1`, `$2`, …, never pasted into `query`. Params arrive as text or numbers, so cast in SQL when needed: `$1::text::timestamptz`. Each `database_url` gets a pool of 10 connections that closes after a minute with no queries.
 
 **Code scripts** get `input` and `steps` (`steps["fetch"]["output"]`). Return `{:ok, value}`, `{:ok, value, "route"}`, `{:error, "why"}`, or just a plain value. Maps use **string keys**: `input["amount"]`, not `input.amount`. Scripts run in an isolated runner with no network, no credentials, and no environment variables: fetch with an HTTP step and hand the result to the script through `input`/`steps`. What a script returns must be JSON-shaped.
 

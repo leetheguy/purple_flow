@@ -17,9 +17,13 @@ defmodule PurpleFlow.Nodes.Postgres do
 
   Connections are pooled: one pool per `database_url`, 10 connections each,
   so a step running 1,000 items at once doesn't open 1,000 connections.
+  A pool closes its connections after a minute with no queries
+  (see `PurpleFlow.Nodes.Postgres.Pool`).
   """
 
   @behaviour PurpleFlow.Node
+
+  alias PurpleFlow.Nodes.Postgres.Pool
 
   @pool_size 10
 
@@ -27,7 +31,9 @@ defmodule PurpleFlow.Nodes.Postgres do
   def execute(_input, config) do
     with {:ok, pool} <- pool(Map.fetch!(config, "database_url")),
          {:ok, result} <-
-           Postgrex.query(pool, Map.fetch!(config, "query"), Map.get(config, "params", [])) do
+           Pool.run(pool, fn conn ->
+             Postgrex.query(conn, Map.fetch!(config, "query"), Map.get(config, "params", []))
+           end) do
       {:ok, rows(result)}
     else
       {:error, %{__exception__: true} = error} -> {:error, Exception.message(error)}
@@ -55,7 +61,8 @@ defmodule PurpleFlow.Nodes.Postgres do
 
   defp json_value(value), do: value
 
-  # Finds the pool for this URL, starting it the first time.
+  # Finds the pool for this URL, starting it the first time. The pool itself
+  # only holds connections while queries are using it.
   # (`Registry` is Elixir's built-in name lookup for processes.)
   defp pool(url) do
     name = {:via, Registry, {PurpleFlow.Nodes.Postgres.Pools, url}}
@@ -66,12 +73,11 @@ defmodule PurpleFlow.Nodes.Postgres do
 
       [] ->
         with {:ok, options} <- parse_url(url) do
-          spec = {Postgrex, [name: name, pool_size: @pool_size] ++ options}
+          spec = {Pool, name: name, postgrex: [pool_size: @pool_size] ++ options}
 
           case DynamicSupervisor.start_child(PurpleFlow.Nodes.Postgres.PoolSupervisor, spec) do
             {:ok, pid} -> {:ok, pid}
             {:error, {:already_started, pid}} -> {:ok, pid}
-            {:error, reason} -> {:error, "couldn't connect: #{inspect(reason)}"}
           end
         end
     end

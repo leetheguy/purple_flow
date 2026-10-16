@@ -2,6 +2,7 @@ defmodule PurpleFlow.NodesTest do
   use PurpleFlow.DataCase, async: false
 
   alias PurpleFlow.Nodes.{Code, Http, Postgres}
+  alias PurpleFlow.Nodes.Postgres.Pool
 
   describe "Http" do
     test "returns the decoded body" do
@@ -212,6 +213,59 @@ defmodule PurpleFlow.NodesTest do
 
       assert message =~ "nope"
     end
+
+    test "a pool closes its connections once idle, and opens again on the next query" do
+      pool = start_pool(idle_ms: 10)
+
+      assert {:ok, %{rows: [[1]]}} = Pool.run(pool, &Postgrex.query(&1, "SELECT 1", []))
+      conn = :sys.get_state(pool).conn
+      ref = Process.monitor(conn)
+      assert_receive {:DOWN, ^ref, :process, ^conn, _}, 1_000
+      assert :sys.get_state(pool).conn == nil
+
+      assert {:ok, %{rows: [[2]]}} = Pool.run(pool, &Postgrex.query(&1, "SELECT 2", []))
+      assert is_pid(:sys.get_state(pool).conn)
+    end
+
+    test "a pool stays open while a query runs, and a caller that crashes doesn't hold it" do
+      pool = start_pool(idle_ms: 10)
+      test = self()
+
+      caller =
+        spawn(fn ->
+          Pool.run(pool, fn _conn ->
+            send(test, :checked_out)
+            Process.sleep(:infinity)
+          end)
+        end)
+
+      assert_receive :checked_out
+      assert %{conn: conn, idle: nil} = :sys.get_state(pool)
+      ref = Process.monitor(conn)
+      Process.exit(caller, :kill)
+      assert_receive {:DOWN, ^ref, :process, ^conn, _}, 1_000
+    end
+
+    test "a pool that goes down on its own opens again on the next query" do
+      pool = start_pool(idle_ms: 60_000)
+
+      assert {:ok, _} = Pool.run(pool, &Postgrex.query(&1, "SELECT 1", []))
+      conn = :sys.get_state(pool).conn
+      ref = Process.monitor(conn)
+      Process.exit(conn, :kill)
+      assert_receive {:DOWN, ^ref, :process, ^conn, _}
+      assert %{conn: nil, idle: nil} = :sys.get_state(pool)
+
+      assert {:ok, %{rows: [[1]]}} = Pool.run(pool, &Postgrex.query(&1, "SELECT 1", []))
+    end
+  end
+
+  defp start_pool(opts) do
+    postgrex =
+      [pool_size: 2] ++
+        Keyword.take(PurpleFlow.Repo.config(), [:hostname, :port, :username, :password, :database])
+
+    start_supervised!({Pool, [postgrex: postgrex] ++ opts})
   end
 
   describe "Code" do
