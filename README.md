@@ -14,8 +14,10 @@ it for people.
 
 It was also designed to build and orchestrate AI swarms that build and orchestrate AI swarms.
 
-![A screenshot of the PurpleFlow UI](image.png)
+## [Live demo](https://leenathan.com/demo)
+
 ![A screenshot of the PurpleFlow Canvas](image-1.png)
+![A screenshot of the PurpleFlow UI](image-2.png)
 
 ## Human written intro
 
