@@ -130,8 +130,7 @@ agent get your heads around the nitty gritty.
 `PURPLEFLOW_ADMIN_USERNAME` and `PURPLEFLOW_ADMIN_PASSWORD`.
 7. Send your friendly neighborhood agent to `yourdomain.com/agents`.
    - It will then want the `PURPLEFLOW_AGENT_TOKEN`.
-   - With that token comes great power; remind your agent to be responsible=
-.
+   - With that token comes great power; remind your agent to be responsible.
    - (Muse has a dedicated system to keep the token out of your agent's
 hands and it works well with PurpleFlow; just sayin')
 8. Your agent can now build workflows that connect anything to anything,
@@ -198,8 +197,7 @@ already foreseen and built protective measures that would have solved many
 of their early issues before the research. Afterwards, PurpleFlow was
 hardened to address several others.
 
-Workflows are stored and versioned locally. A Docker sidecar running [Dufs]=
-(
+Workflows are stored and versioned locally. A Docker sidecar running [Dufs](
 https://github.com/sigoden/dufs) has access to the workflows folder and
 makes it available to agents and the web UI. That sidecar has no port and
 no access to the internet or the rest of the docker network, and it wants
@@ -314,8 +312,7 @@ it). Postgres has a health check, and the app container only starts once it
 passes; migrations run automatically on boot, and the container restarts on
 its own if the app dies. Code node scripts run in the `runner` container,
 which has no secrets, no database, no internet, and no way to reach the app
-(see [specs/100](specs/100_runner_container.md)). Files uploaded to webhook=
-s
+(see [specs/100](specs/100_runner_container.md)). Files uploaded to webhooks
 live in their own volume, `purple_flow_run_files`, only until their run
 ends.
 See `docker-compose.yml`
@@ -336,22 +333,19 @@ points it anywhere). It's yours: this repo ignores it, and it's meant to be
 its own git repository. Nothing commits automatically; you manage its
 history.
 
-- **The app only reads it** (mounted read-only) and picks up every change o=
-n
+- **The app only reads it** (mounted read-only) and picks up every change on
   its own within about two seconds. There's no reload step. If an edit
 breaks
   a workflow, the last version that loaded keeps running, and the Workflows
   page says so.
 - **People and agents edit it through the files service** (dufs), which the
-  app serves behind its own sign-in. People use the **Files** page in the U=
-I
+  app serves behind its own sign-in. People use the **Files** page in the UI
   (click a file to edit it; Ctrl/Cmd+S saves). Agents use `/fs/` with
   `Authorization: Bearer $PURPLEFLOW_AGENT_TOKEN`: plain HTTP (`PUT` to
 write
   a file, `DELETE`, `GET /fs/folder/?json` to list) and WebDAV for mounting
   it as a folder. WebDAV clients that only do Basic auth (Finder, Windows)
-  can use the admin login instead. dufs has no port of its own, and it neve=
-r
+  can use the admin login instead. dufs has no port of its own, and it never
   sees the folder's `.git`.
 - **Agents check their changes** at `GET /api/workflows` on the app, with
   the same token: what loaded, what didn't, and why.
@@ -379,8 +373,7 @@ See [specs/090](specs/090_workflow_files.md),
 
 ### Inviting an agent
 
-Put an `AGENTS.md` at the top of the workflows folder explaining how to wor=
-k
+Put an `AGENTS.md` at the top of the workflows folder explaining how to work
 there. The app serves it, with no sign-in, at `/agents`, and replaces every
 `BASE` in it with the site's address (from `PHX_HOST`). To bring in any
 agent, give it that link and your `PURPLEFLOW_AGENT_TOKEN`. The token lets
