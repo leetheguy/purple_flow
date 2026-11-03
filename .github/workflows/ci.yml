@@ -60,6 +60,10 @@ jobs:
           restore-keys: mix-${{ runner.os }}-otp29.0.3-elixir1.20.2-
 
       - run: mix deps.get
+
+      # Known vulnerabilities and retired packages in mix.lock fail the build.
+      # Fix by updating the package (mix deps.update NAME).
+      - run: mix hex.audit
       - run: mix compile --warnings-as-errors
       - run: mix deps.unlock --check-unused
       - run: mix format --check-formatted
@@ -78,3 +82,15 @@ jobs:
         with:
           file: cover/lcov.info
           fail-on-error: false
+
+  # Scans the whole history for committed secrets. Known false positives
+  # (test fixtures, the dev/test secret_key_base) are listed in
+  # .gitleaksignore.
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: docker run --rm -v "$PWD":/repo zricethezav/gitleaks:v8.30.1 git /repo --no-banner --redact

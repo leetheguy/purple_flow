@@ -11,7 +11,7 @@ before every commit. This file adds what's specific to PurpleFlow.
 | **test** | `mix test` (needs `PURPLEFLOW_SECRET_KEY` and a test Postgres; see below) |
 | **coverage** | `mix coveralls` (`coveralls.json` sets the 90% floor) |
 | **mutation** | not set up yet; see `specs/999_todo.md` |
-| **security** | `mix hex.audit` (known vulnerabilities and retired packages); not in CI yet, and no secret scan yet, see `specs/999_todo.md` |
+| **security** | `mix hex.audit` (known vulnerabilities and retired packages) and gitleaks (secrets in the whole history; known false positives in `.gitleaksignore`), both in CI |
 | **run** | `docker compose up -d --build` |
 | **CI** | `.github/workflows/ci.yml` (GitHub Actions) |
 | **doc tool** | ExDoc: `@moduledoc`, `@doc`, and doctests. Not a dependency yet, so precommit doesn't build the docs; see `specs/999_todo.md` |

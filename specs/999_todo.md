@@ -22,7 +22,6 @@ It gathers the "Later" sections and open questions left in other specs and their
 - **Code docs to OP-PARAMS section 7.** Add ExDoc as a dev dependency and build the docs in `mix precommit` with warnings as errors. Then bring the code docs up to the standard: an overview linking its spec on every module (4 of 68 have no `@moduledoc`), `@doc` on every public function, links to what they reference, and doctests where usage isn't obvious. From [OP-PARAMS.md](../OP-PARAMS.md).
 
 - **Mutation testing**, for OP-PARAMS section 5: pick an Elixir mutation tool (muzak, exavier, or darwin; check which are maintained), add it as a test-only dependency, and bind it in `AGENTS.md`. From [OP-PARAMS.md](../OP-PARAMS.md).
-- **Security scans in CI**, for OP-PARAMS section 5: `mix hex.audit` (it fails on known vulnerabilities) and a secret scanner such as gitleaks, both in `.github/workflows/ci.yml`. `mix.lock` is already committed.
 
 ## Open questions
 

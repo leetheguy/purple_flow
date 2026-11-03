@@ -1,0 +1,6 @@
+# Known false positives: test fixtures and the dev/test-only secret_key_base
+# that Phoenix generates. Production secrets live in .env, never in git.
+c870cd435ce8742366200cc17ba1f636ab29bc28:test/purple_flow/credentials_test.exs:generic-api-key:14
+c870cd435ce8742366200cc17ba1f636ab29bc28:test/purple_flow/credentials_test.exs:generic-api-key:20
+f6a4dc0442708ce7d02197572d3dbf58f23659f6:config/dev.exs:generic-api-key:27
+f6a4dc0442708ce7d02197572d3dbf58f23659f6:config/test.exs:generic-api-key:20
