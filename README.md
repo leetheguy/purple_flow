@@ -255,7 +255,8 @@ Wait, Respond (answer the webhook early), OpenAI Chat (stream a chat answer
 back to the caller in OpenAI's format, so chat apps can point at a webhook),
 Noop, and "run another workflow".
 The Postgres node pools 10 connections per database and closes them after a minute
-with no queries.
+with no queries; `pool_size` and `idle_timeout` (0 keeps them open) change that
+per step.
 A new node type is just a module implementing `execute(input, config)`.
 
 Webhooks take file uploads. A file is saved with its run (in its own

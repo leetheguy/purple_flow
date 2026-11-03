@@ -15,10 +15,16 @@ defmodule PurpleFlow.Nodes.Postgres do
 
   Output is a list of rows as maps, so the next step runs once per row.
 
-  Connections are pooled: one pool per `database_url`, 10 connections each,
-  so a step running 1,000 items at once doesn't open 1,000 connections.
-  A pool closes its connections after a minute with no queries
-  (see `PurpleFlow.Nodes.Postgres.Pool`).
+  Connections are pooled, so a step running 1,000 items at once doesn't open
+  1,000 connections. Two optional settings shape the pool:
+
+    * `pool_size` — connections in the pool, 1 or more. Default `10`.
+    * `idle_timeout` — seconds with no queries before the pool closes its
+      connections; the next query opens them again. `0` keeps them open.
+      Default `60`.
+
+  Steps that share a `database_url` and both settings share one pool (see
+  `PurpleFlow.Nodes.Postgres.Pool`). See `specs/020_nodes.md` and its log.
   """
 
   @behaviour PurpleFlow.Node
@@ -26,10 +32,37 @@ defmodule PurpleFlow.Nodes.Postgres do
   alias PurpleFlow.Nodes.Postgres.Pool
 
   @pool_size 10
+  @idle_timeout 60
+
+  @doc """
+  Checks the pool settings when the workflow loads: `pool_size` must be a
+  whole number of at least 1, and `idle_timeout` one of at least 0. Returns
+  the config unchanged, or `{:error, message}` naming the setting.
+  """
+  @impl true
+  def prepare(config, _node_dir, _root) do
+    with :ok <- whole_number(config, "pool_size", 1),
+         :ok <- whole_number(config, "idle_timeout", 0) do
+      {:ok, config}
+    end
+  end
+
+  defp whole_number(config, key, min) do
+    case Map.fetch(config, key) do
+      :error ->
+        :ok
+
+      {:ok, n} when is_integer(n) and n >= min ->
+        :ok
+
+      {:ok, other} ->
+        {:error, "#{key} must be a whole number of at least #{min}, got #{inspect(other)}"}
+    end
+  end
 
   @impl true
   def execute(_input, config) do
-    with {:ok, pool} <- pool(Map.fetch!(config, "database_url")),
+    with {:ok, pool} <- pool(Map.fetch!(config, "database_url"), settings(config)),
          {:ok, result} <-
            Pool.run(pool, fn conn ->
              Postgrex.query(conn, Map.fetch!(config, "query"), Map.get(config, "params", []))
@@ -61,19 +94,34 @@ defmodule PurpleFlow.Nodes.Postgres do
 
   defp json_value(value), do: value
 
-  # Finds the pool for this URL, starting it the first time. The pool itself
-  # only holds connections while queries are using it.
-  # (`Registry` is Elixir's built-in name lookup for processes.)
-  defp pool(url) do
-    name = {:via, Registry, {PurpleFlow.Nodes.Postgres.Pools, url}}
+  # The pool's size, and how long it waits idle in milliseconds
+  # (`:infinity` for `idle_timeout = 0`).
+  defp settings(config) do
+    size = Map.get(config, "pool_size", @pool_size)
 
-    case Registry.lookup(PurpleFlow.Nodes.Postgres.Pools, url) do
+    idle_ms =
+      case Map.get(config, "idle_timeout", @idle_timeout) do
+        0 -> :infinity
+        seconds -> seconds * 1000
+      end
+
+    {size, idle_ms}
+  end
+
+  # Finds the pool for this URL and settings, starting it the first time.
+  # The pool itself only holds connections while queries are using it.
+  # (`Registry` is Elixir's built-in name lookup for processes.)
+  defp pool(url, {size, idle_ms}) do
+    key = {url, size, idle_ms}
+    name = {:via, Registry, {PurpleFlow.Nodes.Postgres.Pools, key}}
+
+    case Registry.lookup(PurpleFlow.Nodes.Postgres.Pools, key) do
       [{pid, _}] ->
         {:ok, pid}
 
       [] ->
         with {:ok, options} <- parse_url(url) do
-          spec = {Pool, name: name, postgrex: [pool_size: @pool_size] ++ options}
+          spec = {Pool, name: name, idle_ms: idle_ms, postgrex: [pool_size: size] ++ options}
 
           case DynamicSupervisor.start_child(PurpleFlow.Nodes.Postgres.PoolSupervisor, spec) do
             {:ok, pid} -> {:ok, pid}

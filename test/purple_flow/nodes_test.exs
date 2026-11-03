@@ -197,7 +197,62 @@ defmodule PurpleFlow.NodesTest do
         |> Task.await_many()
 
       assert Enum.uniq(results) == [{:ok, [%{"one" => 1}]}]
-      assert [_one] = Registry.lookup(PurpleFlow.Nodes.Postgres.Pools, url)
+      assert [_one] = Registry.lookup(PurpleFlow.Nodes.Postgres.Pools, {url, 10, 60_000})
+    end
+
+    # The pool for a URL and its settings, found by its registry key.
+    defp pool_for(url, size, idle_ms) do
+      [{pool, _}] = Registry.lookup(PurpleFlow.Nodes.Postgres.Pools, {url, size, idle_ms})
+      pool
+    end
+
+    defp unique(url), do: url <> "?pool=#{System.unique_integer([:positive])}"
+
+    test "pool_size and idle_timeout set the pool's connections and idle time", %{url: url} do
+      url = unique(url)
+
+      config = %{
+        "database_url" => url,
+        "query" => "SELECT 1 AS one",
+        "pool_size" => 3,
+        "idle_timeout" => 5
+      }
+
+      assert {:ok, [%{"one" => 1}]} = Postgres.execute(nil, config)
+      state = :sys.get_state(pool_for(url, 3, 5_000))
+      assert state.postgrex[:pool_size] == 3
+      assert state.idle_ms == 5_000
+    end
+
+    test "by default, 10 connections, closed after 60 seconds idle", %{url: url} do
+      url = unique(url)
+      assert {:ok, _} = Postgres.execute(nil, %{"database_url" => url, "query" => "SELECT 1"})
+      state = :sys.get_state(pool_for(url, 10, 60_000))
+      assert state.postgrex[:pool_size] == 10
+      assert state.idle_ms == 60_000
+    end
+
+    test "steps with different settings on one URL get separate pools", %{url: url} do
+      url = unique(url)
+
+      for size <- [1, 2] do
+        config = %{"database_url" => url, "query" => "SELECT 1", "pool_size" => size}
+        assert {:ok, _} = Postgres.execute(nil, config)
+      end
+
+      refute pool_for(url, 1, 60_000) == pool_for(url, 2, 60_000)
+    end
+
+    test "prepare checks pool_size (1 or more) and idle_timeout (0 or more)" do
+      base = %{"database_url" => "postgres://u:p@h/db", "query" => "SELECT 1"}
+      assert {:ok, ^base} = Postgres.prepare(base, ".", ".")
+      ok = Map.merge(base, %{"pool_size" => 1, "idle_timeout" => 0})
+      assert {:ok, ^ok} = Postgres.prepare(ok, ".", ".")
+
+      for {key, value} <- [{"pool_size", 0}, {"pool_size", "5"}, {"idle_timeout", -1}] do
+        assert {:error, message} = Postgres.prepare(Map.put(base, key, value), ".", ".")
+        assert message =~ key
+      end
     end
 
     test "a database_url that isn't a Postgres URL is an error" do
@@ -244,6 +299,13 @@ defmodule PurpleFlow.NodesTest do
       ref = Process.monitor(conn)
       Process.exit(caller, :kill)
       assert_receive {:DOWN, ^ref, :process, ^conn, _}, 1_000
+    end
+
+    test "a pool with idle_ms :infinity stays open between queries" do
+      pool = start_pool(idle_ms: :infinity)
+      assert {:ok, _} = Pool.run(pool, &Postgrex.query(&1, "SELECT 1", []))
+      assert %{conn: conn, idle: nil} = :sys.get_state(pool)
+      assert is_pid(conn)
     end
 
     test "a pool that goes down on its own opens again on the next query" do

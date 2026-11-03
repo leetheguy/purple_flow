@@ -3,7 +3,8 @@ defmodule PurpleFlow.Nodes.Postgres.Pool do
   Looks after one `database_url`'s Postgrex pool for the Postgres node.
 
   The pool opens on the first query and closes, connections and all, once
-  no query has used it for `idle_ms` (default one minute). The next query
+  no query has used it for `idle_ms` (default one minute; `:infinity`
+  keeps it open). The next query
   opens it again. So a burst of items shares one pool, and a database
   nothing is querying holds no connections.
 
@@ -90,7 +91,8 @@ defmodule PurpleFlow.Nodes.Postgres.Pool do
   defp done(state, ref) do
     state = %{state | users: MapSet.delete(state.users, ref)}
 
-    if MapSet.size(state.users) == 0 and state.conn != nil and state.idle == nil do
+    if MapSet.size(state.users) == 0 and state.conn != nil and state.idle == nil and
+         state.idle_ms != :infinity do
       token = make_ref()
       %{state | idle: {Process.send_after(self(), {:idle, token}, state.idle_ms), token}}
     else
