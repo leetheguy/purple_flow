@@ -21,6 +21,8 @@ It gathers the "Later" sections and open questions left in other specs and their
 
 
 
+- **Engine test gaps found by `mix mutate`** (2026-11-03). In `run.ex`, 19 of 82 mutants survived, at lines 83, 104, 321, 333–340, 359, 423, 471, 527, 588–589, and 612; in `step_task.ex`, 1 of 3, at line 91. Each needs a test that kills it, or a reason it can't matter. Rerun with: `mix mutate lib/purple_flow/run.ex lib/purple_flow/step_task.ex --test test/purple_flow/run_test.exs --test test/purple_flow/failures_test.exs --test test/purple_flow/batch_test.exs --test test/purple_flow/streaming_test.exs --test test/purple_flow_web/webhook_controller_test.exs` (about 10 minutes). From [OP-PARAMS.md](../OP-PARAMS.md) section 5.
+
 ## Open questions
 
 - **Code scripts and files.** Scripts see a file's reference but not its bytes, since the runner has no access to the run files volume. Sending bytes to the runner, as an option on the step? From [190](190_run_files.md).
