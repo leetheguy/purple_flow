@@ -79,6 +79,10 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod and role == :app do
+  # Halts the app when its own /health stops answering, so Docker restarts
+  # it. Tuned with PURPLEFLOW_WATCHDOG_*. See specs/250_watchdog.md.
+  config :purple_flow, :watchdog, true
+
   System.get_env("PURPLEFLOW_RUNNER_ADDRESS") ||
     raise """
     environment variable PURPLEFLOW_RUNNER_ADDRESS is missing.

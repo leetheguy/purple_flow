@@ -57,7 +57,13 @@ defmodule PurpleFlow.Application do
       PurpleFlow.Workflows,
       PurpleFlowWeb.LoginThrottle,
       # UI + webhooks, last.
-      PurpleFlowWeb.Endpoint
+      PurpleFlowWeb.Endpoint,
+      # Halts the app if the endpoint stops answering, so Docker restarts
+      # it. Prod only. See specs/250_watchdog.md.
+      PurpleFlow.Watchdog.app_child(
+        System.get_env(),
+        Application.get_env(:purple_flow, :watchdog, false)
+      )
     ]
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
