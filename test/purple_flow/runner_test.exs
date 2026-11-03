@@ -167,6 +167,62 @@ defmodule PurpleFlow.RunnerTest do
       assert {:ok, "small"} = run("input", "small")
     end
 
+    # Talks to a runner directly: one framed request, one framed answer.
+    defp raw_request(port, payload) do
+      {:ok, socket} = :gen_tcp.connect(~c"127.0.0.1", port, [:binary, packet: 4, active: false])
+      :ok = :gen_tcp.send(socket, payload)
+      :gen_tcp.recv(socket, 0, 5_000)
+    end
+
+    defp start_runner(opts) do
+      name = :"runner_#{System.unique_integer([:positive])}"
+      start_supervised!({PurpleFlow.Runner.Server, [name: name] ++ opts})
+      PurpleFlow.Runner.Server.port(name)
+    end
+
+    # A request of exactly `size` bytes whose script returns its input.
+    defp request_of_size(size) do
+      base =
+        Jason.encode!(%{"source" => "input", "file" => "t.exs", "input" => "", "steps" => %{}})
+
+      Jason.encode!(%{
+        "source" => "input",
+        "file" => "t.exs",
+        "input" => String.duplicate("x", size - byte_size(base)),
+        "steps" => %{}
+      })
+    end
+
+    test "a request exactly at the limit runs" do
+      port = start_runner(port: 0, max_request: 1024)
+      request = request_of_size(1024)
+      assert byte_size(request) == 1024
+      assert {:ok, answer} = raw_request(port, request)
+      assert %{"ok" => _} = Jason.decode!(answer)
+    end
+
+    test "0 means no limit" do
+      port = start_runner(port: 0, max_request: 0)
+      assert {:ok, answer} = raw_request(port, request_of_size(100_000))
+      assert %{"ok" => _} = Jason.decode!(answer)
+    end
+
+    test "a limit in megabytes is named in megabytes" do
+      port = start_runner(port: 0, max_request: 1024 * 1024)
+      assert {:ok, answer} = raw_request(port, request_of_size(1024 * 1024 + 1))
+      assert Jason.decode!(answer)["error"] =~ "limit of 1 MB"
+    end
+
+    test "an empty request is answered by closing the connection" do
+      port = start_runner(port: 0)
+      assert {:error, :closed} = raw_request(port, "")
+    end
+
+    test "with no port given, it listens on a free one" do
+      port = start_runner([])
+      assert port > 1023
+    end
+
     test "max_request/1 reads megabytes; 0 is no limit, and the default is 64" do
       alias PurpleFlow.Runner.Server
       assert Server.max_request(nil) == 64 * 1024 * 1024

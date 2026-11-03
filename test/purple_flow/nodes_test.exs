@@ -232,6 +232,26 @@ defmodule PurpleFlow.NodesTest do
       assert state.idle_ms == 60_000
     end
 
+    test "idle_timeout = 0 keeps the pool open", %{url: url} do
+      url = unique(url)
+      config = %{"database_url" => url, "query" => "SELECT 1", "idle_timeout" => 0}
+      assert {:ok, _} = Postgres.execute(nil, config)
+      assert :sys.get_state(pool_for(url, 10, :infinity)).idle_ms == :infinity
+    end
+
+    # A host that can't resolve, so these never reach a real server.
+    test "a password containing ':' is kept whole" do
+      url = unique("postgres://user:pa:ss@nohost.invalid:5432/db")
+      assert {:error, _} = Postgres.execute(nil, %{"database_url" => url, "query" => "SELECT 1"})
+      assert :sys.get_state(pool_for(url, 10, 60_000)).postgrex[:password] == "pa:ss"
+    end
+
+    test "a URL without a port uses 5432" do
+      url = unique("postgres://user:pw@nohost.invalid/db")
+      assert {:error, _} = Postgres.execute(nil, %{"database_url" => url, "query" => "SELECT 1"})
+      assert :sys.get_state(pool_for(url, 10, 60_000)).postgrex[:port] == 5432
+    end
+
     test "steps with different settings on one URL get separate pools", %{url: url} do
       url = unique(url)
 

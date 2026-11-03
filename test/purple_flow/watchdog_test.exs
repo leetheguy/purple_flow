@@ -2,6 +2,7 @@ defmodule PurpleFlow.WatchdogTest do
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
+  require Logger
 
   alias PurpleFlow.Watchdog
 
@@ -23,7 +24,7 @@ defmodule PurpleFlow.WatchdogTest do
           timeout: 1_000,
           failures: 3,
           url: "http://watchdog.test/health",
-          req_options: [plug: {Req.Test, name}, retry: false],
+          req_options: [plug: {Req.Test, name}],
           halt: fn status -> send(test, {:halted, status}) end
         ],
         opts
@@ -94,6 +95,31 @@ defmodule PurpleFlow.WatchdogTest do
     assert_received {:halted, 1}
   end
 
+  test "a failed check is tried once, not retried" do
+    {:ok, calls} = Agent.start_link(fn -> 0 end)
+
+    pid =
+      start(
+        fn conn ->
+          Agent.update(calls, &(&1 + 1))
+          Req.Test.transport_error(conn, :econnrefused)
+        end,
+        failures: 5
+      )
+
+    capture_log(fn -> check(pid) end)
+    assert Agent.get(calls, & &1) == 1
+  end
+
+  test "says when it starts what it checks, how often, and when it halts" do
+    # Tests log warnings and up only; this line is info.
+    Logger.put_module_level(Watchdog, :info)
+    on_exit(fn -> Logger.delete_module_level(Watchdog) end)
+
+    log = capture_log(fn -> start(&ok/1, interval: 120_000, failures: 4) end)
+    assert log =~ "checking http://watchdog.test/health every 120 s, halting after 4 failures"
+  end
+
   test "a healthy app is never halted" do
     pid = start(&ok/1, failures: 1)
     for _ <- 1..5, do: check(pid)
@@ -127,6 +153,11 @@ defmodule PurpleFlow.WatchdogTest do
       }
 
       assert Watchdog.settings(env) == [interval: 5_000, timeout: 2_000, failures: 7]
+    end
+
+    test "1 is the smallest timeout and number of failures" do
+      env = %{"PURPLEFLOW_WATCHDOG_TIMEOUT" => "1", "PURPLEFLOW_WATCHDOG_FAILURES" => "1"}
+      assert Watchdog.settings(env) == [interval: 30_000, timeout: 1_000, failures: 1]
     end
 
     test "an interval of 0 means off" do
