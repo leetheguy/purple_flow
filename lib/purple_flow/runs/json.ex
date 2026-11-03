@@ -7,11 +7,16 @@ defmodule PurpleFlow.Runs.JSON do
 
   use Ecto.Type
 
+  @impl true
   def type, do: :map
+  @impl true
   def cast(value), do: {:ok, value}
+  @impl true
   def load(value), do: {:ok, value}
+  @impl true
   def dump(value), do: {:ok, value}
 
   # jsonb columns come back as-is, so skip Ecto's map checks.
+  @impl true
   def embed_as(_format), do: :dump
 end

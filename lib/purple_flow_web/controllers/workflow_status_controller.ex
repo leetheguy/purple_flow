@@ -13,6 +13,7 @@ defmodule PurpleFlowWeb.WorkflowStatusController do
 
   alias PurpleFlow.Workflows
 
+  @doc "`GET /api/workflows`: every workflow, loaded or not, and why."
   def index(conn, _params) do
     case System.get_env("PURPLEFLOW_AGENT_TOKEN") do
       token when token in [nil, ""] ->

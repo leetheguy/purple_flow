@@ -141,7 +141,10 @@ defmodule PurpleFlowWeb.Auth do
 
   def safe_return_to(_), do: "/"
 
-  # LiveView: checked when a LiveView mounts, over HTTP and over the socket.
+  @doc """
+  Sends a LiveView that isn't signed in to `/login`. Runs when a LiveView
+  mounts, over HTTP and again over its websocket.
+  """
   def on_mount(:require_login, _params, session, socket) do
     if signed_in?(session) do
       {:cont, socket}

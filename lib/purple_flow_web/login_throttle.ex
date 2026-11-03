@@ -19,6 +19,7 @@ defmodule PurpleFlowWeb.LoginThrottle do
   @lockout_ms 4 * 60 * 60 * 1000
   @sweep_ms 10 * 60 * 1000
 
+  @doc "Starts the throttle, which owns the table of failed sign-ins."
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
   @doc "Whether `ip` is locked out."

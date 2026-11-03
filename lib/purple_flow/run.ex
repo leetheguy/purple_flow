@@ -32,6 +32,7 @@ defmodule PurpleFlow.Run do
 
   @flush_ms 250
 
+  @doc "Starts a run, registered under its ID. `PurpleFlow.run/2` calls this; use that."
   def start_link(args), do: GenServer.start_link(__MODULE__, args, name: via(args.id))
 
   defp via(id), do: {:via, Registry, {PurpleFlow.RunRegistry, id}}

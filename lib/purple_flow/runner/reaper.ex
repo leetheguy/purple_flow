@@ -17,6 +17,7 @@ defmodule PurpleFlow.Runner.Reaper do
 
   @min_interval_ms 100
 
+  @doc "Starts the reaper. The runner starts one."
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
   @doc "Kills, soon, every process whose group leader is `leader`."

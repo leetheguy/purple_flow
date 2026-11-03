@@ -9,6 +9,7 @@ defmodule PurpleFlowWeb.AgentsController do
 
   use PurpleFlowWeb, :controller
 
+  @doc "`GET /agents`: the workflows folder's `AGENTS.md`, with `BASE` filled in."
   def show(conn, _params) do
     case File.read(Path.join(PurpleFlow.Workflows.dir(), "AGENTS.md")) do
       {:ok, text} ->

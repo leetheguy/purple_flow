@@ -44,6 +44,7 @@ defmodule PurpleFlowWeb.WebhookController do
   # The caller's own credentials shouldn't end up saved in run records.
   @dropped_headers ~w(authorization proxy-authorization cookie)
 
+  @doc "`GET` or `POST /hooks/<path>`: starts the workflow with that webhook path and answers as it says."
   def handle(conn, %{"path" => path}) do
     path = Enum.join(path, "/")
 

@@ -1,4 +1,19 @@
 defmodule PurpleFlowWeb.Router do
+  @moduledoc """
+  Maps each URL to the code that answers it.
+
+  - Open to anyone: `GET /health` (Docker's health check), `GET /agents`
+    (the guide for visiting agents), and `/hooks/*` (webhooks, which can
+    require a token; see [specs/040](specs/040_triggers.md)).
+  - `/api/workflows`: for agents, with `PURPLEFLOW_AGENT_TOKEN`
+    ([specs/090](specs/090_workflow_files.md)).
+  - Everything else is the UI, behind the admin login
+    ([specs/080](specs/080_credentials.md)).
+
+  A *pipeline* is a list of plugs (small request handlers) run in order
+  before the controller or LiveView.
+  """
+
   use PurpleFlowWeb, :router
 
   pipeline :browser do

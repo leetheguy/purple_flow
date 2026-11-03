@@ -1,4 +1,14 @@
 defmodule PurpleFlowWeb.Endpoint do
+  @moduledoc """
+  The web server's front door: every HTTP request passes through the plugs
+  here, then `PurpleFlowWeb.Router`. Started after everything a run needs,
+  so nothing is answered before a run could start ([specs/000](specs/000_overview.md)).
+
+  Before anything else, `call/2` refuses requests from the Code runner's
+  network (`PurpleFlowWeb.Plugs.RejectRunner`,
+  [specs/100](specs/100_runner_container.md)).
+  """
+
   use Phoenix.Endpoint, otp_app: :purple_flow
 
   # The session will be stored in the cookie and signed,
@@ -58,6 +68,7 @@ defmodule PurpleFlowWeb.Endpoint do
 
   # Ahead of every plug above, and of the LiveView socket: a request from the
   # Code node runner's network is refused before anything else sees it.
+  @doc "Handles a request, refusing it first if it comes from the runner's network."
   def call(conn, opts) do
     case PurpleFlowWeb.Plugs.RejectRunner.call(conn, []) do
       %Plug.Conn{halted: true} = conn -> conn

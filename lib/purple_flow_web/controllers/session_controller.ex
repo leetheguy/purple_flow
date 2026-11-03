@@ -8,6 +8,7 @@ defmodule PurpleFlowWeb.SessionController do
 
   alias PurpleFlowWeb.Auth
 
+  @doc "`GET /login`: the sign-in page."
   def new(conn, params) do
     return_to = Auth.safe_return_to(params["return_to"])
 
@@ -18,6 +19,7 @@ defmodule PurpleFlowWeb.SessionController do
     end
   end
 
+  @doc "`POST /login`: signs in, or counts a failure toward the lockout."
   def create(conn, params) do
     username = params["username"] || ""
     return_to = Auth.safe_return_to(params["return_to"])
@@ -42,6 +44,7 @@ defmodule PurpleFlowWeb.SessionController do
     end
   end
 
+  @doc "`DELETE /logout`: signs out."
   def delete(conn, _params) do
     conn |> Auth.sign_out() |> redirect(to: ~p"/login")
   end

@@ -25,6 +25,7 @@ defmodule PurpleFlowWeb.Live.Helpers do
     """
   end
 
+  @doc "The badge colors (Tailwind classes) for a run or execution status."
   def status_class(status) when status in ["complete", "ok"],
     do: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
 

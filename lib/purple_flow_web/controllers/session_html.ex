@@ -3,6 +3,7 @@ defmodule PurpleFlowWeb.SessionHTML do
 
   use PurpleFlowWeb, :html
 
+  @doc "Renders the sign-in page."
   def new(assigns) do
     ~H"""
     <main class="min-h-dvh grid place-items-center px-4 py-12 bg-base-200/60">

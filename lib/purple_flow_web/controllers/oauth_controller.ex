@@ -16,6 +16,7 @@ defmodule PurpleFlowWeb.OAuthController do
   @doc "This site's callback address, for the provider's client settings."
   def callback_url, do: url(~p"/credentials/oauth/callback")
 
+  @doc "`GET /credentials/:id/connect`: sends the person to the provider to sign in."
   def connect(conn, %{"id" => id}) do
     with {id, ""} <- Integer.parse(id),
          %{type: "oauth"} = cred <- Credentials.fetch(id) do
@@ -30,6 +31,7 @@ defmodule PurpleFlowWeb.OAuthController do
     end
   end
 
+  @doc "`GET /credentials/oauth/callback`: where the provider sends the person back; saves the tokens."
   def callback(conn, params) do
     pending = get_session(conn, :oauth_connect)
     conn = delete_session(conn, :oauth_connect)

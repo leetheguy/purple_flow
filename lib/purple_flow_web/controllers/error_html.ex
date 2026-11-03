@@ -18,6 +18,7 @@ defmodule PurpleFlowWeb.ErrorHTML do
   # The default is to render a plain text page based on
   # the template name. For example, "404.html" becomes
   # "Not Found".
+  @doc "An error page's text, from its status (\"404.html\" is \"Not Found\")."
   def render(template, _assigns) do
     Phoenix.Controller.status_message_from_template(template)
   end

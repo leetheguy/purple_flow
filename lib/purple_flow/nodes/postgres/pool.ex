@@ -16,6 +16,10 @@ defmodule PurpleFlow.Nodes.Postgres.Pool do
 
   @idle_ms 60_000
 
+  @doc """
+  Starts a pool. Options: `:postgrex` (Postgrex's connection options,
+  including `:pool_size`), `:idle_ms`, and `:name`.
+  """
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: opts[:name])
 
   @doc "Runs `fun` with a connection to pass to `Postgrex.query/3`."

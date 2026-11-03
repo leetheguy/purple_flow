@@ -6,5 +6,6 @@ defmodule PurpleFlowWeb.HealthController do
 
   use PurpleFlowWeb, :controller
 
+  @doc "`GET /health`: `200 ok`."
   def show(conn, _params), do: text(conn, "ok")
 end
