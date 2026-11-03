@@ -23,7 +23,6 @@ It gathers the "Later" sections and open questions left in other specs and their
 
 - **Mutation testing**, for OP-PARAMS section 5: pick an Elixir mutation tool (muzak, exavier, or darwin; check which are maintained), add it as a test-only dependency, and bind it in `AGENTS.md`. From [OP-PARAMS.md](../OP-PARAMS.md).
 - **Security scans in CI**, for OP-PARAMS section 5: `mix hex.audit` (it fails on known vulnerabilities) and a secret scanner such as gitleaks, both in `.github/workflows/ci.yml`. `mix.lock` is already committed.
-- **Update vulnerable dependencies.** On 2026-11-03, `mix hex.audit` found advisories against bandit 1.12.5 (11 high, 3 medium; 1.14.1 is out), mint 1.10.1 (1 high, 2 medium), phoenix_html 4.3.0, plug_crypto 2.2.0, decimal 3.1.1 (medium), and lazy_html 0.1.12 (low, test only). Update them and run the full test suite and a check against the deployed stack. From [OP-PARAMS.md](../OP-PARAMS.md).
 
 ## Open questions
 
