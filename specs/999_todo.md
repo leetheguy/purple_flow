@@ -33,6 +33,8 @@ It gathers the "Later" sections and open questions left in other specs and their
 - **A non-superuser database role** for the app, as an option. From [050](050_storage.md)'s log.
 - **Scripts sharing the runner VM** can see each other; a VM per workflow is the idea, without losing the shared VM's speed. From [100](100_runner_container.md).
 
+- **Restarting a hung container.** Docker restarts a container that crashes, but one that hangs (the app's process alive, its endpoint not answering, as happened before Docker) is only marked unhealthy: plain Docker doesn't act on health checks. The runner and files containers have no health check at all (dufs's image has no shell or client to run one with, and the runner's protocol isn't HTTP). Options: an in-app watchdog that checks its own `/health` and halts the VM so Docker restarts it, plus Erlang's `heart` for a VM that stops entirely; or a sidecar like autoheal, which needs the Docker socket (root on the host). From the OP-PARAMS audit, 2026-11-03.
+
 ## Ideas
 
 - Rollback of a run's side effects. From [000](000_overview.md).
