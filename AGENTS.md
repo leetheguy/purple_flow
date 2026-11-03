@@ -1,3 +1,24 @@
+**Read `OP-PARAMS.md` (version 1.0) before you do anything else.** It holds the operating
+parameters every agent follows: specs, test-driven development, writing
+tests worth having, the quality gates, and the housekeeping review you do
+before every commit. This file adds what's specific to PurpleFlow.
+
+## Project bindings
+
+| Binding | PurpleFlow |
+|---|---|
+| **precommit** | `mix precommit` |
+| **test** | `mix test` (needs `PURPLEFLOW_SECRET_KEY` and a test Postgres; see below) |
+| **coverage** | `mix coveralls` (`coveralls.json` sets the 90% floor) |
+| **mutation** | not set up yet; see `specs/999_todo.md` |
+| **security** | `mix hex.audit` (known vulnerabilities and retired packages); not in CI yet, and no secret scan yet, see `specs/999_todo.md` |
+| **run** | `docker compose up -d --build` |
+| **CI** | `.github/workflows/ci.yml` (GitHub Actions) |
+| **doc tool** | ExDoc: `@moduledoc`, `@doc`, and doctests. Not a dependency yet, so precommit doesn't build the docs; see `specs/999_todo.md` |
+| **docs** | the spec, `README.md`, `samples/AGENTS.md`, `.claude/skills/purpleflow-workflows/SKILL.md` |
+| **copies** | `workflows/AGENTS.md` ← `samples/AGENTS.md`, copied by the user after commit, push, and pull; report a mismatch, don't copy it |
+| **branching** | cloud sessions: a branch and a PR; local sessions: a branch, merged into `master` locally when asked; the user pushes |
+
 This is a web application written using the Phoenix web framework.
 
 **PurpleFlow is a power tool; don't get in the way of design decisions.**
@@ -25,23 +46,10 @@ setting, or change in behavior belongs in all three.
 
 **Working on workflows?** Read `.claude/skills/purpleflow-workflows/SKILL.md` first. It covers the workflow files, nodes, templates, credentials, and how to check and run them.
 
-**Writing or changing a spec?** Specs in `specs/` are a history, not a
-description of the current app. A new spec gets the next number and a
-`Created: YYYY-MM-DD` line under its `Status:` line, and it says what it does,
-not what it changes. `Status:` is one of `draft`, `implemented`, or
-`superseded by [NNN](...)`. A new spec starts as `draft`. The commit that
-finishes implementing a spec also sets it to `implemented`; never leave a
-shipped spec marked `draft`. A draft can be edited until it's implemented; after that
-it's set in stone, and only its `Status:` line and its `## Log` change. When
-something changes what an implemented spec says, append a dated entry to its
-`## Log` section (create it at the bottom if missing) naming what changed and
-linking the spec that changed it. A redesign too big for a log entry is a new
-spec: mark the old one `Status: superseded by [NNN](...)` and give the new one
-a `Replaces:` line. To know what's true now, read a spec and then its log.
-The one exception is `specs/999_todo.md`, the living list of planned work
-and open questions: it's always `draft` and kept current, not kept as
-history. Add to it when you leave something planned or open, and delete an
-item when it ships.
+**Writing or changing a spec?** Follow `OP-PARAMS.md` section 2. Start
+with `specs/000_overview.md`: it describes PurpleFlow as it is now and
+indexes every other spec. Keep it current in the same commit as any change
+it describes.
 
 **Starting/restarting the server?** Use `docker compose up -d --build`, not a
 bare `mix phx.server`. Docker waits for Postgres to be healthy before
