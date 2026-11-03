@@ -74,6 +74,8 @@ services:
     # Deliberately no env_file, and nothing secret here.
     environment:
       - PURPLEFLOW_RUNNER_PORT=4100
+      # Largest Code step input and steps, in MB; 0 is no limit.
+      - PURPLEFLOW_RUNNER_MAX_REQUEST=${PURPLEFLOW_RUNNER_MAX_REQUEST:-64}
       - RELEASE_DISTRIBUTION=none
       # The release writes its runtime config at boot; the rest is read-only.
       - RELEASE_TMP=/tmp

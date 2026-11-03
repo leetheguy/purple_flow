@@ -31,9 +31,9 @@ defmodule PurpleFlow.Runner.Server do
 
   require Logger
 
-  # Largest request accepted, in bytes. A script's input and steps ride
-  # along with it, so this is generous.
-  @max_request 64 * 1024 * 1024
+  # Largest request accepted by default, in megabytes. A script's input and
+  # steps ride along with it, so this is generous.
+  @max_request_mb 64
 
   # How many connections can wait to be accepted. Every Code execution is a
   # connection, and thousands can start at once; the kernel's own default
@@ -41,41 +41,86 @@ defmodule PurpleFlow.Runner.Server do
   # kernel caps this at net.core.somaxconn (4096 on current Linux).
   @backlog 4096
 
-  def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  @doc """
+  Starts the runner.
 
-  @doc "The port it's listening on. Useful when it was started on port 0."
+  Options: `:port` (`0` picks a free one), `:ip`, `:backlog`, and
+  `:max_request`, the largest request in bytes (`0` is no limit; default
+  from `config :purple_flow, :runner_max_request`, see `max_request/1`).
+  `:name` starts another runner beside the main one, as tests do.
+  """
+  def start_link(opts),
+    do: GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
+
+  @doc "The port the main runner is listening on. Useful when it was started on port 0."
   def port, do: :persistent_term.get({__MODULE__, :port})
+
+  @doc "The port the runner started with `name:` is listening on."
+  def port(name), do: GenServer.call(name, :port)
+
+  @doc """
+  The largest request in bytes, from `PURPLEFLOW_RUNNER_MAX_REQUEST`
+  (megabytes, a whole number; `0` is no limit; `nil` is the default, 64).
+  Raises `ArgumentError` naming the variable for anything else.
+
+      iex> PurpleFlow.Runner.Server.max_request("2")
+      2_097_152
+  """
+  def max_request(nil), do: max_request(Integer.to_string(@max_request_mb))
+
+  def max_request(value) do
+    case Integer.parse(value) do
+      {mb, ""} when mb >= 0 ->
+        mb * 1024 * 1024
+
+      _ ->
+        raise ArgumentError,
+              "PURPLEFLOW_RUNNER_MAX_REQUEST must be a whole number of megabytes (0 for no limit), got: #{inspect(value)}"
+    end
+  end
 
   @impl true
   def init(opts) do
     ip = Keyword.get(opts, :ip, {127, 0, 0, 1})
 
+    max_request =
+      Keyword.get_lazy(opts, :max_request, fn ->
+        max_request(Application.get_env(:purple_flow, :runner_max_request))
+      end)
+
     {:ok, listen} =
       :gen_tcp.listen(Keyword.get(opts, :port, 0), [
         :binary,
         ip: ip,
-        packet: 4,
-        packet_size: @max_request,
+        # Raw at first: serve/2 reads the 4-byte length itself, so it can
+        # answer a request that's too big instead of dropping it.
+        packet: :raw,
         active: false,
         reuseaddr: true,
         backlog: Keyword.get(opts, :backlog, @backlog)
       ])
 
     {:ok, port} = :inet.port(listen)
-    :persistent_term.put({__MODULE__, :port}, port)
+
+    if Keyword.get(opts, :name, __MODULE__) == __MODULE__,
+      do: :persistent_term.put({__MODULE__, :port}, port)
+
     Logger.info("Code runner listening on #{:inet.ntoa(ip)}:#{port}")
 
-    acceptor = spawn_link(fn -> accept_loop(listen) end)
-    {:ok, %{listen: listen, acceptor: acceptor}}
+    acceptor = spawn_link(fn -> accept_loop(listen, max_request) end)
+    {:ok, %{listen: listen, acceptor: acceptor, port: port}}
   end
 
-  defp accept_loop(listen) do
+  @impl true
+  def handle_call(:port, _from, state), do: {:reply, state.port, state}
+
+  defp accept_loop(listen, max_request) do
     case :gen_tcp.accept(listen) do
       {:ok, socket} ->
         {:ok, pid} =
           Task.Supervisor.start_child(PurpleFlow.Runner.Connections, fn ->
             receive do
-              {:socket, socket} -> serve(socket)
+              {:socket, socket} -> serve(socket, max_request)
             end
           end)
 
@@ -90,11 +135,48 @@ defmodule PurpleFlow.Runner.Server do
         Process.sleep(50)
     end
 
-    accept_loop(listen)
+    accept_loop(listen, max_request)
   end
 
-  defp serve(socket) do
-    with {:ok, data} <- :gen_tcp.recv(socket, 0),
+  # Each request is a 4-byte length, then that many bytes of JSON. A request
+  # over the limit is read and thrown away, so the app's send finishes, and
+  # answered with an error that says how to raise the limit. (Letting
+  # `gen_tcp` enforce the limit would close the socket with no answer.)
+  defp serve(socket, max_request) do
+    with {:ok, <<length::32>>} <- :gen_tcp.recv(socket, 4) do
+      if max_request > 0 and length > max_request do
+        discard(socket, length)
+        :ok = :inet.setopts(socket, packet: 4)
+
+        :gen_tcp.send(
+          socket,
+          error_response(
+            "the script's input and steps are over the Code runner's limit of " <>
+              "#{size(max_request)} (PURPLEFLOW_RUNNER_MAX_REQUEST, in MB; 0 is no limit)"
+          )
+        )
+      else
+        received = if length == 0, do: {:ok, ""}, else: :gen_tcp.recv(socket, length)
+        :ok = :inet.setopts(socket, packet: 4)
+        serve_request(socket, received)
+      end
+    end
+  end
+
+  defp discard(_socket, 0), do: :ok
+
+  defp discard(socket, left) do
+    case :gen_tcp.recv(socket, min(left, 1024 * 1024)) do
+      {:ok, data} -> discard(socket, left - byte_size(data))
+      {:error, _} -> :ok
+    end
+  end
+
+  defp size(bytes) when bytes >= 1024 * 1024, do: "#{div(bytes, 1024 * 1024)} MB"
+  defp size(bytes), do: "#{div(bytes, 1024)} KB"
+
+  defp serve_request(socket, received) do
+    with {:ok, data} <- received,
          {:ok, request} <- Jason.decode(data) do
       runner = self()
       leader = start_leader(Process.group_leader())

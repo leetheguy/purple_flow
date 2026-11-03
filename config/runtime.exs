@@ -33,6 +33,10 @@ if role == :runner do
   config :purple_flow,
          :runner_port,
          String.to_integer(System.get_env("PURPLEFLOW_RUNNER_PORT", "4100"))
+
+  # The largest request, in MB (0 is no limit). Read by
+  # PurpleFlow.Runner.Server.max_request/1; default 64.
+  config :purple_flow, :runner_max_request, System.get_env("PURPLEFLOW_RUNNER_MAX_REQUEST")
 end
 
 # Where the app sends Code node scripts, as "host:port". Without it (dev and

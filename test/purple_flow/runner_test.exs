@@ -8,6 +8,8 @@ defmodule PurpleFlow.RunnerTest do
 
   alias PurpleFlow.Runner.Client
 
+  doctest PurpleFlow.Runner.Server
+
   defp run(source, input \\ nil, steps \\ %{}), do: Client.run(source, "test.exs", input, steps)
 
   describe "result shapes" do
@@ -142,6 +144,42 @@ defmodule PurpleFlow.RunnerTest do
     # (an unanswered one would hang the script).
     test "a script can still write output" do
       assert {:ok, 1} = run(~s|IO.write(""); 1|)
+    end
+  end
+
+  describe "the request size limit" do
+    # A second runner, with a 1 KB limit, on a free port.
+    defp small_runner do
+      name = :"small_runner_#{System.unique_integer([:positive])}"
+      start_supervised!({PurpleFlow.Runner.Server, name: name, port: 0, max_request: 1024})
+      use_runner({"127.0.0.1", PurpleFlow.Runner.Server.port(name)})
+    end
+
+    test "a request over the limit gets an error naming the limit and its setting" do
+      small_runner()
+      assert {:error, message} = run("input", String.duplicate("x", 5_000))
+      assert message =~ "1 KB"
+      assert message =~ "PURPLEFLOW_RUNNER_MAX_REQUEST"
+    end
+
+    test "a request under the limit runs" do
+      small_runner()
+      assert {:ok, "small"} = run("input", "small")
+    end
+
+    test "max_request/1 reads megabytes; 0 is no limit, and the default is 64" do
+      alias PurpleFlow.Runner.Server
+      assert Server.max_request(nil) == 64 * 1024 * 1024
+      assert Server.max_request("2") == 2 * 1024 * 1024
+      assert Server.max_request("0") == 0
+
+      assert_raise ArgumentError, ~r/PURPLEFLOW_RUNNER_MAX_REQUEST/, fn ->
+        Server.max_request("-1")
+      end
+
+      assert_raise ArgumentError, ~r/PURPLEFLOW_RUNNER_MAX_REQUEST/, fn ->
+        Server.max_request("lots")
+      end
     end
   end
 

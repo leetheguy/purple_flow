@@ -256,7 +256,8 @@ back to the caller in OpenAI's format, so chat apps can point at a webhook),
 Noop, and "run another workflow".
 The Postgres node pools 10 connections per database and closes them after a minute
 with no queries; `pool_size` and `idle_timeout` (0 keeps them open) change that
-per step.
+per step. A Code step's input and steps can be up to 64 MB, set on the runner with
+`PURPLEFLOW_RUNNER_MAX_REQUEST` (in MB, 0 for no limit).
 A new node type is just a module implementing `execute(input, config)`.
 
 Webhooks take file uploads. A file is saved with its run (in its own
