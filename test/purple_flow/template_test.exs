@@ -3,6 +3,8 @@ defmodule PurpleFlow.TemplateTest do
 
   alias PurpleFlow.{Credentials, Template}
 
+  doctest Template
+
   @ctx %{
     input: %{"user" => %{"id" => 7, "tags" => ["a", "b"]}},
     steps: %{"fetch" => %{"output" => %{"total" => 3}}}

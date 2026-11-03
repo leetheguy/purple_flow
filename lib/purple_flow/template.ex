@@ -25,7 +25,21 @@ defmodule PurpleFlow.Template do
 
   `context` has `:input` and `:steps` (ancestor outputs). Returns the filled
   config plus the credential values that were used, so they can be redacted
-  later.
+  later. A placeholder that's the whole string keeps its value's type (`n`
+  below stays a number); one inside other text becomes text.
+
+      iex> PurpleFlow.Template.render(
+      ...>   %{"url" => "https://x/{{ input.id }}", "n" => "{{ input.n }}",
+      ...>     "first" => "{{ steps.fetch.output.items.0.name }}"},
+      ...>   %{input: %{"id" => 7, "n" => 3},
+      ...>     steps: %{"fetch" => %{"output" => %{"items" => [%{"name" => "a"}]}}}}
+      ...> )
+      {:ok, %{"first" => "a", "n" => 3, "url" => "https://x/7"}, []}
+
+  A path that isn't there is an error, naming what's missing:
+
+      iex> PurpleFlow.Template.render("{{ input.missing.deep }}", %{input: %{}, steps: %{}})
+      {:error, ~s({{ input.missing.deep }}: no "missing" found)}
   """
   @spec render(term(), %{input: term(), steps: map()}) ::
           {:ok, term(), [String.t()]} | {:error, String.t()}
@@ -40,6 +54,12 @@ defmodule PurpleFlow.Template do
   Lists every placeholder in `config` without filling anything in, as
   `{:creds, name}`, `{:steps, name, path}`, `{:input, path}`, or `{:bad, text}`.
   Used when a workflow loads, to catch mistakes early.
+
+      iex> PurpleFlow.Template.refs(%{
+      ...>   "a" => "{{ input.x }} and {{ creds.TOKEN }}",
+      ...>   "b" => ["{{ steps.s.output }}"]
+      ...> })
+      [{:input, ["x"]}, {:creds, "TOKEN"}, {:steps, "s", []}]
   """
   def refs(config) do
     config

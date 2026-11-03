@@ -19,7 +19,6 @@ It gathers the "Later" sections and open questions left in other specs and their
 - **Code scripts reading file bytes**, not just a file's reference, so a script can parse a file's contents (PDF, CSV, etc.) instead of only moving it around. Same gap as the "Code scripts and files" open question below; called out again because it's the one real blocker found migrating Decapod's workflows (n8n's Extract From File node).
 - **Signed requests on the HTTP node** (starting with AWS SigV4, for S3), plus sending a file's bytes as a request body. Found migrating Decapod's workflows: S3 is popular enough elsewhere that it's worth solving for, even setting personal taste aside.
 
-- **Code docs to OP-PARAMS section 7.** Add ExDoc as a dev dependency and build the docs in `mix precommit` with warnings as errors. Then bring the code docs up to the standard: an overview linking its spec on every module (4 of 68 have no `@moduledoc`), `@doc` on every public function, links to what they reference, and doctests where usage isn't obvious. From [OP-PARAMS.md](../OP-PARAMS.md).
 
 - **Mutation testing**, for OP-PARAMS section 5: pick an Elixir mutation tool (muzak, exavier, or darwin; check which are maintained), add it as a test-only dependency, and bind it in `AGENTS.md`. From [OP-PARAMS.md](../OP-PARAMS.md).
 

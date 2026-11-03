@@ -11,7 +11,14 @@ defmodule PurpleFlow.Redact do
   # Very short values ("1", "on") would blank out half the data, so skip them.
   @min_length 4
 
-  @doc "Replaces every secret found anywhere inside `value`."
+  @doc """
+  Replaces every secret found anywhere inside `value`: in strings, map keys
+  and values, and lists, however deep. Secrets shorter than 4 characters
+  are left alone, since they'd blank out ordinary data.
+
+      iex> PurpleFlow.Redact.redact(%{"auth" => "Bearer s3cret", "list" => ["s3cret"]}, ["s3cret"])
+      %{"auth" => "Bearer [redacted]", "list" => ["[redacted]"]}
+  """
   def redact(value, secrets) do
     case Enum.filter(secrets, &(is_binary(&1) and byte_size(&1) >= @min_length)) do
       [] -> value

@@ -9,7 +9,14 @@ defmodule PurpleFlow.Id do
   See [specs/050](specs/050_storage.md).
   """
 
-  @doc "A fresh UUIDv7 string, like `\"018f2f3a-1b2c-7d4e-9a1b-0123456789ab\"`."
+  @doc ~S"""
+  A fresh UUIDv7 string. The version digit (the first of the third group)
+  is always `7`. An ID made in a later millisecond sorts after an earlier
+  one; within the same millisecond, the order is random.
+
+      iex> PurpleFlow.Id.generate() =~ ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/
+      true
+  """
   @spec generate() :: String.t()
   def generate do
     unix_ts_ms = System.system_time(:millisecond)
