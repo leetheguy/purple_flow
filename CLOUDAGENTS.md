@@ -207,8 +207,6 @@ purple_flow-app` works.
   read env vars, list `/proc`, and connect to `db:5432`, `app:4000`,
   `app:4369` and the internet, triggered by a webhook. All of that should
   fail, and `app:4000` should answer 403. Delete the workflow afterwards.
-- **`bin/start.sh`'s wedge workaround** was never exercised in these
-  sessions; nothing here depends on it.
 - **No tests needed special handling** beyond `PURPLEFLOW_SECRET_KEY`.
 
 ## 7. The live server
