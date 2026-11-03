@@ -3,4 +3,14 @@ set -eu
 
 cd -P -- "$(dirname -- "$0")"
 ./purple_flow eval PurpleFlow.Release.migrate
+# Erlang's heart kills the VM if it freezes, so Docker restarts the
+# container. PURPLEFLOW_HEART=false turns it off; HEART_BEAT_TIMEOUT
+# (seconds, more than 10, default 60) tunes it. Heart only kills the VM
+# when it has a command to run afterwards, so the default command is
+# `true`, which does nothing. See specs/250_watchdog.md.
+if [ "${PURPLEFLOW_HEART:-true}" != "false" ]; then
+  export ELIXIR_ERL_OPTIONS="${ELIXIR_ERL_OPTIONS:-} -heart"
+  export HEART_COMMAND="${HEART_COMMAND:-true}"
+fi
+
 PHX_SERVER=true exec ./purple_flow start

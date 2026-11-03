@@ -2,6 +2,10 @@ services:
   app:
     build: .
     container_name: purple_flow
+    # Docker's small init process runs as PID 1, so heart can kill a frozen
+    # VM (Linux ignores kill signals to PID 1 from inside the container).
+    # See specs/250_watchdog.md.
+    init: true
     restart: unless-stopped
     env_file:
       - .env
@@ -61,6 +65,10 @@ services:
   runner:
     build: .
     container_name: purple_flow-runner
+    # Docker's small init process runs as PID 1, so heart can kill a frozen
+    # VM (Linux ignores kill signals to PID 1 from inside the container).
+    # See specs/250_watchdog.md.
+    init: true
     command: ["/app/bin/runner"]
     restart: unless-stopped
     # Deliberately no env_file, and nothing secret here.
