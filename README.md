@@ -25,7 +25,7 @@ Hi! I'm Lee Nathan. I'm an AI enthusiast, an automation engineer and an AI-assis
 
 https://leenathan.com/
 
-</shameless_plug>
+&lt;/shameless_plug&gt;
 
 ---
 
@@ -197,8 +197,7 @@ already foreseen and built protective measures that would have solved many
 of their early issues before the research. Afterwards, PurpleFlow was
 hardened to address several others.
 
-Workflows are stored and versioned locally. A Docker sidecar running [Dufs](
-https://github.com/sigoden/dufs) has access to the workflows folder and
+Workflows are stored and versioned locally. A Docker sidecar running [Dufs](https://github.com/sigoden/dufs) has access to the workflows folder and
 makes it available to agents and the web UI. That sidecar has no port and
 no access to the internet or the rest of the docker network, and it wants
 the agent token even from inside that network. It's only reachable through
@@ -288,7 +287,7 @@ the first failure, or with "continue on error" turned on, overflowed its
 call
 stack after 208 seconds. The write-up, every number cited to a test, is in
 [docs/n8n_case_study.md](docs/n8n_case_study.md); the tests themselves are
-in [samples/testing/](samples/testing/).
+in [samples/testing/](https://github.com/leetheguy/purple_flow/tree/master/samples/testing).
 
 ## Running it
 

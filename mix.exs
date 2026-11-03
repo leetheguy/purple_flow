@@ -12,7 +12,30 @@ defmodule PurpleFlow.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      test_coverage: [tool: ExCoveralls]
+      test_coverage: [tool: ExCoveralls],
+      name: "PurpleFlow",
+      source_url: "https://github.com/leetheguy/purple_flow",
+      docs: docs()
+    ]
+  end
+
+  # `mix docs` builds the code docs into doc/. `mix precommit` builds them
+  # with warnings as errors, so a broken reference fails it.
+  defp docs do
+    [
+      main: "readme",
+      extras:
+        [
+          "README.md",
+          "OP-PARAMS.md",
+          "AGENTS.md",
+          "docs/phoenix-guidelines.md",
+          "docs/n8n_case_study.md",
+          "LICENSE"
+        ] ++ Path.wildcard("specs/*.md"),
+      groups_for_extras: [Specs: ~r"specs/"],
+      # Specs are history: they name code as it was when they were written.
+      skip_undefined_reference_warnings_on: Path.wildcard("specs/*.md")
     ]
   end
 
@@ -32,7 +55,8 @@ defmodule PurpleFlow.MixProject do
         precommit: :test,
         coveralls: :test,
         "coveralls.lcov": :test,
-        "coveralls.html": :test
+        "coveralls.html": :test,
+        docs: :test
       ]
     ]
   end
@@ -55,6 +79,7 @@ defmodule PurpleFlow.MixProject do
       {:phoenix_live_view, "~> 1.2.0"},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
+      {:ex_doc, "~> 0.40", only: [:dev, :test], runtime: false},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
       {:heroicons,
@@ -101,7 +126,13 @@ defmodule PurpleFlow.MixProject do
         "esbuild purple_flow --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: [
+        "compile --warnings-as-errors",
+        "deps.unlock --unused",
+        "format",
+        "test",
+        "docs --warnings-as-errors"
+      ]
     ]
   end
 end

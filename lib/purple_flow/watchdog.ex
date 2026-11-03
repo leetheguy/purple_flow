@@ -1,7 +1,7 @@
 defmodule PurpleFlow.Watchdog do
   @moduledoc """
   Halts the app when it stops answering web requests, so Docker restarts it.
-  See [`specs/250_watchdog.md`](../specs/250_watchdog.md).
+  See [specs/250](specs/250_watchdog.md).
 
   Docker restarts a container whose process exits, but not one that's still
   running and just hung. Every `interval`, this process asks the app's own

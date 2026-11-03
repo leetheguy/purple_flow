@@ -1,5 +1,15 @@
 defmodule PurpleFlow.Application do
-  @moduledoc false
+  @moduledoc """
+  Starts PurpleFlow: the app, or the Code runner when `PURPLEFLOW_ROLE` is
+  `runner` (`config :purple_flow, :role`). See
+  [specs/000](specs/000_overview.md) for the process tree and why it's in
+  this order, and [specs/100](specs/100_runner_container.md) for the runner.
+
+  Each child is a process the app supervises: if one crashes, the
+  supervisor starts it again (`:one_for_one`), except a run, which is never
+  restarted, so it can't repeat what it already did.
+  """
+
   # Starts everything, in order. Order matters: nothing should accept a
   # trigger until everything a run needs is already up.
   #

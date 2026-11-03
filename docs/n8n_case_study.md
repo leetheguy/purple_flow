@@ -3,7 +3,7 @@
 Two tests, run on both: many things at once, and a workflow full of
 failures. Every number below comes from a test in the [test log](#test-log),
 cited by its ID. The workflows and scripts are in
-[`samples/testing/`](../samples/testing/), so anyone can run them again.
+[`samples/testing/`](https://github.com/leetheguy/purple_flow/tree/master/samples/testing), so anyone can run them again.
 
 Run on 2026-09-27 against PurpleFlow at this commit and n8n 2.40.7 (the
 latest release that day).
@@ -217,4 +217,4 @@ finished 791 of 10,000 (PF-S1). Five bugs, all fixed on this branch:
 
 ## Running it yourself
 
-See [`samples/testing/README.md`](../samples/testing/README.md).
+See [`samples/testing/README.md`](https://github.com/leetheguy/purple_flow/blob/master/samples/testing/README.md).

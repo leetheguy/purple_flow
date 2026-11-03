@@ -14,7 +14,7 @@ before every commit. This file adds what's specific to PurpleFlow.
 | **security** | `mix hex.audit` (known vulnerabilities and retired packages) and gitleaks (secrets in the whole history; known false positives in `.gitleaksignore`), both in CI |
 | **run** | `docker compose up -d --build` |
 | **CI** | `.github/workflows/ci.yml` (GitHub Actions) |
-| **doc tool** | ExDoc: `@moduledoc`, `@doc`, and doctests. Not a dependency yet, so precommit doesn't build the docs; see `specs/999_todo.md` |
+| **doc tool** | ExDoc: `@moduledoc`, `@doc`, and doctests. `mix docs` builds them into `doc/`, with the README, `OP-PARAMS.md`, and the specs; precommit and CI build them with warnings as errors |
 | **docs** | the spec, `README.md`, `samples/AGENTS.md`, `.claude/skills/purpleflow-workflows/SKILL.md` |
 | **copies** | `workflows/AGENTS.md` ← `samples/AGENTS.md`, copied by the user after commit, push, and pull; report a mismatch, don't copy it |
 | **branching** | cloud sessions: a branch and a PR; local sessions: a branch, merged into `master` locally when asked; the user pushes |

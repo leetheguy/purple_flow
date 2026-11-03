@@ -68,6 +68,9 @@ jobs:
       - run: mix deps.unlock --check-unused
       - run: mix format --check-formatted
 
+      # The code docs build with no broken references (OP-PARAMS section 7).
+      - run: mix docs --warnings-as-errors
+
       # The credential tests need a key; any random one will do. Coverage is
       # written to cover/lcov.info for the README badge.
       - name: mix test (with coverage)
