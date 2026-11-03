@@ -310,7 +310,12 @@ and sign in with `PURPLEFLOW_ADMIN_USERNAME` / `PURPLEFLOW_ADMIN_PASSWORD`.
 Three failed sign-ins lock that address out for four hours (a restart lifts
 it). Postgres has a health check, and the app container only starts once it
 passes; migrations run automatically on boot, and the container restarts on
-its own if the app dies. Code node scripts run in the `runner` container,
+its own if the app dies. It also restarts if the app hangs: a watchdog
+halts the app when its own `/health` stops answering (three failed checks,
+30 seconds apart), and Erlang's `heart` kills a VM that freezes outright
+(after 60 seconds). Both are on by default; `PURPLEFLOW_WATCHDOG_INTERVAL=0`
+and `PURPLEFLOW_HEART=false` turn them off (see
+[specs/250](specs/250_watchdog.md) for the other settings). Code node scripts run in the `runner` container,
 which has no secrets, no database, no internet, and no way to reach the app
 (see [specs/100](specs/100_runner_container.md)). Files uploaded to webhooks
 live in their own volume, `purple_flow_run_files`, only until their run

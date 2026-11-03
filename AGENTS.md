@@ -55,10 +55,10 @@ indexes every other spec.
 **Starting/restarting the server?** Use `docker compose up -d --build`, not a
 bare `mix phx.server`. Docker waits for Postgres to be healthy before
 starting the app, runs migrations automatically on boot, and restarts a
-container that crashes. A container that hangs (process alive, endpoint not
-answering; it has happened before) is marked unhealthy but **not**
-restarted; see `specs/999_todo.md`. See the README's "Running it" section
-for details.
+container that crashes. A hung app is made to crash: a watchdog halts it
+when its own `/health` stops answering, and Erlang's `heart` kills a frozen
+VM (`specs/250_watchdog.md`). See the README's "Running it" section for
+details.
 
 **Running the tests?** They need `PURPLEFLOW_SECRET_KEY` set (any
 `openssl rand -base64 32` will do) and a Postgres that takes

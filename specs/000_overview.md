@@ -47,6 +47,8 @@ Docker Compose runs four services, behind one site and one sign-in:
 | `files` | dufs, serving the workflows folder to agents and people at `/fs/`, through the app. |
 | `db` | Postgres 17, or an existing server via `docker-compose.external-db.yml`. |
 
+Docker restarts the app and the runner when they exit. A watchdog in the app halts it when its own `/health` stops answering, and Erlang's `heart` kills either VM if it freezes, so a hang becomes a restart ([250](250_watchdog.md)). Both containers run with `init: true`, so the VM isn't PID 1.
+
 Run files (webhook uploads) live in a volume of their own and are deleted when the run ends ([190](190_run_files.md)). The whole UI is behind a login form; `/hooks/*`, `/health`, and `/agents` are open, and a webhook can require a token (`auth`, [040](040_triggers.md)).
 
 ## Process tree (app)
@@ -63,10 +65,11 @@ PurpleFlow.Supervisor
 ├── PurpleFlow.Scheduler                          # Quantum, for cron triggers
 ├── PurpleFlow.Workflows                          # loads, checks, and watches the workflow files
 ├── PurpleFlowWeb.LoginThrottle                   # locks out repeated failed sign-ins
-└── PurpleFlowWeb.Endpoint                        # UI + webhooks, started last
+├── PurpleFlowWeb.Endpoint                        # UI + webhooks
+└── PurpleFlow.Watchdog                           # prod only: halts the app if /health stops answering
 ```
 
-Order matters: nothing accepts a trigger until everything a run needs is up. A crashed run is not restarted, or it would redo its side effects. The runner container starts only `PurpleFlow.Runner.Server`, its connections, and a reaper that cleans up what scripts leave behind.
+Order matters: nothing accepts a trigger until everything a run needs is up, and the watchdog starts after the endpoint it checks. A crashed run is not restarted, or it would redo its side effects. The runner container starts only `PurpleFlow.Runner.Server`, its connections, and a reaper that cleans up what scripts leave behind.
 
 ## Where things live
 
@@ -129,3 +132,4 @@ Check current versions on Hex before adding any.
 - [220 — Missing credentials](220_missing_credentials.md): creating every unset credential in one click.
 - [230 — String and Text credentials](230_credential_value_types.md)
 - [240 — OpenAI Chat node](240_openai_chat.md)
+- [250 — Watchdog and heart](250_watchdog.md): restarting a hung or frozen app.
