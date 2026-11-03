@@ -25,6 +25,8 @@ defmodule PurpleFlowWeb.CoreComponents do
       the component system used by Phoenix. Some components, such as `<.link>`
       and `<.form>`, are defined there.
 
+  See [specs/060](specs/060_ui.md).
+
   """
   use Phoenix.Component
 

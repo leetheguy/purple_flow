@@ -5,6 +5,8 @@ defmodule PurpleFlowWeb.Plugs.RequireLogin do
   see `PurpleFlowWeb.Router`). See `PurpleFlowWeb.Auth`.
 
   Needs the session fetched first.
+
+  See [specs/080](specs/080_credentials.md).
   """
 
   @behaviour Plug

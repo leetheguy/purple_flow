@@ -5,8 +5,8 @@ defmodule PurpleFlow.Credentials.Credential do
   `type` is `"string"` (a one-line value in `key`), `"text"` (a value that
   can span lines, in `key`), or `"oauth"`: `oauth` holds its settings,
   `client_secret` is encrypted, and `key` holds its tokens, encrypted, once
-  connected. See `specs/200_oauth_credentials.md` and
-  `specs/230_credential_value_types.md`.
+  connected. See [specs/200](specs/200_oauth_credentials.md) and
+  [specs/230](specs/230_credential_value_types.md).
   """
 
   use Ecto.Schema

@@ -7,6 +7,8 @@ defmodule PurpleFlow.Nodes.Noop do
   Useful as a named place for branches to meet, a placeholder while a
   workflow is being built, or a last step that makes a run's output
   obvious. No config.
+
+  See [specs/180](specs/180_noop_wait_respond.md).
   """
 
   @behaviour PurpleFlow.Node

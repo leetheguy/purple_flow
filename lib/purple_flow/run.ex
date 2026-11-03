@@ -3,7 +3,7 @@ defmodule PurpleFlow.Run do
   One process per workflow run. It holds a queue in front of every step,
   starts executions from those queues, hears their results, and sends what
   they produced on to the next steps' queues right away. Nothing waits for
-  a whole step to finish. See `specs/120_flow.md`.
+  a whole step to finish. See [specs/120](specs/120_flow.md).
 
   How it goes:
 

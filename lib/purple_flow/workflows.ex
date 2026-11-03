@@ -1,7 +1,7 @@
 defmodule PurpleFlow.Workflows do
   @moduledoc """
   Holds every loaded workflow in memory, and keeps it in step with the
-  workflows folder. See `specs/090_workflow_files.md`.
+  workflows folder. See [specs/090](specs/090_workflow_files.md).
 
   Once a second (a "tick") it fingerprints every file in the folder. When
   the fingerprint has changed and then held still for one full tick, so a

@@ -11,7 +11,7 @@ defmodule PurpleFlow.Nodes.Batch do
   The run handles Batch steps itself: items collect in the step's batch
   instead of each starting an execution, and a batch goes when it's full,
   when `wait` runs out, or when nothing more can reach it. This module
-  only checks the config and shapes the output. See `specs/140_batch.md`.
+  only checks the config and shapes the output. See [specs/140](specs/140_batch.md).
   """
 
   @behaviour PurpleFlow.Node

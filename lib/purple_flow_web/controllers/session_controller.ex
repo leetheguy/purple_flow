@@ -2,6 +2,8 @@ defmodule PurpleFlowWeb.SessionController do
   @moduledoc """
   `/login` and `/logout`. A plain form post, not a LiveView or a browser
   popup, so password managers fill and save it. See `PurpleFlowWeb.Auth`.
+
+  See [specs/080](specs/080_credentials.md).
   """
 
   use PurpleFlowWeb, :controller

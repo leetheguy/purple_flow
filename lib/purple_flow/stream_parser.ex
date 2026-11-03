@@ -2,7 +2,7 @@ defmodule PurpleFlow.StreamParser do
   @moduledoc """
   Splits a streamed body into messages as its chunks arrive, for the nodes
   that stream (`PurpleFlow.Nodes.Http`, `PurpleFlow.Nodes.Ssh`). See
-  `specs/150_streaming.md`.
+  [specs/150](specs/150_streaming.md).
 
   - `"sse"`: one server-sent event per item, `{"event", "data", "id"}`
   - `"ndjson"`: one line of JSON per item, decoded

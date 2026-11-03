@@ -11,6 +11,8 @@ defmodule PurpleFlow.Runner.Reaper do
   most one pass every 100 ms. With thousands of scripts finishing at
   once, one pass each would cost thousands of passes over thousands of
   processes.
+
+  See [specs/100](specs/100_runner_container.md).
   """
 
   use GenServer

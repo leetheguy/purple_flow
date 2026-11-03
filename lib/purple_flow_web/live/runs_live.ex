@@ -1,7 +1,7 @@
 defmodule PurpleFlowWeb.RunsLive do
   @moduledoc """
   One workflow's runs, newest first. Runs show up and finish live, and a
-  running one has a Kill button (see `specs/160_live_runs.md`).
+  running one has a Kill button (see [specs/160](specs/160_live_runs.md)).
   """
 
   use PurpleFlowWeb, :live_view

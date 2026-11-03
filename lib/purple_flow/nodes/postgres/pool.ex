@@ -10,6 +10,8 @@ defmodule PurpleFlow.Nodes.Postgres.Pool do
 
   It counts queries in flight by monitoring each caller, so a step that
   crashes mid-query doesn't keep the pool open forever.
+
+  See [specs/020](specs/020_nodes.md).
   """
 
   use GenServer, restart: :temporary

@@ -12,7 +12,7 @@ defmodule PurpleFlow.StepTask do
 
   It doesn't save anything or talk to anyone but the run: the run saves
   rows in batches and decides where items go. Timeouts are the run's job
-  too; it kills the execution. See `specs/120_flow.md`.
+  too; it kills the execution. See [specs/120](specs/120_flow.md).
   """
 
   alias PurpleFlow.{Redact, Template}

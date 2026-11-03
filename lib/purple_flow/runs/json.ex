@@ -3,6 +3,8 @@ defmodule PurpleFlow.Runs.JSON do
   A database column that holds any JSON value: a map, a list, a string, a
   number, `true`/`false`, or `nil`. (Ecto's built-in `:map` only takes maps,
   but a step's input or output can be a list or a plain value.)
+
+  See [specs/050](specs/050_storage.md).
   """
 
   use Ecto.Type

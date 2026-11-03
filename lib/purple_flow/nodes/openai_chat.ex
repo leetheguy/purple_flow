@@ -26,7 +26,7 @@ defmodule PurpleFlow.Nodes.OpenAIChat do
 
   A non-2xx response is an error, and the caller gets that status and body.
   An `error` the provider sends mid-stream is passed on, then fails the step.
-  See `specs/240_openai_chat.md`.
+  See [specs/240](specs/240_openai_chat.md).
   """
 
   @behaviour PurpleFlow.Node

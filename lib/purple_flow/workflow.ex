@@ -5,6 +5,8 @@ defmodule PurpleFlow.Workflow do
 
   `comment` is the comment at the top of `workflow.toml`, for people to read
   (see `PurpleFlow.Workflow.Loader.leading_comment/1`).
+
+  See [specs/010](specs/010_workflows.md).
   """
 
   defstruct [

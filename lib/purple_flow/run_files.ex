@@ -9,7 +9,7 @@ defmodule PurpleFlow.RunFiles do
 
   So a file never ends up in a run's saved records, only its reference.
   A run's files are deleted when the run ends, and leftovers from runs cut
-  off by a restart are deleted at boot. See `specs/190_run_files.md`.
+  off by a restart are deleted at boot. See [specs/190](specs/190_run_files.md).
   """
 
   alias PurpleFlow.Id

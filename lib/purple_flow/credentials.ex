@@ -11,6 +11,8 @@ defmodule PurpleFlow.Credentials do
   is no way for a workflow, a node, or anything building either to create,
   set, or see one — that only happens through this module's other
   functions, used by the `/credentials` UI.
+
+  See [specs/080](specs/080_credentials.md), [specs/200](specs/200_oauth_credentials.md), [specs/230](specs/230_credential_value_types.md).
   """
 
   import Ecto.Query

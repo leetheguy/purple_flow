@@ -31,7 +31,7 @@ defmodule PurpleFlow.Nodes.Ssh do
 
   With `stream`, the command's standard output is read as it arrives and
   each line in it is handed on right away (`PurpleFlow.Node.emit/2`), as
-  text or decoded JSON. See `specs/170_ssh.md` and `specs/190_run_files.md`.
+  text or decoded JSON. See [specs/170](specs/170_ssh.md) and [specs/190](specs/190_run_files.md).
   """
 
   @behaviour PurpleFlow.Node

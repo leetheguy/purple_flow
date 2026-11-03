@@ -5,6 +5,8 @@ defmodule PurpleFlow.Id do
 
   Hand-written (copied from purple_goo) because it's a few lines and not worth
   a dependency.
+
+  See [specs/050](specs/050_storage.md).
   """
 
   @doc "A fresh UUIDv7 string, like `\"018f2f3a-1b2c-7d4e-9a1b-0123456789ab\"`."

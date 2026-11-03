@@ -2,6 +2,8 @@ defmodule PurpleFlow.Redact do
   @moduledoc """
   Hides credentials. Anywhere a secret value shows up in a record, error, or
   broadcast, it's replaced with `[redacted]` before it leaves the task.
+
+  See [specs/010](specs/010_workflows.md), [specs/080](specs/080_credentials.md).
   """
 
   @mask "[redacted]"

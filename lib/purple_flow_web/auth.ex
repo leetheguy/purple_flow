@@ -13,6 +13,8 @@ defmodule PurpleFlowWeb.Auth do
 
   The session holds a token derived from the username and password, not a
   flag, so changing the password signs everyone out.
+
+  See [specs/080](specs/080_credentials.md).
   """
 
   import Plug.Conn

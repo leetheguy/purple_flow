@@ -2,7 +2,7 @@ defmodule PurpleFlowWeb.WorkflowStatusController do
   @moduledoc """
   `GET /api/workflows`: which workflows are loaded, which aren't, and why.
   For agents that edit workflow files and need to know whether their change
-  took, without the admin login. See `specs/090_workflow_files.md`.
+  took, without the admin login. See [specs/090](specs/090_workflow_files.md).
 
   Needs `Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>`. With no token
   configured, the route doesn't exist (404). The token grants this and

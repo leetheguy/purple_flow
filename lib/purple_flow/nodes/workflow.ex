@@ -10,6 +10,8 @@ defmodule PurpleFlow.Nodes.Workflow do
   The other workflow gets this node's input as its trigger input. This node
   waits for it to finish; the step's `timeout` covers the wait. If the other
   workflow fails, this node fails.
+
+  See [specs/020](specs/020_nodes.md), [specs/120](specs/120_flow.md).
   """
 
   @behaviour PurpleFlow.Node

@@ -5,7 +5,7 @@ defmodule PurpleFlowWeb.CredentialsLive do
   The server never sends a stored `key` value to the browser, in any form,
   ever. A set credential's secret field shows as a fixed placeholder of dots
   until edit mode opens it as a real, empty input. See
-  `specs/080_credentials.md`.
+  [specs/080](specs/080_credentials.md).
   """
 
   use PurpleFlowWeb, :live_view

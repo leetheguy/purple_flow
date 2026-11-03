@@ -16,6 +16,8 @@ defmodule PurpleFlow.Nodes.Wait do
   many items wait at once. The step's `timeout` covers the wait, and Kill
   stops it. A wait lives in memory: a restart marks the run `interrupted`,
   like any other.
+
+  See [specs/180](specs/180_noop_wait_respond.md).
   """
 
   @behaviour PurpleFlow.Node

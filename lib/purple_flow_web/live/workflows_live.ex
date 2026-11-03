@@ -9,7 +9,7 @@ defmodule PurpleFlowWeb.WorkflowsLive do
   page follows. The list mirrors the workflows folder: subfolders are
   groups, listed before the workflows beside them, and collapsed until
   opened (a search opens the ones it matches in). See
-  `specs/110_workflow_folders.md`.
+  [specs/110](specs/110_workflow_folders.md).
   """
 
   use PurpleFlowWeb, :live_view

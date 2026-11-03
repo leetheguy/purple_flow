@@ -5,6 +5,8 @@ defmodule PurpleFlowWeb.AgentsController do
   workflows folder, as plain Markdown, with `BASE` replaced by this site's
   address. Public, since an agent needs it before it has a token; it
   holds only what's in that file. Without the file, a 404.
+
+  See [specs/090](specs/090_workflow_files.md).
   """
 
   use PurpleFlowWeb, :controller

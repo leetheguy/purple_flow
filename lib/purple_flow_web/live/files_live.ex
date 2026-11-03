@@ -4,6 +4,8 @@ defmodule PurpleFlowWeb.FilesLive do
   inside the app's frame. The page embeds dufs's own UI from `/fs/...`
   (`PurpleFlowWeb.Plugs.FilesProxy`), and keeps the address bar on the
   folder or file being shown, so it can be bookmarked and reloaded.
+
+  See [specs/090](specs/090_workflow_files.md).
   """
 
   use PurpleFlowWeb, :live_view

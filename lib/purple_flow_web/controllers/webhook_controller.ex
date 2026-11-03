@@ -11,7 +11,7 @@ defmodule PurpleFlowWeb.WebhookController do
   (`PurpleFlow.Nodes.Respond`) can answer sooner, with its own status,
   headers, and body, while the run carries on. An OpenAI Chat step
   (`PurpleFlow.Nodes.OpenAIChat`) can answer with a stream instead; see
-  `specs/240_openai_chat.md`.
+  [specs/240](specs/240_openai_chat.md).
 
   With `respond = "immediately"` the reply comes right away:
   `202 {"run_id": "..."}`. Use that for workflows that take longer than
@@ -19,7 +19,7 @@ defmodule PurpleFlowWeb.WebhookController do
 
   With `respond = "stream"` the reply is a server-sent event stream: every
   item a last step produces, as it's produced, then an `end` event with the
-  run's status. See `specs/150_streaming.md`.
+  run's status. See [specs/150](specs/150_streaming.md).
 
   Files sent as a multipart form are saved with the run (up to the
   webhook's `max_upload` bytes, default 100 MB), and the input holds a
@@ -30,7 +30,7 @@ defmodule PurpleFlowWeb.WebhookController do
   With `auth = "NAME"`, the caller must send `Authorization: Bearer <value>`,
   where `<value>` is credential NAME's value, or, with `auth_header`, that
   header holding the value itself. Otherwise: `401`, no body, no run. The
-  token's header is never saved in the run's input. See `specs/040_triggers.md`.
+  token's header is never saved in the run's input. See [specs/040](specs/040_triggers.md).
   """
 
   use PurpleFlowWeb, :controller

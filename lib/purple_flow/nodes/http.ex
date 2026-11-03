@@ -18,7 +18,7 @@ defmodule PurpleFlow.Nodes.Http do
   With `stream`, the response is read as it arrives and each message in it
   is handed on right away (`PurpleFlow.Node.emit/2`), following the
   protocol named: one server-sent event, one line of JSON, or one line of
-  text. See `specs/150_streaming.md`.
+  text. See [specs/150](specs/150_streaming.md).
   """
 
   @behaviour PurpleFlow.Node

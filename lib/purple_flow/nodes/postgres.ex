@@ -24,7 +24,7 @@ defmodule PurpleFlow.Nodes.Postgres do
       Default `60`.
 
   Steps that share a `database_url` and both settings share one pool (see
-  `PurpleFlow.Nodes.Postgres.Pool`). See `specs/020_nodes.md` and its log.
+  `PurpleFlow.Nodes.Postgres.Pool`). See [specs/020](specs/020_nodes.md) and its log.
   """
 
   @behaviour PurpleFlow.Node

@@ -6,7 +6,7 @@ defmodule PurpleFlowWeb.RunLive do
   while the run is going, what's queued and running. Click a row to see its
   input and output; a step that ran more than once expands into one row
   per execution. Dots: green all ok, yellow some not, red none ok (or it
-  ended the run), blue busy, gray didn't run. See `specs/160_live_runs.md`.
+  ended the run), blue busy, gray didn't run. See [specs/160](specs/160_live_runs.md).
 
   While the run is going, it updates from the run's `run_progress`
   messages, and a Kill button stops it.

@@ -10,7 +10,7 @@ defmodule PurpleFlowWeb.CanvasLive do
 
   The server lays the boxes out in rows (a step goes one row below the
   lowest step it comes after); the `.Canvas` hook draws the arrows between
-  them, and pans and zooms. See `specs/210_canvas.md`.
+  them, and pans and zooms. See [specs/210](specs/210_canvas.md).
   """
 
   use PurpleFlowWeb, :live_view

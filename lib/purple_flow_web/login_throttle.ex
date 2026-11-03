@@ -10,6 +10,8 @@ defmodule PurpleFlowWeb.LoginThrottle do
 
   Kept in memory: restarting the app clears every lockout, which is also
   how to let yourself back in early.
+
+  See [specs/080](specs/080_credentials.md).
   """
 
   use GenServer

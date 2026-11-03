@@ -2,6 +2,8 @@ defmodule PurpleFlowWeb.Layouts do
   @moduledoc """
   This module holds layouts and related functionality
   used by your application.
+
+  See [specs/060](specs/060_ui.md).
   """
   use PurpleFlowWeb, :html
 

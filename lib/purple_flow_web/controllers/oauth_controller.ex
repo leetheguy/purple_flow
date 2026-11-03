@@ -5,7 +5,7 @@ defmodule PurpleFlowWeb.OAuthController do
   `connect` sends the browser to the provider's "allow this?" page, keeping
   a random `state` and a PKCE verifier in the session. The provider sends
   the browser back to `callback`, which checks `state`, trades the code for
-  tokens, and returns to `/credentials`. See `specs/200_oauth_credentials.md`.
+  tokens, and returns to `/credentials`. See [specs/200](specs/200_oauth_credentials.md).
   """
 
   use PurpleFlowWeb, :controller

@@ -8,7 +8,7 @@ defmodule PurpleFlow.Node do
   The input is always one item. A list output splits into items, one
   execution each for the next steps; anything else, including an object
   holding a list, is one item. A node can also hand items on while it's
-  still running, with `emit/2`. See `specs/120_flow.md`.
+  still running, with `emit/2`. See [specs/120](specs/120_flow.md).
 
       defmodule MyNode do
         @behaviour PurpleFlow.Node

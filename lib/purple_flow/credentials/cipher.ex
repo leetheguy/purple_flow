@@ -5,6 +5,8 @@ defmodule PurpleFlow.Credentials.Cipher do
 
   The stored binary is `nonce <> tag <> ciphertext`: everything needed to
   decrypt, in one blob, so the schema only needs a single `key` column.
+
+  See [specs/080](specs/080_credentials.md).
   """
 
   @aad ""

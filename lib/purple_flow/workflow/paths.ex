@@ -6,7 +6,7 @@ defmodule PurpleFlow.Workflow.Paths do
   the file that names them. Without a check, `"../../etc/passwd"`, an
   absolute path, or a symlink pointing out would make the app read a file
   outside the workflows folder, in the container that holds the secrets.
-  See `specs/090_workflow_files.md`.
+  See [specs/090](specs/090_workflow_files.md).
   """
 
   @doc """

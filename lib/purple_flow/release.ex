@@ -2,6 +2,8 @@ defmodule PurpleFlow.Release do
   @moduledoc """
   Used for executing DB release tasks when run in production without Mix
   installed.
+
+  See [specs/050](specs/050_storage.md).
   """
   @app :purple_flow
 

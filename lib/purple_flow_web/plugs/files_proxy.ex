@@ -2,7 +2,7 @@ defmodule PurpleFlowWeb.Plugs.FilesProxy do
   @moduledoc """
   `/fs/*`: the files service (dufs), passed through behind the app's own
   sign-in. dufs has no login of its own and no published port; the app is
-  the only way in. See `specs/090_workflow_files.md`.
+  the only way in. See [specs/090](specs/090_workflow_files.md).
 
   Any one of these gets through:
 

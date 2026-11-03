@@ -6,6 +6,8 @@ defmodule PurpleFlow.Nodes.Ssh.Keys do
 
   This is an `:ssh_client_key_api` callback module; `:ssh` calls it with
   `key_cb_private: [private_key: ..., host_key: ...]` in its options.
+
+  See [specs/170](specs/170_ssh.md).
   """
 
   @behaviour :ssh_client_key_api

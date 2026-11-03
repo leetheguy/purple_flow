@@ -5,6 +5,8 @@ defmodule PurpleFlow.Workflow.Loader do
   Every problem is collected and reported together, so one load tells you
   everything that's wrong with a workflow. A workflow with problems isn't
   loaded; other workflows still are.
+
+  See [specs/010](specs/010_workflows.md), [specs/090](specs/090_workflow_files.md), [specs/110](specs/110_workflow_folders.md).
   """
 
   alias PurpleFlow.{Credentials, Template, Workflow}

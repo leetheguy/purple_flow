@@ -11,6 +11,8 @@ defmodule PurpleFlow.Template do
   If a string is *only* a placeholder, the raw value is used, so numbers,
   lists, and maps keep their type. Otherwise the value is turned into text.
   List positions work too: `{{ input.items.0.name }}`.
+
+  See [specs/010](specs/010_workflows.md).
   """
 
   alias PurpleFlow.Credentials

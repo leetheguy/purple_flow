@@ -5,6 +5,8 @@ defmodule PurpleFlow do
 
       PurpleFlow.run("sync_records", %{"since" => "2026-01-01"})
       #=> {:ok, "0192..."}
+
+  See [specs/000](specs/000_overview.md), [specs/120](specs/120_flow.md), [specs/160](specs/160_live_runs.md).
   """
 
   alias PurpleFlow.{Id, Runs, Workflows}

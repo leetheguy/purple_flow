@@ -4,7 +4,7 @@ defmodule PurpleFlow.Credentials.OAuth do
 
   A workflow never sees any of this. `PurpleFlow.Credentials.get/1` calls
   `access_token/1` for an OAuth credential, which returns the saved token
-  if it's still good, or renews it first. See `specs/200_oauth_credentials.md`.
+  if it's still good, or renews it first. See [specs/200](specs/200_oauth_credentials.md).
 
   The flow is OAuth 2's authorization code with PKCE (a one-time secret
   that proves the app that asked is the app that finishes) and refresh

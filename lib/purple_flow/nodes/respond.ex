@@ -19,7 +19,7 @@ defmodule PurpleFlow.Nodes.Respond do
   Workflow node), answer no one. A run that ends before any Respond step
   runs answers with its output, as usual.
 
-  Either way the step hands its input on unchanged. See `specs/180_noop_wait_respond.md`.
+  Either way the step hands its input on unchanged. See [specs/180](specs/180_noop_wait_respond.md).
   """
 
   @behaviour PurpleFlow.Node

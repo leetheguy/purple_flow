@@ -4,6 +4,8 @@ defmodule PurpleFlow.Runs do
 
   Records are written as things happen, not at the end, so a crash never
   loses what already ran.
+
+  See [specs/050](specs/050_storage.md).
   """
 
   import Ecto.Query
