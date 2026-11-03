@@ -20,7 +20,6 @@ It gathers the "Later" sections and open questions left in other specs and their
 - **Signed requests on the HTTP node** (starting with AWS SigV4, for S3), plus sending a file's bytes as a request body. Found migrating Decapod's workflows: S3 is popular enough elsewhere that it's worth solving for, even setting personal taste aside.
 
 
-- **Mutation testing**, for OP-PARAMS section 5: pick an Elixir mutation tool (muzak, exavier, or darwin; check which are maintained), add it as a test-only dependency, and bind it in `AGENTS.md`. From [OP-PARAMS.md](../OP-PARAMS.md).
 
 ## Open questions
 

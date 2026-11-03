@@ -3,6 +3,7 @@
     "minimum_coverage": 90
   },
   "skip_files": [
-    "lib/purple_flow_web/components/core_components.ex"
+    "lib/purple_flow_web/components/core_components.ex",
+    "test/support/mix/tasks/mutate.ex"
   ]
 }

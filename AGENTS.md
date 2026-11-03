@@ -10,7 +10,7 @@ before every commit. This file adds what's specific to PurpleFlow.
 | **precommit** | `mix precommit` |
 | **test** | `mix test` (needs `PURPLEFLOW_SECRET_KEY` and a test Postgres; see below) |
 | **coverage** | `mix coveralls` (`coveralls.json` sets the 90% floor) |
-| **mutation** | not set up yet; see `specs/999_todo.md` |
+| **mutation** | `mix mutate FILE...` (`test/support/mix/tasks/mutate.ex`): makes small bugs in each file, one at a time, runs the tests that name its modules against each, and lists the ones no test caught. Takes seconds to a few minutes per file |
 | **security** | `mix hex.audit` (known vulnerabilities and retired packages) and gitleaks (secrets in the whole history; known false positives in `.gitleaksignore`), both in CI |
 | **run** | `docker compose up -d --build` |
 | **CI** | `.github/workflows/ci.yml` (GitHub Actions) |

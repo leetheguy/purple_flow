@@ -56,7 +56,8 @@ defmodule PurpleFlow.MixProject do
         coveralls: :test,
         "coveralls.lcov": :test,
         "coveralls.html": :test,
-        docs: :test
+        docs: :test,
+        mutate: :test
       ]
     ]
   end

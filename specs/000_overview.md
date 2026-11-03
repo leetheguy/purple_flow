@@ -83,6 +83,7 @@ Order matters: nothing accepts a trigger until everything a run needs is up, and
 | `lib/purple_flow_web/` | UI (LiveViews), webhooks, login, files proxy |
 | `samples/` | sample workflows, the agent guide (`AGENTS.md`), and pressure tests (`testing/`) |
 | `.claude/skills/purpleflow-workflows/` | the skill sheet for agents building workflows |
+| `test/support/mix/tasks/mutate.ex` | `mix mutate`, the mutation testing tool (test-only) |
 
 ## Dependencies
 
