@@ -113,6 +113,15 @@ defmodule PurpleFlow.RunFiles do
   end
 
   @doc """
+  True if `value` is a file reference: a map whose `"file"` is a file ID.
+  Nodes use it to tell a file from other values (a form field, a query
+  param). It doesn't check that the file is still there; `path/1` does.
+  """
+  @spec ref?(term()) :: boolean()
+  def ref?(%{"file" => id}) when is_binary(id), do: Regex.match?(@file_id, id)
+  def ref?(_value), do: false
+
+  @doc """
   Where a file's bytes are, from its reference (or its bare `"file"` ID).
   An error if it isn't a file reference or the file is gone.
   """

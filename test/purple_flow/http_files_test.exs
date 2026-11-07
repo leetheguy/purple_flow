@@ -94,11 +94,106 @@ defmodule PurpleFlow.HttpFilesTest do
     end
 
     test "body and body_file together fail to load; either alone loads" do
-      assert {:error, "takes body or body_file, not both"} =
+      assert {:error, "takes one of body, body_file, and form, not more"} =
                Http.prepare(%{"body" => "x", "body_file" => "{{ input.doc }}"}, ".", ".")
 
       assert {:ok, _} = Http.prepare(%{"body" => "x"}, ".", ".")
       assert {:ok, _} = Http.prepare(%{"body_file" => "{{ input.doc }}"}, ".", ".")
+    end
+  end
+
+  describe "form" do
+    # Answers with the form's fields, and each file part's name, type, and bytes.
+    defp echo_form do
+      Req.Test.stub(Http, fn conn ->
+        opts = Plug.Parsers.init(parsers: [:multipart], pass: ["*/*"], length: 10_000_000)
+        conn = Plug.Parsers.call(conn, opts)
+
+        fields =
+          Map.new(conn.body_params, fn
+            {name, %Plug.Upload{} = upload} ->
+              {name,
+               %{
+                 "filename" => upload.filename,
+                 "type" => upload.content_type,
+                 "md5" => Base.encode16(:crypto.hash(:md5, File.read!(upload.path)))
+               }}
+
+            {name, value} ->
+              {name, value}
+          end)
+
+        Req.Test.json(conn, fields)
+      end)
+    end
+
+    test "file references become file parts, beside text fields", %{run_id: run_id} do
+      bytes = :crypto.strong_rand_bytes(150_000)
+      ref = run_file(run_id, bytes, "scan.pdf", "application/pdf")
+      echo_form()
+
+      assert {:ok, fields} =
+               Http.execute(nil, %{
+                 "method" => "POST",
+                 "url" => "http://api.test/documents",
+                 "form" => %{
+                   "title" => "Q3",
+                   "pages" => 4,
+                   "tags" => ["a", "b"],
+                   "doc" => ref
+                 }
+               })
+
+      assert fields == %{
+               "title" => "Q3",
+               "pages" => "4",
+               "tags" => ~s(["a","b"]),
+               "doc" => %{
+                 "filename" => "scan.pdf",
+                 "type" => "application/pdf",
+                 "md5" => Base.encode16(:crypto.hash(:md5, bytes))
+               }
+             }
+    end
+
+    test "a map that only looks like a reference is sent as text" do
+      echo_form()
+
+      assert {:ok, %{"note" => ~s({"file":"not-an-id"})}} =
+               Http.execute(nil, %{
+                 "method" => "POST",
+                 "url" => "http://api.test/",
+                 "form" => %{"note" => %{"file" => "not-an-id"}}
+               })
+    end
+
+    test "a file that's gone fails before sending", %{run_id: run_id} do
+      gone = run_file(run_id, "x", "a.txt", nil)
+      RunFiles.delete_run(run_id)
+      refuse_requests()
+
+      assert {:error, "file " <> _} =
+               Http.execute(nil, %{"url" => "http://api.test/", "form" => %{"doc" => gone}})
+    end
+
+    test "form with body or body_file fails to load; form alone loads" do
+      for other <- ["body", "body_file"] do
+        assert {:error, "takes one of body, body_file, and form, not more"} =
+                 Http.prepare(%{"form" => %{}, other => "x"}, ".", ".")
+      end
+
+      assert {:ok, _} = Http.prepare(%{"form" => %{"a" => 1}}, ".", ".")
+    end
+
+    test "form must be a table, when it loads or once its placeholder is filled in" do
+      assert {:error, "form must be a table of fields, not \"x\""} =
+               Http.prepare(%{"form" => "x"}, ".", ".")
+
+      assert {:ok, _} = Http.prepare(%{"form" => "{{ input.form }}"}, ".", ".")
+      refuse_requests()
+
+      assert {:error, "form must be a table of fields, not \"x\""} =
+               Http.execute(nil, %{"url" => "http://api.test/", "form" => "x"})
     end
   end
 end

@@ -140,7 +140,7 @@ If a string is only one placeholder, the raw value is used (numbers, lists, and 
 
 | module | config | output |
 |---|---|---|
-| `PurpleFlow.Nodes.Http` | `url`, `method` (GET), `headers`, `query`, `body` (maps are sent as JSON) or `body_file` (a file reference, sent as the body with its type), `stream` (`"sse"`, `"ndjson"`, `"lines"`) | response body. Non-2xx is an error. No retries. With `stream`: one item per event/line as it arrives (SSE: `{"event", "data", "id"}`), and returns `[]` |
+| `PurpleFlow.Nodes.Http` | `url`, `method` (GET), `headers`, `query`, `body` (maps are sent as JSON) or `body_file` (a file reference, sent as the body with its type) or `form` (`multipart/form-data`; file references become file parts, other values text), `stream` (`"sse"`, `"ndjson"`, `"lines"`) | response body. Non-2xx is an error. No retries. With `stream`: one item per event/line as it arrives (SSE: `{"event", "data", "id"}`), and returns `[]` |
 | `PurpleFlow.Nodes.Ssh` | `host`, `port` (22), `user`, `password` or `private_key`, `host_key` (optional `SHA256:...` fingerprint), `command`, `stdin` or `stdin_file` (a file reference), `connect_timeout` (seconds, 30; 0 = no limit), `stream` (`"lines"`, `"ndjson"`) | `{"stdout", "stderr", "exit_status"}`. Non-zero exit is an error. With `stream`: one item per stdout line as it arrives, and returns `[]` |
 | `PurpleFlow.Nodes.Postgres` | `database_url`, `query`, `params` | list of row maps, so the next step runs per row |
 | `PurpleFlow.Nodes.Code` | `file` (an `.exs` next to the node file) | whatever the script returns |

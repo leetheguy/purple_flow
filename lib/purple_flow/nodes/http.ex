@@ -11,6 +11,7 @@ defmodule PurpleFlow.Nodes.Http do
       query = { page = 1 }                  # optional
       body = { name = "{{ input.name }}" }  # optional; maps/lists are sent as JSON
       body_file = "{{ input.body.doc }}"    # optional, instead: a file's bytes
+      form = { doc = "{{ input.body.doc }}" } # optional, instead: multipart/form-data
       stream = "sse"                        # optional: "sse", "ndjson", or "lines"
 
   Output is the response body (decoded if it's JSON). A non-2xx response is
@@ -23,7 +24,10 @@ defmodule PurpleFlow.Nodes.Http do
 
   `body_file` takes a file reference (see `PurpleFlow.RunFiles`) and sends
   the file as the body, streamed from disk, with the reference's type as
-  `content-type` unless `headers` sets one. See [specs/260](specs/260_file_transport.md).
+  `content-type` unless `headers` sets one. `form` sends
+  `multipart/form-data`: a field holding a file reference becomes a file
+  part, streamed from disk; any other value is text (maps and lists as
+  JSON). See [specs/260](specs/260_file_transport.md).
   """
 
   @behaviour PurpleFlow.Node
@@ -35,8 +39,11 @@ defmodule PurpleFlow.Nodes.Http do
   @impl true
   def prepare(config, _node_dir, _root) do
     cond do
-      Map.has_key?(config, "body") and Map.has_key?(config, "body_file") ->
-        {:error, "takes body or body_file, not both"}
+      Enum.count(~w(body body_file form), &Map.has_key?(config, &1)) > 1 ->
+        {:error, "takes one of body, body_file, and form, not more"}
+
+      bad_form?(config["form"]) ->
+        {:error, "form must be a table of fields, not #{inspect(config["form"])}"}
 
       config["stream"] in [nil | @protocols] ->
         {:ok, config}
@@ -122,10 +129,53 @@ defmodule PurpleFlow.Nodes.Http do
     end
   end
 
+  defp body(%{"form" => form}) when is_map(form) do
+    form
+    |> Enum.reduce_while({:ok, []}, fn {name, value}, {:ok, fields} ->
+      case form_field(value) do
+        {:ok, field} -> {:cont, {:ok, [{name, field} | fields]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, fields} -> {:ok, [form_multipart: fields], %{}}
+      error -> error
+    end
+  end
+
+  defp body(%{"form" => form}),
+    do: {:error, "form must be a table of fields, not #{inspect(form)}"}
+
   defp body(%{"body" => nil}), do: {:ok, [], %{}}
   defp body(%{"body" => body}) when is_map(body) or is_list(body), do: {:ok, [json: body], %{}}
   defp body(%{"body" => body}), do: {:ok, [body: to_string(body)], %{}}
   defp body(_config), do: {:ok, [], %{}}
+
+  # A placeholder can only be checked once it's filled in.
+  defp bad_form?(nil), do: false
+  defp bad_form?("{{" <> _), do: false
+  defp bad_form?(form), do: not is_map(form)
+
+  defp form_field(value) do
+    cond do
+      RunFiles.ref?(value) ->
+        with {:ok, path} <- RunFiles.path(value) do
+          {:ok,
+           {File.stream!(path, 65_536),
+            filename: value["name"] || "file",
+            content_type: value["type"] || "application/octet-stream"}}
+        end
+
+      is_binary(value) ->
+        {:ok, value}
+
+      is_map(value) or is_list(value) ->
+        {:ok, Jason.encode!(value)}
+
+      true ->
+        {:ok, to_string(value)}
+    end
+  end
 
   # Header names are matched without case, so `Content-Type` in `headers`
   # wins over the body's own.

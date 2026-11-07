@@ -165,6 +165,16 @@ url = "https://storage.example.com/uploads/report.pdf"
 body_file = "{{ input.body.doc }}"
 ```
 
+To send a form upload (`multipart/form-data`), use `form`. A field holding a file reference is sent as that file, with its name and type; any other value is sent as text:
+
+```toml
+method = "POST"
+url = "https://api.example.com/documents"
+form = { title = "{{ input.body.title }}", doc = "{{ input.body.doc }}" }
+```
+
+Use one of `body`, `body_file`, and `form` in a step, not more.
+
 Add `stream = "sse"` (server-sent events), `"ndjson"` (one JSON value per line), or `"lines"` (plain text lines) to read a streamed response as it arrives. Each event or line becomes its own item and moves on right away, while the rest is still coming. A server-sent event arrives as `{"event": "message", "data": ..., "id": "..."}`, with `data` already decoded if it's JSON. Streams from AI APIs usually want `stream = "sse"`.
 
 **Command on another machine (SSH)**
@@ -372,7 +382,7 @@ The file itself isn't put in the input. It's saved on the server, and the input 
 {"body": {"note": "hello", "doc": {"file": "0192…/0192…", "name": "report.pdf", "type": "application/pdf", "size": 48213}}, ...}
 ```
 
-The reference moves through steps like any other value. To send the file somewhere, give it to an HTTP step's `body_file` (see HTTP request) or an SSH step's `stdin_file`:
+The reference moves through steps like any other value. To send the file somewhere, give it to an HTTP step's `body_file` or `form` (see HTTP request) or an SSH step's `stdin_file`:
 
 ```toml
 command = "cat > /srv/uploads/report.pdf"

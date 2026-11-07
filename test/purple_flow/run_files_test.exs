@@ -93,4 +93,16 @@ defmodule PurpleFlow.RunFilesTest do
     [run_id, _] = String.split(ref["file"], "/")
     RunFiles.delete_run(run_id)
   end
+
+  test "ref? is true only for a map holding a real file ID" do
+    run_id = Id.generate()
+    ref = run_id |> RunFiles.open("a", nil, 0) |> RunFiles.close()
+    on_exit(fn -> RunFiles.delete_run(run_id) end)
+
+    assert RunFiles.ref?(ref)
+    assert RunFiles.ref?(%{"file" => ref["file"]})
+    refute RunFiles.ref?(ref["file"])
+    refute RunFiles.ref?(%{"file" => "../etc/passwd"})
+    refute RunFiles.ref?(%{"name" => "a"})
+  end
 end
