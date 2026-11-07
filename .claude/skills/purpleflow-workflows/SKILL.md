@@ -48,6 +48,7 @@ Start `workflow.toml` and **every node `.toml`** with a `#` comment for a person
 ```toml
 [workflow]
 name = "sync_records"          # unique
+max_file_size = 100000000      # optional: most bytes per file coming into a run. Default 100 MB; 0 = no limit
 
 [trigger.webhook]              # optional
 path = "sync-records"          # POST/GET /hooks/sync-records
@@ -169,7 +170,7 @@ Outputs must be JSON-shaped: maps, lists, strings, numbers, booleans, nil.
 
 ## Files
 
-A webhook takes uploads (`multipart/form-data`). Each file is saved with the run, and the input holds a reference where the file was: `input.body.doc` = `{"file": "<run>/<id>", "name", "type", "size"}`. Send one on with an SSH step: `stdin_file = "{{ input.body.doc }}"`, `command = "cat > /srv/in/report.pdf"`. A run's files are deleted when it ends. Code scripts see the reference only, not the bytes. See `specs/190_run_files.md`.
+A webhook takes uploads (`multipart/form-data`). Each file is saved with the run, and the input holds a reference where the file was: `input.body.doc` = `{"file": "<run>/<id>", "name", "type", "size"}`. Send one on with an SSH step: `stdin_file = "{{ input.body.doc }}"`, `command = "cat > /srv/in/report.pdf"`. A run's files are deleted when it ends. Each file may be up to `[workflow] max_file_size` (default 100 MB, `0` = no limit); a bigger upload gets `413` and no run. Code scripts see the reference only, not the bytes. See `specs/190_run_files.md` and `specs/260_file_transport.md`.
 
 ## Gotchas
 

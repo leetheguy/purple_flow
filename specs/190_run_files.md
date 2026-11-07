@@ -76,3 +76,7 @@ Other ways of handling files (HTTP responses saved as files, sending a file with
 - **Webhook:** a multipart upload becomes a reference with the right name, type, and size, beside the form's other fields; the run's files are gone once the reply comes; over `max_upload` gets `413`.
 - **Loader:** `max_upload` defaults to 100 MB, takes `0`, and must be a whole number.
 - **SSH:** `stdin_file` sends a 3 MB file whole, past the flow control window; a non-file or a gone file fails; `stdin` with `stdin_file` fails to load.
+
+## Log
+
+- 2026-11-07 — [260](260_file_transport.md): each upload is also checked against the workflow's `[workflow] max_file_size` (default 100 MB, `0` = no limit); a bigger one gets `413` and no run.

@@ -389,6 +389,23 @@ defmodule PurpleFlow.Workflow.LoaderTest do
                "webhook max_upload must be"
     end
 
+    test "max_file_size defaults to 100 MB, takes 0 for no limit, and must be bytes" do
+      size = fn line ->
+        "[workflow]\nname = \"sized\"\n#{line}\n[[steps]]\nname = \"n\"\nnode = \"n.toml\"\n"
+      end
+
+      assert load_workflow!(size.(""), %{"n.toml" => fake_node()}).max_file_size == 100_000_000
+
+      assert load_workflow!(size.("max_file_size = 0"), %{"n.toml" => fake_node()}).max_file_size ==
+               0
+
+      assert problems(size.("max_file_size = -1"), %{"n.toml" => fake_node()}) ==
+               "max_file_size must be a number of bytes, 0 or more (0 = no limit), not -1"
+
+      assert problems(size.(~s(max_file_size = "big")), %{"n.toml" => fake_node()}) =~
+               "max_file_size must be"
+    end
+
     test "auth = \"\" means no auth" do
       workflow = load_workflow!(auth_workflow(~s(auth = "")), %{"n.toml" => fake_node()})
       assert workflow.auth == nil

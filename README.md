@@ -261,8 +261,9 @@ A new node type is just a module implementing `execute(input, config)`.
 
 Webhooks take file uploads. A file is saved with its run (in its own
 volume), steps pass around a small reference to it, an SSH step can send it
-on (`stdin_file`), and it's deleted when the run ends. See
-[specs/190](specs/190_run_files.md).
+on (`stdin_file`), and it's deleted when the run ends. Each file may be up
+to the workflow's `max_file_size` (default 100 MB, `0` for no limit). See
+[specs/190](specs/190_run_files.md) and [specs/260](specs/260_file_transport.md).
 
 The UI (Phoenix LiveView) is one site behind one sign-in, with a side menu
 (a menu button on small screens):

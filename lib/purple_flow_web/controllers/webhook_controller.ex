@@ -55,13 +55,34 @@ defmodule PurpleFlowWeb.WebhookController do
   end
 
   defp authorize(conn, workflow) do
-    if authorized?(conn, workflow) do
-      run_id = PurpleFlow.Id.generate()
-      respond(conn, workflow, input(conn, workflow, run_id), run_id)
-    else
-      send_resp(conn, 401, "")
+    cond do
+      not authorized?(conn, workflow) ->
+        send_resp(conn, 401, "")
+
+      too_big = too_big(conn.body_params, workflow.max_file_size) ->
+        message =
+          "file #{too_big.filename} is over max_file_size (#{workflow.max_file_size} bytes)"
+
+        conn |> put_status(413) |> json(%{error: message})
+
+      true ->
+        run_id = PurpleFlow.Id.generate()
+        respond(conn, workflow, input(conn, workflow, run_id), run_id)
     end
   end
+
+  # The first upload over the workflow's `max_file_size`, or nil. Checked
+  # before anything is saved, so a refused request leaves no files.
+  defp too_big(_params, 0), do: nil
+
+  defp too_big(%Plug.Upload{} = upload, max),
+    do: if(File.stat!(upload.path).size > max, do: upload)
+
+  defp too_big(map, max) when is_map(map) and not is_struct(map),
+    do: map |> Map.values() |> too_big(max)
+
+  defp too_big(list, max) when is_list(list), do: Enum.find_value(list, &too_big(&1, max))
+  defp too_big(_value, _max), do: nil
 
   defp authorized?(_conn, %{auth: nil}), do: true
 

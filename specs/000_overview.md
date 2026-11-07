@@ -49,7 +49,7 @@ Docker Compose runs four services, behind one site and one sign-in:
 
 Docker restarts the app and the runner when they exit. A watchdog in the app halts it when its own `/health` stops answering, and Erlang's `heart` kills either VM if it freezes, so a hang becomes a restart ([250](250_watchdog.md)). Both containers run with `init: true`, so the VM isn't PID 1.
 
-Run files (webhook uploads) live in a volume of their own and are deleted when the run ends ([190](190_run_files.md)). The whole UI is behind a login form; `/hooks/*`, `/health`, and `/agents` are open, and a webhook can require a token (`auth`, [040](040_triggers.md)).
+Run files (webhook uploads) live in a volume of their own, each up to the workflow's `max_file_size`, and are deleted when the run ends ([190](190_run_files.md), [260](260_file_transport.md)). The whole UI is behind a login form; `/hooks/*`, `/health`, and `/agents` are open, and a webhook can require a token (`auth`, [040](040_triggers.md)).
 
 ## Process tree (app)
 

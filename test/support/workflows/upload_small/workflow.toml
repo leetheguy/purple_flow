@@ -1,0 +1,10 @@
+[workflow]
+name = "upload_small"
+max_file_size = 10
+
+[trigger.webhook]
+path = "upload-small"
+
+[[steps]]
+name = "echo"
+node = "../echo/echo.toml"

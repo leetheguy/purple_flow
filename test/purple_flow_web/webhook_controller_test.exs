@@ -155,6 +155,29 @@ defmodule PurpleFlowWeb.WebhookControllerTest do
       assert {:error, "file " <> _} = PurpleFlow.RunFiles.path(doc)
     end
 
+    test "a file at the workflow's max_file_size is taken", %{conn: conn} do
+      conn = multipart(conn, "/hooks/upload-small", "0123456789")
+
+      assert %{"body" => %{"doc" => %{"size" => 10}}} = json_response(conn, 200)
+    end
+
+    test "a file over the workflow's max_file_size gets 413 and starts no run",
+         %{conn: conn} do
+      conn = multipart(conn, "/hooks/upload-small", "0123456789A")
+
+      assert json_response(conn, 413) == %{
+               "error" => "file report.pdf is over max_file_size (10 bytes)"
+             }
+
+      assert get_resp_header(conn, "x-run-id") == []
+    end
+
+    test "with max_file_size = 0, only max_upload limits a file", %{conn: conn} do
+      conn = multipart(conn, "/hooks/upload", String.duplicate("x", 800))
+
+      assert %{"body" => %{"doc" => %{"size" => 800}}} = json_response(conn, 200)
+    end
+
     test "a file over the webhook's max_upload gets 413 and starts no run", %{conn: conn} do
       assert_error_sent 413, fn ->
         multipart(conn, "/hooks/upload", String.duplicate("x", 2000))

@@ -371,6 +371,8 @@ command = "cat > /srv/uploads/report.pdf"
 stdin_file = "{{ input.body.doc }}"
 ```
 
+Each file may be up to the workflow's `max_file_size`, in bytes: 100 MB unless `[workflow]` says otherwise (`max_file_size = 500000000`; `0` = no limit). That's room for nearly any document, image, or short video. A bigger upload gets `413` and no run starts.
+
 A run's files are deleted when the run ends, so use them within the run that received them. Code scripts see the reference, not the file's contents. `name` is whatever the uploader called the file; if you put it into an SSH `command`, the server's shell runs whatever it says.
 
 ## Check that your change worked

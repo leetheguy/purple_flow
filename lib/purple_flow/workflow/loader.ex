@@ -100,6 +100,7 @@ defmodule PurpleFlow.Workflow.Loader do
         auth: blank_to_nil(get_in(toml, ["trigger", "webhook", "auth"])),
         auth_header: auth_header(get_in(toml, ["trigger", "webhook", "auth_header"])),
         max_upload: get_in(toml, ["trigger", "webhook", "max_upload"]) || 100_000_000,
+        max_file_size: get_in(toml, ["workflow", "max_file_size"]) || 100_000_000,
         cron: get_in(toml, ["trigger", "cron", "schedule"]),
         steps: steps
       }
@@ -315,7 +316,8 @@ defmodule PurpleFlow.Workflow.Loader do
   defp check_triggers(workflow),
     do:
       check_respond(workflow) ++
-        check_auth(workflow) ++ check_max_upload(workflow) ++ check_cron(workflow)
+        check_auth(workflow) ++
+        check_max_upload(workflow) ++ check_max_file_size(workflow) ++ check_cron(workflow)
 
   defp check_max_upload(%Workflow{max_upload: n}) when is_integer(n) and n >= 0, do: []
 
@@ -323,6 +325,11 @@ defmodule PurpleFlow.Workflow.Loader do
     do: [
       "webhook max_upload must be a number of bytes, 0 or more (0 = no limit), not #{inspect(n)}"
     ]
+
+  defp check_max_file_size(%Workflow{max_file_size: n}) when is_integer(n) and n >= 0, do: []
+
+  defp check_max_file_size(%Workflow{max_file_size: n}),
+    do: ["max_file_size must be a number of bytes, 0 or more (0 = no limit), not #{inspect(n)}"]
 
   defp check_respond(%Workflow{respond: {:bad, value}}) do
     [~s(webhook respond must be "result", "immediately", or "stream", not #{inspect(value)})]
