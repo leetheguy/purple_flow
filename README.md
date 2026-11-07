@@ -16,6 +16,8 @@ It was also designed to build and orchestrate AI swarms that build and orchestra
 
 ## [Live demo](https://leenathan.com/demo)
 
+## [Discord](https://discord.gg/USwqPgBpYY)
+
 ![A screenshot of the PurpleFlow Canvas](image-1.png)
 ![A screenshot of the PurpleFlow UI](image-2.png)
 

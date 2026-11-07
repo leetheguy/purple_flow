@@ -40,4 +40,26 @@ test/review/review.sh 297abe5..c135034 specs/260_file_transport.md
   size, to check it fits the model's context.
 - The report goes to `test/review/reports/` (ignored by git), or `--out`.
 
+## While it runs
+
+The answer streams back, so you can see it working:
+
+```
+Reading the spec, the diff (297abe5..c135034), and the changed files…
+35 changed files, 0 context files, and the diff: about 127,311 tokens
+Sending to z-ai/… through OpenRouter.
+The report is written to test/review/reports/c135034-z-ai-….md as it arrives. Press Ctrl-C twice to stop.
+Writing the report: 1,240 words, 4:15 (thought 3,100 words first)
+```
+
+The last line updates every second: still waiting for the model, thinking
+(reasoning models think before they write; the thinking isn't part of the
+report), or writing, with the time so far and the words so far. When it's
+done, it says how long it took, the tokens in and out, and the cost.
+
+The report is written as it arrives, so stopping early, or an error from
+OpenRouter partway, still leaves what came so far. Nothing arriving at
+all for 5 minutes counts as a dead connection (OpenRouter sends a
+keep-alive while the model works).
+
 Then hand the report to Claude.
