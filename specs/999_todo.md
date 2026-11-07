@@ -9,7 +9,6 @@ It gathers the "Later" sections and open questions left in other specs and their
 
 ## Planned
 
-- **File transport**: HTTP downloads and uploads, SSH `stdout_file`, Postgres `bytea`, and `max_file_size`. Drafted in [260](260_file_transport.md).
 - **Retries.** An option per step to retry a failed item (`retries`, `retry_delay`), off by default. From [000](000_overview.md).
 - **Waiting for all branches.** A step that runs once after all of its `after` branches finish, instead of once per item from each ([120](120_flow.md) has no joining). From [000](000_overview.md).
 - **Per-credential allowed-host locks** on the HTTP, Postgres, and SSH nodes, as an option on the credential. From [080](080_credentials.md), [090](090_workflow_files.md), [100](100_runner_container.md).

@@ -1,6 +1,6 @@
 # 260 — File transport
 
-Status: draft
+Status: implemented
 Created: 2026-11-07
 
 PurpleFlow moves files; it doesn't make or change them. A file comes into a run (a webhook upload, an HTTP download, an SSH command's output, a Postgres `bytea` value), travels from step to step as a reference ([190](190_run_files.md)), and goes out, bytes and all, to something that keeps or uses it (an HTTP request, an SSH command, a Postgres row). Converting, parsing, resizing, and storing files for good are jobs for the tools and services a workflow connects to.
@@ -132,15 +132,3 @@ Postgres sends a value whole, so a file read or written this way sits in memory 
 - **HTTP `form`:** file parts arrive with their name, type, and bytes beside the text fields; fails to load with `body` or `body_file`.
 - **Every consumer:** a non-file value or a gone file fails the item before anything is sent.
 - **Release:** in the Docker stack, a file comes in over one node and goes out over another, and the run files folder is empty once the run ends.
-
-## Tasks
-
-- [x] `RunFiles`: save from a stream, counting against a limit and deleting a partial file on failure; nodes can save files into the current run (`PurpleFlow.Node`, like `emit`).
-- [x] `[workflow] max_file_size`: loading, and the webhook's per-file check.
-- [x] HTTP `body_file`.
-- [x] HTTP `form`.
-- [x] HTTP `response_file`.
-- [x] SSH `stdout_file`.
-- [x] Postgres `bytea` writes.
-- [x] Postgres `files` reads.
-- [ ] Check the whole path in the Docker release; update the docs (README, `samples/AGENTS.md`, the workflows skill, 000, 999, 190's log); mark this spec `implemented`.

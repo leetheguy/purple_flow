@@ -80,3 +80,4 @@ Other ways of handling files (HTTP responses saved as files, sending a file with
 ## Log
 
 - 2026-11-07 — [260](260_file_transport.md): each upload is also checked against the workflow's `[workflow] max_file_size` (default 100 MB, `0` = no limit); a bigger one gets `413` and no run.
+- 2026-11-07 — [260](260_file_transport.md): files also come in from HTTP downloads (`response_file`), SSH output (`stdout_file`), and Postgres `bytea` columns (`files`), and go out as an HTTP body or form part (`body_file`, `form`) and as Postgres params. Code scripts still see only references: making or changing files is left to the tools a workflow calls.

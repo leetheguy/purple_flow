@@ -30,6 +30,7 @@ It's a power tool: safeguards are options with defaults, not limits. See `AGENTS
 - **Untrusted code runs elsewhere.** Code node scripts run in a separate runner container with no secrets, no database, and no network beyond answering the app. See [100](100_runner_container.md).
 - **Fail loud.** A failure leaves a full record. Retries are an open idea, not a feature ([999](999_todo.md)).
 - **Light docs in code.** Module docs and comments are short and plain, like these specs. Someone who doesn't know Elixir should be able to follow them: say what it does and why, and explain Elixir/OTP terms in a few words when they come up.
+- **PurpleFlow moves files; it doesn't make or change them.** A file comes into a run (a webhook upload, an HTTP download, SSH output, a Postgres `bytea` value), travels between steps as a small reference, and goes out over HTTP, SSH, or Postgres. It's deleted when the run ends: a workflow that needs it later sends it somewhere that lasts and passes that link on. See [190](190_run_files.md), [260](260_file_transport.md).
 - **TOML is the editor.** The UI shows runs and a read-only canvas of each workflow ([210](210_canvas.md)); workflows are edited as files.
 
 ## Built-in nodes
@@ -49,7 +50,7 @@ Docker Compose runs four services, behind one site and one sign-in:
 
 Docker restarts the app and the runner when they exit. A watchdog in the app halts it when its own `/health` stops answering, and Erlang's `heart` kills either VM if it freezes, so a hang becomes a restart ([250](250_watchdog.md)). Both containers run with `init: true`, so the VM isn't PID 1.
 
-Run files (webhook uploads) live in a volume of their own, each up to the workflow's `max_file_size`, and are deleted when the run ends ([190](190_run_files.md), [260](260_file_transport.md)). The whole UI is behind a login form; `/hooks/*`, `/health`, and `/agents` are open, and a webhook can require a token (`auth`, [040](040_triggers.md)).
+Run files live in a volume of their own, each up to the workflow's `max_file_size`, and are deleted when the run ends ([190](190_run_files.md), [260](260_file_transport.md)). The whole UI is behind a login form; `/hooks/*`, `/health`, and `/agents` are open, and a webhook can require a token (`auth`, [040](040_triggers.md)).
 
 ## Process tree (app)
 
@@ -127,11 +128,11 @@ Check current versions on Hex before adding any.
 - [160 — Live runs](160_live_runs.md): watching runs as they happen.
 - [170 — SSH node](170_ssh.md)
 - [180 — Noop, Wait, and Respond nodes](180_noop_wait_respond.md)
-- [190 — Run files](190_run_files.md): webhook uploads and files in runs.
+- [190 — Run files](190_run_files.md): webhook uploads, file references, and how long files last.
 - [200 — OAuth credentials](200_oauth_credentials.md)
 - [210 — Canvas](210_canvas.md): a read-only picture of each workflow.
 - [220 — Missing credentials](220_missing_credentials.md): creating every unset credential in one click.
 - [230 — String and Text credentials](230_credential_value_types.md)
 - [240 — OpenAI Chat node](240_openai_chat.md)
 - [250 — Watchdog and heart](250_watchdog.md): restarting a hung or frozen app.
-- [260 — File transport](260_file_transport.md): *draft.* Files in and out over HTTP, SSH, and Postgres; `max_file_size`.
+- [260 — File transport](260_file_transport.md): files in and out over HTTP, SSH, and Postgres; `max_file_size`.
