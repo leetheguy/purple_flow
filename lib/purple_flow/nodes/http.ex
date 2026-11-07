@@ -10,6 +10,7 @@ defmodule PurpleFlow.Nodes.Http do
       headers = { authorization = "Bearer {{ creds.API_TOKEN }}" }
       query = { page = 1 }                  # optional
       body = { name = "{{ input.name }}" }  # optional; maps/lists are sent as JSON
+      body_file = "{{ input.body.doc }}"    # optional, instead: a file's bytes
       stream = "sse"                        # optional: "sse", "ndjson", or "lines"
 
   Output is the response body (decoded if it's JSON). A non-2xx response is
@@ -19,38 +20,49 @@ defmodule PurpleFlow.Nodes.Http do
   is handed on right away (`PurpleFlow.Node.emit/2`), following the
   protocol named: one server-sent event, one line of JSON, or one line of
   text. See [specs/150](specs/150_streaming.md).
+
+  `body_file` takes a file reference (see `PurpleFlow.RunFiles`) and sends
+  the file as the body, streamed from disk, with the reference's type as
+  `content-type` unless `headers` sets one. See [specs/260](specs/260_file_transport.md).
   """
 
   @behaviour PurpleFlow.Node
 
-  alias PurpleFlow.StreamParser
+  alias PurpleFlow.{RunFiles, StreamParser}
 
   @protocols ~w(sse ndjson lines)
 
   @impl true
   def prepare(config, _node_dir, _root) do
-    case config["stream"] do
-      nil -> {:ok, config}
-      protocol when protocol in @protocols -> {:ok, config}
-      other -> {:error, ~s(stream must be "sse", "ndjson", or "lines", not #{inspect(other)})}
+    cond do
+      Map.has_key?(config, "body") and Map.has_key?(config, "body_file") ->
+        {:error, "takes body or body_file, not both"}
+
+      config["stream"] in [nil | @protocols] ->
+        {:ok, config}
+
+      true ->
+        {:error, ~s(stream must be "sse", "ndjson", or "lines", not #{inspect(config["stream"])})}
     end
   end
 
   @impl true
   def execute(_input, config) do
-    options =
-      [
-        method:
-          config |> Map.get("method", "GET") |> String.downcase() |> String.to_existing_atom(),
-        url: Map.fetch!(config, "url"),
-        headers: Map.get(config, "headers", %{}),
-        params: Map.get(config, "query", %{}),
-        retry: false
-      ] ++ body(config["body"]) ++ Application.get_env(:purple_flow, :http_req_options, [])
+    with {:ok, body, body_headers} <- body(config) do
+      options =
+        [
+          method:
+            config |> Map.get("method", "GET") |> String.downcase() |> String.to_existing_atom(),
+          url: Map.fetch!(config, "url"),
+          headers: headers(Map.get(config, "headers", %{}), body_headers),
+          params: Map.get(config, "query", %{}),
+          retry: false
+        ] ++ body ++ Application.get_env(:purple_flow, :http_req_options, [])
 
-    case config["stream"] do
-      nil -> request(options)
-      protocol -> stream(options, protocol)
+      case config["stream"] do
+        nil -> request(options)
+        protocol -> stream(options, protocol)
+      end
     end
   end
 
@@ -97,9 +109,30 @@ defmodule PurpleFlow.Nodes.Http do
     end
   end
 
-  defp body(nil), do: []
-  defp body(body) when is_map(body) or is_list(body), do: [json: body]
-  defp body(body), do: [body: to_string(body)]
+  # The body's Req options, and headers it needs unless `headers` sets them.
+  defp body(%{"body_file" => ref}) do
+    with {:ok, path} <- RunFiles.path(ref) do
+      type = if is_map(ref), do: ref["type"], else: nil
+
+      {:ok, [body: File.stream!(path, 65_536)],
+       %{
+         "content-type" => type || "application/octet-stream",
+         "content-length" => Integer.to_string(File.stat!(path).size)
+       }}
+    end
+  end
+
+  defp body(%{"body" => nil}), do: {:ok, [], %{}}
+  defp body(%{"body" => body}) when is_map(body) or is_list(body), do: {:ok, [json: body], %{}}
+  defp body(%{"body" => body}), do: {:ok, [body: to_string(body)], %{}}
+  defp body(_config), do: {:ok, [], %{}}
+
+  # Header names are matched without case, so `Content-Type` in `headers`
+  # wins over the body's own.
+  defp headers(headers, defaults) do
+    given = MapSet.new(headers, fn {name, _} -> String.downcase(to_string(name)) end)
+    Map.merge(Map.reject(defaults, fn {name, _} -> name in given end), headers)
+  end
 
   defp preview(body) when is_binary(body), do: String.slice(body, 0, 500)
   defp preview(body), do: body |> Jason.encode!() |> String.slice(0, 500)

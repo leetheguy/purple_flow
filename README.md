@@ -260,8 +260,8 @@ per step. A Code step's input and steps can be up to 64 MB, set on the runner wi
 A new node type is just a module implementing `execute(input, config)`.
 
 Webhooks take file uploads. A file is saved with its run (in its own
-volume), steps pass around a small reference to it, an SSH step can send it
-on (`stdin_file`), and it's deleted when the run ends. Each file may be up
+volume), steps pass around a small reference to it, an HTTP step (`body_file`) or SSH
+step (`stdin_file`) can send it on, and it's deleted when the run ends. Each file may be up
 to the workflow's `max_file_size` (default 100 MB, `0` for no limit). See
 [specs/190](specs/190_run_files.md) and [specs/260](specs/260_file_transport.md).
 

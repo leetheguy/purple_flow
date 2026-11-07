@@ -157,6 +157,14 @@ body = { name = "{{ input.name }}" }     # sent as JSON
 
 The output is the response body. A response that isn't a success (anything outside 200–299) fails the step.
 
+To send a file as the body (an upload to storage, say), use `body_file` instead of `body`. It takes a file reference (see Files), and the file goes as is, with its type as `content-type` unless `headers` sets one:
+
+```toml
+method = "PUT"
+url = "https://storage.example.com/uploads/report.pdf"
+body_file = "{{ input.body.doc }}"
+```
+
 Add `stream = "sse"` (server-sent events), `"ndjson"` (one JSON value per line), or `"lines"` (plain text lines) to read a streamed response as it arrives. Each event or line becomes its own item and moves on right away, while the rest is still coming. A server-sent event arrives as `{"event": "message", "data": ..., "id": "..."}`, with `data` already decoded if it's JSON. Streams from AI APIs usually want `stream = "sse"`.
 
 **Command on another machine (SSH)**
@@ -364,7 +372,7 @@ The file itself isn't put in the input. It's saved on the server, and the input 
 {"body": {"note": "hello", "doc": {"file": "0192…/0192…", "name": "report.pdf", "type": "application/pdf", "size": 48213}}, ...}
 ```
 
-The reference moves through steps like any other value. To send the file somewhere, give it to an SSH step's `stdin_file`:
+The reference moves through steps like any other value. To send the file somewhere, give it to an HTTP step's `body_file` (see HTTP request) or an SSH step's `stdin_file`:
 
 ```toml
 command = "cat > /srv/uploads/report.pdf"

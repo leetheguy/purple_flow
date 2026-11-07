@@ -137,7 +137,7 @@ Postgres sends a value whole, so a file read or written this way sits in memory 
 
 - [x] `RunFiles`: save from a stream, counting against a limit and deleting a partial file on failure; nodes can save files into the current run (`PurpleFlow.Node`, like `emit`).
 - [x] `[workflow] max_file_size`: loading, and the webhook's per-file check.
-- [ ] HTTP `body_file`.
+- [x] HTTP `body_file`.
 - [ ] HTTP `form`.
 - [ ] HTTP `response_file`.
 - [ ] SSH `stdout_file`.
