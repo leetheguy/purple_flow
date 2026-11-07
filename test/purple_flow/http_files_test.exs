@@ -196,4 +196,163 @@ defmodule PurpleFlow.HttpFilesTest do
                Http.execute(nil, %{"url" => "http://api.test/", "form" => "x"})
     end
   end
+
+  describe "response_file" do
+    setup %{run_id: run_id} do
+      PurpleFlow.Node.put_files(run_id, 0)
+      :ok
+    end
+
+    defp files_in(run_id) do
+      case File.ls(Path.join(RunFiles.dir(), run_id)) do
+        {:ok, names} -> names
+        {:error, :enoent} -> []
+      end
+    end
+
+    defp bytes_of(ref) do
+      {:ok, path} = RunFiles.path(ref)
+      File.read!(path)
+    end
+
+    # Sends `bytes` in 100 KB chunks, with these response headers.
+    defp serve(bytes, headers \\ []) do
+      Req.Test.stub(Http, fn conn ->
+        conn = Enum.reduce(headers, conn, fn {k, v}, c -> Plug.Conn.put_resp_header(c, k, v) end)
+        conn = Plug.Conn.send_chunked(conn, 200)
+
+        for <<piece::binary-size(100_000) <- bytes>>, reduce: conn do
+          conn -> elem(Plug.Conn.chunk(conn, piece), 1)
+        end
+      end)
+    end
+
+    test "a download is saved whole, with the given name and the response's type",
+         %{run_id: run_id} do
+      bytes = :crypto.strong_rand_bytes(3_000_000)
+      serve(bytes, [{"content-type", "application/pdf"}])
+
+      assert {:ok, ref} =
+               Http.execute(nil, %{
+                 "url" => "http://api.test/r/42",
+                 "response_file" => "report.pdf"
+               })
+
+      assert %{"name" => "report.pdf", "type" => "application/pdf", "size" => 3_000_000} = ref
+      assert String.starts_with?(ref["file"], run_id <> "/")
+      assert bytes_of(ref) == bytes
+    end
+
+    test "with no content-type, the type is guessed from the name" do
+      serve("a,b\n")
+
+      assert {:ok, %{"type" => "text/csv"}} =
+               Http.execute(nil, %{"url" => "http://api.test/x", "response_file" => "rows.csv"})
+    end
+
+    test "true names the file from content-disposition, then the URL, then \"response\"" do
+      serve("x", [{"content-disposition", ~s(attachment; filename="Q3 report.pdf")}])
+
+      assert {:ok, %{"name" => "Q3 report.pdf"}} =
+               Http.execute(nil, %{"url" => "http://api.test/dl", "response_file" => true})
+
+      serve("x", [{"content-disposition", "attachment; filename=plain.txt; size=1"}])
+
+      assert {:ok, %{"name" => "plain.txt"}} =
+               Http.execute(nil, %{"url" => "http://api.test/dl", "response_file" => true})
+
+      serve("x", [{"content-disposition", "attachment; filename*=UTF-8''na%C3%AFve.txt"}])
+
+      assert {:ok, %{"name" => "naïve.txt"}} =
+               Http.execute(nil, %{"url" => "http://api.test/dl", "response_file" => true})
+
+      serve("x")
+
+      assert {:ok, %{"name" => "photo 1.jpg", "type" => "image/jpeg"}} =
+               Http.execute(nil, %{
+                 "url" => "http://api.test/img/photo%201.jpg?size=big",
+                 "response_file" => true
+               })
+
+      serve("x")
+
+      assert {:ok, %{"name" => "response"}} =
+               Http.execute(nil, %{"url" => "http://api.test/", "response_file" => true})
+    end
+
+    test "an empty body is an empty file" do
+      Req.Test.stub(Http, &Plug.Conn.send_resp(&1, 200, ""))
+
+      assert {:ok, %{"size" => 0} = ref} =
+               Http.execute(nil, %{"url" => "http://api.test/", "response_file" => "empty"})
+
+      assert bytes_of(ref) == ""
+    end
+
+    test "a non-2xx response fails, with the start of its body, and saves no file",
+         %{run_id: run_id} do
+      Req.Test.stub(Http, &Plug.Conn.send_resp(&1, 404, String.duplicate("missing ", 400)))
+
+      assert {:error, "HTTP 404: missing missing" <> rest} =
+               Http.execute(nil, %{"url" => "http://api.test/", "response_file" => "a"})
+
+      assert String.length("missing missing" <> rest) == 500
+      assert files_in(run_id) == []
+    end
+
+    test "a 300 isn't a success, for a download, a request, or a stream", %{run_id: run_id} do
+      Req.Test.stub(Http, &Plug.Conn.send_resp(&1, 300, "choose"))
+
+      for extra <- [%{"response_file" => "a"}, %{}, %{"stream" => "lines"}] do
+        assert {:error, "HTTP 300: choose"} =
+                 Http.execute(nil, Map.put(extra, "url", "http://api.test/"))
+      end
+
+      assert files_in(run_id) == []
+    end
+
+    test "the download is asked for uncompressed, so the file is what the URL serves" do
+      Req.Test.stub(Http, fn conn ->
+        Plug.Conn.send_resp(conn, 200, inspect(Plug.Conn.get_req_header(conn, "accept-encoding")))
+      end)
+
+      assert {:ok, ref} =
+               Http.execute(nil, %{"url" => "http://api.test/", "response_file" => "a"})
+
+      assert bytes_of(ref) == "[]"
+    end
+
+    test "a download over max_file_size fails and leaves no file", %{run_id: run_id} do
+      PurpleFlow.Node.put_files(run_id, 150_000)
+      serve(:crypto.strong_rand_bytes(300_000))
+
+      assert {:error, "file big.bin is over max_file_size (150000 bytes)"} =
+               Http.execute(nil, %{"url" => "http://api.test/", "response_file" => "big.bin"})
+
+      assert files_in(run_id) == []
+    end
+
+    test "a request that fails leaves no file", %{run_id: run_id} do
+      Req.Test.stub(Http, &Req.Test.transport_error(&1, :econnrefused))
+
+      assert {:error, "request failed: " <> _} =
+               Http.execute(nil, %{"url" => "http://api.test/", "response_file" => "a"})
+
+      assert files_in(run_id) == []
+    end
+
+    test "fails to load with stream, or as anything but a name or true" do
+      assert {:error, "takes stream or response_file, not both"} =
+               Http.prepare(%{"stream" => "sse", "response_file" => "a"}, ".", ".")
+
+      assert {:error, "response_file must be a file name or true, not 3"} =
+               Http.prepare(%{"response_file" => 3}, ".", ".")
+
+      assert {:error, "response_file must be a file name or true, not \"\""} =
+               Http.prepare(%{"response_file" => ""}, ".", ".")
+
+      assert {:ok, _} = Http.prepare(%{"response_file" => true}, ".", ".")
+      assert {:ok, _} = Http.prepare(%{"response_file" => "{{ input.name }}"}, ".", ".")
+    end
+  end
 end

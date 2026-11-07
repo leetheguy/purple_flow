@@ -155,16 +155,22 @@ defmodule PurpleFlow.Node do
   def open_file(name, type) do
     {run_id, max} =
       case Process.get(:purple_flow_files) do
-        nil ->
-          files = {PurpleFlow.Id.generate(), 0}
-          Process.put(:purple_flow_files, files)
-          files
-
-        files ->
-          files
+        nil -> put_files(PurpleFlow.Id.generate(), 0)
+        files -> files
       end
 
     PurpleFlow.RunFiles.open(run_id, name, type, max)
+  end
+
+  @doc """
+  Sets where `open_file/2` saves files for the rest of this execution: into
+  `run_id`'s files, up to `max_file_size` bytes each (`0` is no limit). The
+  run sets it for every execution; a test can set it to choose the run ID.
+  """
+  @spec put_files(String.t(), non_neg_integer()) :: {String.t(), non_neg_integer()}
+  def put_files(run_id, max_file_size) do
+    Process.put(:purple_flow_files, {run_id, max_file_size})
+    {run_id, max_file_size}
   end
 
   @doc "True if `module` is a real module that says it's a `PurpleFlow.Node`."

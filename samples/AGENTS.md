@@ -175,6 +175,15 @@ form = { title = "{{ input.body.title }}", doc = "{{ input.body.doc }}" }
 
 Use one of `body`, `body_file`, and `form` in a step, not more.
 
+To download a file, add `response_file`. The response is saved as a file in the run, and the step's output is its reference instead of the body:
+
+```toml
+url = "https://reports.example.com/{{ input.id }}.pdf"
+response_file = "report.pdf"     # or true: use the name the server gives, else the URL's
+```
+
+The file's type is the response's `content-type`. A failed response, or a file bigger than `max_file_size`, fails the step and saves nothing. It can't be used with `stream`.
+
 Add `stream = "sse"` (server-sent events), `"ndjson"` (one JSON value per line), or `"lines"` (plain text lines) to read a streamed response as it arrives. Each event or line becomes its own item and moves on right away, while the rest is still coming. A server-sent event arrives as `{"event": "message", "data": ..., "id": "..."}`, with `data` already decoded if it's JSON. Streams from AI APIs usually want `stream = "sse"`.
 
 **Command on another machine (SSH)**
@@ -370,7 +379,7 @@ Your first step usually wants `input.body`. Runs started with the Run button in 
 
 ## Files
 
-A webhook can take files, sent as a form upload (`multipart/form-data`):
+Files come into a run from a webhook upload or an HTTP download (`response_file`, see HTTP request). A webhook can take files, sent as a form upload (`multipart/form-data`):
 
 ```sh
 curl -F note=hello -F doc=@report.pdf "BASE/hooks/my-flow"

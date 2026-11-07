@@ -29,13 +29,13 @@ defmodule PurpleFlow.StepTask do
   end
 
   @doc false
-  def execute(run, %{step: step, input: input, steps: steps, files: files}) do
+  def execute(run, %{step: step, input: input, steps: steps, files: {run_id, max_file_size}}) do
     case Template.render(step.config, %{input: input, steps: steps}) do
       {:ok, config, secrets} ->
         Process.put(:purple_flow_emit, fn value, route -> emit(run, value, route, secrets) end)
         Process.put(:purple_flow_respond, &respond(run, &1))
         Process.put(:purple_flow_respond_stream, &respond_stream(run, &1, &2))
-        Process.put(:purple_flow_files, files)
+        PurpleFlow.Node.put_files(run_id, max_file_size)
 
         case call_node(step.module, input, config, steps) do
           {:ok, output, route} ->

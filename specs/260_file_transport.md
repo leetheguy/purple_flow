@@ -139,7 +139,7 @@ Postgres sends a value whole, so a file read or written this way sits in memory 
 - [x] `[workflow] max_file_size`: loading, and the webhook's per-file check.
 - [x] HTTP `body_file`.
 - [x] HTTP `form`.
-- [ ] HTTP `response_file`.
+- [x] HTTP `response_file`.
 - [ ] SSH `stdout_file`.
 - [ ] Postgres `bytea` writes.
 - [ ] Postgres `files` reads.
