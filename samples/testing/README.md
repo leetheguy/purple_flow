@@ -10,6 +10,7 @@ tests found five PurpleFlow bugs; each is in that write-up.
 | `stress/` | One run, many Code executions at once (default 10,000, each sleeping 1 s). Tests concurrency and memory. |
 | `diamonds/` | 100 "diamonds" in a row: each branches into a step that always fails and one that counts, then merges. Tests failure handling and graph size. |
 | `n8n/` | The same two tests as n8n workflows (n8n 2.40.7), plus a diamonds variant with n8n's "continue on error" turned on. |
+| `file_transport/` | Spec 260's release check: an upload goes out over HTTP as a form part and a raw body, and a download comes back in. Tests file handling in the app as Docker runs it. |
 | `harness/` | Scripts that run each test and report time, memory, and outcome. |
 
 Every execution is saved, so a 10,000-item stress run adds about 10,000
@@ -39,6 +40,22 @@ How many scripts can run at once depends on two limits in
 `docker-compose.yml`: the runner's `mem_limit` (about 30 KB per script
 running at once, so 512 MB holds a bit over 10,000) and `nofile` (one open
 file per script running at once, in the app and in the runner).
+
+## File transport check
+
+From a checkout, with the app running in Docker:
+
+```sh
+mix run --no-start samples/testing/harness/pf_file_transport.exs
+```
+
+It copies `file_transport/check` and `file_transport/echo` into the
+workflows folder, waits for the app to load them, sends a random 300 KB
+file, and checks what each step saw and that the run files folder is
+empty afterwards. It prints PASS or FAIL for each, exits 1 on any FAIL,
+and removes the copies either way. `PF_PORT`, `WORKFLOWS_PATH`, and
+`PF_CONTAINER` change where it looks; see the script's comments. Postgres
+and SSH need credentials, so they're covered by `mix test` instead.
 
 ## n8n
 

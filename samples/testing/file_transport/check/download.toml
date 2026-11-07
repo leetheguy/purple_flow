@@ -1,0 +1,5 @@
+module = "PurpleFlow.Nodes.Http"
+
+[config]
+url = "{{ steps.start.output.body.health_url }}"
+response_file = true

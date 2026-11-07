@@ -1,0 +1,36 @@
+# Moves an uploaded file through the HTTP node's file options, in a running
+# app (spec 260's release check). Send it a file `doc` and the echo
+# workflow's URL as `echo_url`; samples/testing/harness/pf_file_transport.exs
+# does both and checks the answer.
+[workflow]
+name = "file_transport_check"
+
+[trigger.webhook]
+path = "file-transport-check"
+
+[[steps]]
+name = "start"
+node = "start.toml"
+
+# The upload goes out as a multipart form part...
+[[steps]]
+name = "form"
+node = "form.toml"
+after = ["start"]
+
+# ...and as a raw body...
+[[steps]]
+name = "body"
+node = "body.toml"
+after = ["form"]
+
+# ...and a file comes back in as a download.
+[[steps]]
+name = "download"
+node = "download.toml"
+after = ["body"]
+
+[[steps]]
+name = "report"
+node = "report.toml"
+after = ["download"]

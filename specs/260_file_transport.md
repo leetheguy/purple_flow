@@ -132,3 +132,7 @@ Postgres sends a value whole, so a file read or written this way sits in memory 
 - **HTTP `form`:** file parts arrive with their name, type, and bytes beside the text fields; fails to load with `body` or `body_file`.
 - **Every consumer:** a non-file value or a gone file fails the item before anything is sent.
 - **Release:** in the Docker stack, a file comes in over one node and goes out over another, and the run files folder is empty once the run ends.
+
+## Log
+
+- 2026-11-07 — The release check (`## Tests`, "Release") is kept as `samples/testing/file_transport/` and `samples/testing/harness/pf_file_transport.exs`, so it can be run again. It was first run by hand when this spec shipped. Found by an independent review (GLM through `test/review/review.sh`).

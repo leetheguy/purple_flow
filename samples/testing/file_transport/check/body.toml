@@ -1,0 +1,6 @@
+module = "PurpleFlow.Nodes.Http"
+
+[config]
+method = "POST"
+url = "{{ steps.start.output.body.echo_url }}"
+body_file = "{{ steps.start.output.body.doc }}"

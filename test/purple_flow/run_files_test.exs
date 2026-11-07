@@ -86,11 +86,15 @@ defmodule PurpleFlow.RunFilesTest do
     end
   end
 
-  test "outside a run, a node's files go into a run of their own, with no limit" do
-    assert {:ok, %{"ref" => ref, "bytes" => "abcd"}} =
+  test "outside a run, a node's files go into one run of their own, with no limit" do
+    assert {:ok, %{"ref" => first, "bytes" => "abcd"}} =
              PurpleFlow.Test.FakeNode.execute(%{}, %{"save_file" => ["ab", "cd"]})
 
-    [run_id, _] = String.split(ref["file"], "/")
+    assert {:ok, %{"ref" => second}} =
+             PurpleFlow.Test.FakeNode.execute(%{}, %{"save_file" => ["ef"]})
+
+    [run_id, _] = String.split(first["file"], "/")
+    assert String.starts_with?(second["file"], run_id <> "/")
     RunFiles.delete_run(run_id)
   end
 

@@ -1,0 +1,11 @@
+# Answers with whatever it was sent: the other end for the file transport
+# check (../check). See samples/testing/README.md.
+[workflow]
+name = "file_transport_echo"
+
+[trigger.webhook]
+path = "file-transport-echo"
+
+[[steps]]
+name = "echo"
+node = "echo.toml"
