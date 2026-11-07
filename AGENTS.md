@@ -52,6 +52,8 @@ to check and run them.
 with `specs/000_overview.md`: it describes PurpleFlow as it is now and
 indexes every other spec.
 
+**Independent review** (OP-PARAMS section 5): `test/review/review.sh RANGE SPEC` sends a change to another AI through OpenRouter and saves its report; see `test/review/README.md`. The reviewer only reads. Check each of its findings against the code before acting on it, fix the real ones test-first, and say which didn't hold up and why.
+
 **Starting/restarting the server?** Use `docker compose up -d --build`, not a
 bare `mix phx.server`. Docker waits for Postgres to be healthy before
 starting the app, runs migrations automatically on boot, and restarts a

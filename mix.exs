@@ -13,6 +13,12 @@ defmodule PurpleFlow.MixProject do
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
       test_coverage: [tool: ExCoveralls],
+      # test/support is ExUnit's default; test/review holds the review
+      # script, which its test loads itself (test/review/README.md).
+      test_ignore_filters: [
+        &String.starts_with?(&1, "test/support/"),
+        &(&1 in ["test/review/review.exs", "test/review/review_lib.exs"])
+      ],
       name: "PurpleFlow",
       source_url: "https://github.com/leetheguy/purple_flow",
       docs: docs()

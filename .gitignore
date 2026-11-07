@@ -50,3 +50,6 @@ npm-debug.log
 phx_server.log
 
 /memories/
+
+# Independent review reports (test/review/README.md)
+/test/review/reports/
