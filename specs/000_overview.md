@@ -134,3 +134,4 @@ Check current versions on Hex before adding any.
 - [230 — String and Text credentials](230_credential_value_types.md)
 - [240 — OpenAI Chat node](240_openai_chat.md)
 - [250 — Watchdog and heart](250_watchdog.md): restarting a hung or frozen app.
+- [260 — File transport](260_file_transport.md): *draft.* Files in and out over HTTP, SSH, and Postgres; `max_file_size`.

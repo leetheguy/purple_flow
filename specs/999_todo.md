@@ -9,15 +9,14 @@ It gathers the "Later" sections and open questions left in other specs and their
 
 ## Planned
 
-- **More ways to handle files**, when needed: save an HTTP response as a file, send a file with the HTTP or Respond node, save SSH output as a file. The minimum (webhook uploads, SSH `stdin_file`) is in [190](190_run_files.md).
+- **File transport**: HTTP downloads and uploads, SSH `stdout_file`, Postgres `bytea`, and `max_file_size`. Drafted in [260](260_file_transport.md).
 - **Retries.** An option per step to retry a failed item (`retries`, `retry_delay`), off by default. From [000](000_overview.md).
 - **Waiting for all branches.** A step that runs once after all of its `after` branches finish, instead of once per item from each ([120](120_flow.md) has no joining). From [000](000_overview.md).
 - **Per-credential allowed-host locks** on the HTTP, Postgres, and SSH nodes, as an option on the credential. From [080](080_credentials.md), [090](090_workflow_files.md), [100](100_runner_container.md).
 - **Agent node**, wrapping purple_goo's agent call, and running purple_goo's pipeline as a workflow. From [000](000_overview.md).
 - **Run-a-workflow endpoint for agents**, so testing a workflow doesn't need a webhook on it. From [090](090_workflow_files.md).
 - **Run retention.** Runs and their step records are kept in Postgres forever, so the database only grows. An option to prune them after some age or count. (A run's files don't need it: they're deleted when the run ends, [190](190_run_files.md).)
-- **Code scripts reading file bytes**, not just a file's reference, so a script can parse a file's contents (PDF, CSV, etc.) instead of only moving it around. Same gap as the "Code scripts and files" open question below; called out again because it's the one real blocker found migrating Decapod's workflows (n8n's Extract From File node).
-- **Signed requests on the HTTP node** (starting with AWS SigV4, for S3), plus sending a file's bytes as a request body. Found migrating Decapod's workflows: S3 is popular enough elsewhere that it's worth solving for, even setting personal taste aside.
+- **Signed requests on the HTTP node** (starting with AWS SigV4, for S3); sending a file's bytes is in [260](260_file_transport.md). Found migrating Decapod's workflows: S3 is popular enough elsewhere that it's worth solving for, even setting personal taste aside.
 
 
 
@@ -25,7 +24,6 @@ It gathers the "Later" sections and open questions left in other specs and their
 
 ## Open questions
 
-- **Code scripts and files.** Scripts see a file's reference but not its bytes, since the runner has no access to the run files volume. Sending bytes to the runner, as an option on the step? From [190](190_run_files.md).
 - **Non-zero SSH exits:** always an error, or an option to return them as output or send them down a route? From [170](170_ssh.md)'s log.
 - **Missed cron firings** while the app is down: catch up at boot, as an option on `[trigger.cron]`? From [040](040_triggers.md)'s log.
 - **Resuming interrupted runs**, as a per-workflow option. From [130](130_failures.md)'s log.
