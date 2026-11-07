@@ -15,6 +15,18 @@ defmodule PurpleFlow.Nodes.Postgres do
 
   Output is a list of rows as maps, so the next step runs once per row.
 
+  Files move both ways as `bytea` (see [specs/260](specs/260_file_transport.md)):
+
+    * a param that's a file reference (`PurpleFlow.RunFiles.ref?/1`) is
+      sent as the file's bytes, so `"{{ input.body.doc }}"` fills a `bytea`
+      column;
+    * `files = ["data"]` names `bytea` columns to save as files in the run
+      (`PurpleFlow.Node.open_file/2`), each named after its column; the row
+      holds the reference instead of the bytes, and `NULL` stays `null`.
+
+  Postgres sends a value whole, so each such file is in memory while the
+  step runs. `max_file_size` limits the ones read.
+
   Connections are pooled, so a step running 1,000 items at once doesn't open
   1,000 connections. Two optional settings shape the pool:
 
@@ -42,10 +54,19 @@ defmodule PurpleFlow.Nodes.Postgres do
   @impl true
   def prepare(config, _node_dir, _root) do
     with :ok <- whole_number(config, "pool_size", 1),
-         :ok <- whole_number(config, "idle_timeout", 0) do
+         :ok <- whole_number(config, "idle_timeout", 0),
+         :ok <- file_columns(config) do
       {:ok, config}
     end
   end
+
+  defp file_columns(%{"files" => columns} = config) do
+    if is_list(columns) and Enum.all?(columns, &(is_binary(&1) and &1 != "")),
+      do: :ok,
+      else: {:error, "files must be a list of column names, not #{inspect(config["files"])}"}
+  end
+
+  defp file_columns(_config), do: :ok
 
   defp whole_number(config, key, min) do
     case Map.fetch(config, key) do
@@ -62,24 +83,111 @@ defmodule PurpleFlow.Nodes.Postgres do
 
   @impl true
   def execute(_input, config) do
-    with {:ok, pool} <- pool(Map.fetch!(config, "database_url"), settings(config)),
-         {:ok, result} <-
-           Pool.run(pool, fn conn ->
-             Postgrex.query(conn, Map.fetch!(config, "query"), Map.get(config, "params", []))
-           end) do
-      {:ok, rows(result)}
+    files = Map.get(config, "files", [])
+
+    with :ok <- file_columns(config),
+         {:ok, params} <- params(Map.get(config, "params", [])),
+         {:ok, pool} <- pool(Map.fetch!(config, "database_url"), settings(config)),
+         {:ok, oids, result} <- query(pool, Map.fetch!(config, "query"), params, files) do
+      rows(result, oids, files)
     else
       {:error, %{__exception__: true} = error} -> {:error, Exception.message(error)}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp rows(%Postgrex.Result{columns: nil}), do: []
-
-  defp rows(%Postgrex.Result{columns: columns, rows: rows}) do
-    for row <- rows do
-      columns |> Enum.zip(Enum.map(row, &json_value/1)) |> Map.new()
+  # A file reference goes as the file's bytes. Checked before connecting.
+  defp params(params) do
+    Enum.reduce_while(params, {:ok, []}, fn param, {:ok, acc} ->
+      if PurpleFlow.RunFiles.ref?(param) do
+        case PurpleFlow.RunFiles.path(param) do
+          {:ok, path} -> {:cont, {:ok, [File.read!(path) | acc]}}
+          error -> {:halt, error}
+        end
+      else
+        {:cont, {:ok, [param | acc]}}
+      end
+    end)
+    |> case do
+      {:ok, params} -> {:ok, Enum.reverse(params)}
+      error -> error
     end
+  end
+
+  # With `files`, the query is prepared first, to learn its columns' types.
+  defp query(pool, query, params, []) do
+    Pool.run(pool, fn conn ->
+      with {:ok, result} <- Postgrex.query(conn, query, params), do: {:ok, nil, result}
+    end)
+  end
+
+  defp query(pool, query, params, _files) do
+    Pool.run(pool, fn conn ->
+      with {:ok, prepared, result} <- Postgrex.prepare_execute(conn, "", query, params),
+           do: {:ok, prepared.result_oids, result}
+    end)
+  end
+
+  # Postgres's type ID for bytea.
+  @bytea 17
+
+  defp rows(%Postgrex.Result{columns: nil}, _oids, _files), do: {:ok, []}
+
+  defp rows(%Postgrex.Result{columns: columns, rows: rows}, oids, files) do
+    with :ok <- check_file_columns(columns, oids, files) do
+      rows
+      |> Enum.reduce_while({:ok, [], []}, fn row, {:ok, acc, saved} ->
+        case row(columns, row, files) do
+          {:ok, map, refs} -> {:cont, {:ok, [map | acc], refs ++ saved}}
+          {:error, message, refs} -> {:halt, {:error, message, refs ++ saved}}
+        end
+      end)
+      |> case do
+        {:ok, rows, _saved} ->
+          {:ok, Enum.reverse(rows)}
+
+        # One failed file means no output, so the ones saved are no use.
+        {:error, message, saved} ->
+          Enum.each(saved, &PurpleFlow.RunFiles.delete/1)
+          {:error, message}
+      end
+    end
+  end
+
+  defp check_file_columns(columns, oids, files) do
+    types = Map.new(Enum.zip(columns, oids || []))
+
+    Enum.find_value(files, :ok, fn column ->
+      case Map.fetch(types, column) do
+        {:ok, @bytea} -> nil
+        {:ok, _other} -> {:error, "files column #{column} isn't bytea"}
+        :error -> {:error, "files column #{column} isn't in the result"}
+      end
+    end)
+  end
+
+  defp row(columns, row, files) do
+    Enum.zip(columns, row)
+    |> Enum.reduce_while({:ok, %{}, []}, fn {column, value}, {:ok, map, refs} ->
+      cond do
+        column not in files ->
+          {:cont, {:ok, Map.put(map, column, json_value(value)), refs}}
+
+        value == nil ->
+          {:cont, {:ok, Map.put(map, column, nil), refs}}
+
+        true ->
+          case save(column, value) do
+            {:ok, ref} -> {:cont, {:ok, Map.put(map, column, ref), [ref | refs]}}
+            {:error, message} -> {:halt, {:error, message, refs}}
+          end
+      end
+    end)
+  end
+
+  defp save(column, bytes) do
+    with {:ok, writer} <- PurpleFlow.RunFiles.write(PurpleFlow.Node.open_file(column, nil), bytes),
+         do: {:ok, PurpleFlow.RunFiles.close(writer)}
   end
 
   # Postgres returns a few types that aren't JSON as-is.

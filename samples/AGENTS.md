@@ -228,6 +228,23 @@ params = ["{{ input.status }}"]
 
 The output is a list of rows. Always put values in `params` (`$1`, `$2`, …), never in the query text itself. Each database gets a pool of up to 10 connections, closed after a minute with no queries. Change that per step with `pool_size` (1 or more) and `idle_timeout` (seconds; `0` keeps the pool open). Steps with different settings get separate pools.
 
+Files go in and out of `bytea` columns. A param that's a file reference is sent as the file's contents:
+
+```toml
+query = "insert into attachments (filename, data) values ($1, $2)"
+params = ["{{ input.body.doc.name }}", "{{ input.body.doc }}"]
+```
+
+To read files out, name the `bytea` columns in `files`. Each value is saved as a file named after its column, and the row holds its reference (see Files); `NULL` stays `null`:
+
+```toml
+query = "select id, filename, data from attachments where id = $1::text::uuid"
+params = ["{{ input.id }}"]
+files = ["data"]
+```
+
+A database sends a value all at once, so each of these files is held in memory while the step runs. A value bigger than `max_file_size` fails the step.
+
 **Code**
 
 ```toml
@@ -388,7 +405,7 @@ Your first step usually wants `input.body`. Runs started with the Run button in 
 
 ## Files
 
-Files come into a run from a webhook upload, an HTTP download (`response_file`, see HTTP request), or an SSH command's output (`stdout_file`). A webhook can take files, sent as a form upload (`multipart/form-data`):
+Files come into a run from a webhook upload, an HTTP download (`response_file`, see HTTP request), an SSH command's output (`stdout_file`), or a Postgres `bytea` column (`files`). A webhook can take files, sent as a form upload (`multipart/form-data`):
 
 ```sh
 curl -F note=hello -F doc=@report.pdf "BASE/hooks/my-flow"
@@ -400,7 +417,7 @@ The file itself isn't put in the input. It's saved on the server, and the input 
 {"body": {"note": "hello", "doc": {"file": "0192…/0192…", "name": "report.pdf", "type": "application/pdf", "size": 48213}}, ...}
 ```
 
-The reference moves through steps like any other value. To send the file somewhere, give it to an HTTP step's `body_file` or `form` (see HTTP request) or an SSH step's `stdin_file`:
+The reference moves through steps like any other value. To send the file somewhere, give it to an HTTP step's `body_file` or `form` (see HTTP request), a Postgres param, or an SSH step's `stdin_file`:
 
 ```toml
 command = "cat > /srv/uploads/report.pdf"

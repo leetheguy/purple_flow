@@ -260,8 +260,9 @@ per step. A Code step's input and steps can be up to 64 MB, set on the runner wi
 A new node type is just a module implementing `execute(input, config)`.
 
 Webhooks take file uploads, an HTTP step can download one
-(`response_file`), and an SSH step can save a command's output as one
-(`stdout_file`). A file is saved with its run (in its own
+(`response_file`), an SSH step can save a command's output as one
+(`stdout_file`), and a Postgres step can read one from a `bytea` column
+(`files`) or write one to it (a file reference as a param). A file is saved with its run (in its own
 volume), steps pass around a small reference to it, an HTTP step (`body_file`, `form`) or SSH
 step (`stdin_file`) can send it on, and it's deleted when the run ends. Each file may be up
 to the workflow's `max_file_size` (default 100 MB, `0` for no limit). See

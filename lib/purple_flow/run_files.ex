@@ -144,6 +144,13 @@ defmodule PurpleFlow.RunFiles do
     do:
       {:error, "not a file: #{inspect(value)} (expected a file reference like input.body.upload)"}
 
+  @doc "Deletes one file, from its reference. Nothing happens if it's already gone."
+  @spec delete(map()) :: :ok
+  def delete(ref) do
+    with {:ok, path} <- path(ref), do: File.rm(path)
+    :ok
+  end
+
   @doc "Deletes all of a run's files."
   def delete_run(run_id) do
     if Regex.match?(@run_id, run_id), do: File.rm_rf(Path.join(dir(), run_id))

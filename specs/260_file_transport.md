@@ -141,6 +141,6 @@ Postgres sends a value whole, so a file read or written this way sits in memory 
 - [x] HTTP `form`.
 - [x] HTTP `response_file`.
 - [x] SSH `stdout_file`.
-- [ ] Postgres `bytea` writes.
-- [ ] Postgres `files` reads.
+- [x] Postgres `bytea` writes.
+- [x] Postgres `files` reads.
 - [ ] Check the whole path in the Docker release; update the docs (README, `samples/AGENTS.md`, the workflows skill, 000, 999, 190's log); mark this spec `implemented`.
