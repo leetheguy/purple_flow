@@ -140,6 +140,33 @@ defmodule PurpleFlow.Node do
     :ok
   end
 
+  @doc """
+  Starts saving a file into the run, for a node that brings one in (a
+  download, a command's output). Returns a `PurpleFlow.RunFiles.Writer`:
+  add the bytes with `PurpleFlow.RunFiles.write/2` as they arrive, then
+  `PurpleFlow.RunFiles.close/1` for the reference to hand on, or
+  `PurpleFlow.RunFiles.discard/1` if the node fails. The workflow's
+  `max_file_size` limits the file. See [specs/260](specs/260_file_transport.md).
+
+  Outside a run (a test calling `execute` directly), files go into a run ID
+  of the calling process's own, with no limit.
+  """
+  @spec open_file(String.t(), String.t() | nil) :: PurpleFlow.RunFiles.Writer.t()
+  def open_file(name, type) do
+    {run_id, max} =
+      case Process.get(:purple_flow_files) do
+        nil ->
+          files = {PurpleFlow.Id.generate(), 0}
+          Process.put(:purple_flow_files, files)
+          files
+
+        files ->
+          files
+      end
+
+    PurpleFlow.RunFiles.open(run_id, name, type, max)
+  end
+
   @doc "True if `module` is a real module that says it's a `PurpleFlow.Node`."
   def node_module?(module) do
     with true <- Code.ensure_loaded?(module),

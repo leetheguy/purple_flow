@@ -532,4 +532,37 @@ defmodule PurpleFlow.RunTest do
     assert_received {:run_item, ^id, "b", 2}
     refute_received {:run_item, ^id, "a", _}
   end
+
+  describe "files a node saves" do
+    defp saver(name, max_file_size) do
+      workflow =
+        steps!(
+          name,
+          """
+          [[steps]]
+          name = "save"
+          node = "save.toml"
+          """,
+          %{"save.toml" => fake_node(%{"save_file" => ["ab", "cd"]})}
+        )
+
+      %{workflow | max_file_size: max_file_size}
+    end
+
+    test "go into the run's files, and are gone when the run ends" do
+      result = run!(saver("saves", 0), %{})
+
+      assert result.run.status == "complete"
+      assert %{"ref" => ref, "bytes" => "abcd"} = result.run.output
+      assert String.starts_with?(ref["file"], result.run.id <> "/")
+      assert {:error, "file " <> _} = PurpleFlow.RunFiles.path(ref)
+    end
+
+    test "fail the item when over the workflow's max_file_size" do
+      result = run!(saver("saves_too_much", 3), %{})
+
+      assert [%{status: "error", error: %{"message" => message}}] = rows(result, "save")
+      assert message == "file saved.txt is over max_file_size (3 bytes)"
+    end
+  end
 end

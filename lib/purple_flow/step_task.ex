@@ -19,8 +19,9 @@ defmodule PurpleFlow.StepTask do
 
   @doc """
   Starts an execution for `run` (the run's pid). `args` has `:step`,
-  `:input` (one item), and `:steps` (this item's path, as
-  `%{"fetch" => %{"output" => ...}}`). Returns a `Task`; its reply is
+  `:input` (one item), `:steps` (this item's path, as
+  `%{"fetch" => %{"output" => ...}}`), and `:files` (`{run_id,
+  max_file_size}`, where `PurpleFlow.Node.open_file/2` saves files). Returns a `Task`; its reply is
   `%{status:, output:, route:, error:, input:}`.
   """
   def start(run, args) do
@@ -28,12 +29,13 @@ defmodule PurpleFlow.StepTask do
   end
 
   @doc false
-  def execute(run, %{step: step, input: input, steps: steps}) do
+  def execute(run, %{step: step, input: input, steps: steps, files: files}) do
     case Template.render(step.config, %{input: input, steps: steps}) do
       {:ok, config, secrets} ->
         Process.put(:purple_flow_emit, fn value, route -> emit(run, value, route, secrets) end)
         Process.put(:purple_flow_respond, &respond(run, &1))
         Process.put(:purple_flow_respond_stream, &respond_stream(run, &1, &2))
+        Process.put(:purple_flow_files, files)
 
         case call_node(step.module, input, config, steps) do
           {:ok, output, route} ->

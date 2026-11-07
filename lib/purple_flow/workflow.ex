@@ -18,6 +18,7 @@ defmodule PurpleFlow.Workflow do
     auth: nil,
     auth_header: nil,
     max_upload: 100_000_000,
+    max_file_size: 100_000_000,
     cron: nil,
     steps: []
   ]
@@ -31,6 +32,7 @@ defmodule PurpleFlow.Workflow do
           auth: String.t() | nil,
           auth_header: String.t() | nil,
           max_upload: non_neg_integer(),
+          max_file_size: non_neg_integer(),
           cron: String.t() | nil,
           steps: [PurpleFlow.Workflow.Step.t()]
         }

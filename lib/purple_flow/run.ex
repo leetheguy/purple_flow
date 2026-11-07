@@ -354,7 +354,14 @@ defmodule PurpleFlow.Run do
   defp launch(state, step) do
     name = step.name
     {{:value, entry}, queue} = :queue.out(state.queues[name])
-    task = StepTask.start(self(), %{step: step, input: entry.value, steps: entry.steps})
+
+    task =
+      StepTask.start(self(), %{
+        step: step,
+        input: entry.value,
+        steps: entry.steps,
+        files: {state.id, state.workflow.max_file_size}
+      })
 
     if step.timeout > 0, do: Process.send_after(self(), {:timeout, task.ref}, step.timeout)
 

@@ -15,6 +15,8 @@ defmodule PurpleFlow.Test.FakeNode do
   - `"stream_reply"`: answer the waiting webhook caller with a stream of
     these chunks, without ending it, before anything else (so `"crash"`
     after it leaves the stream open)
+  - `"save_file"`: save these chunks as a file in the run, named
+    `"saved.txt"`, and return `%{"ref" => reference, "bytes" => contents}`
   """
 
   @behaviour PurpleFlow.Node
@@ -34,6 +36,9 @@ defmodule PurpleFlow.Test.FakeNode do
     cond do
       Map.has_key?(config, "fail_if") and input == config["fail_if"] ->
         {:error, "boom on #{inspect(input)}"}
+
+      chunks = config["save_file"] ->
+        save_file(chunks)
 
       emit = config["emit"] ->
         for value <- emit do
@@ -55,6 +60,27 @@ defmodule PurpleFlow.Test.FakeNode do
 
       true ->
         {:ok, input}
+    end
+  end
+
+  defp save_file(chunks) do
+    writer = PurpleFlow.Node.open_file("saved.txt", "text/plain")
+
+    chunks
+    |> Enum.reduce_while({:ok, writer}, fn chunk, {:ok, writer} ->
+      case PurpleFlow.RunFiles.write(writer, chunk) do
+        {:ok, writer} -> {:cont, {:ok, writer}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, writer} ->
+        ref = PurpleFlow.RunFiles.close(writer)
+        {:ok, path} = PurpleFlow.RunFiles.path(ref)
+        {:ok, %{"ref" => ref, "bytes" => File.read!(path)}}
+
+      error ->
+        error
     end
   end
 end
