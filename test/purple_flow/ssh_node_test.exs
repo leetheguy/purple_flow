@@ -208,4 +208,93 @@ defmodule PurpleFlow.SshNodeTest do
 
     assert {:error, "stream must be" <> _} = Ssh.prepare(Map.put(base, "stream", "sse"), ".", ".")
   end
+
+  describe "stdout_file" do
+    setup do
+      run_id = PurpleFlow.Id.generate()
+      PurpleFlow.Node.put_files(run_id, 0)
+      on_exit(fn -> PurpleFlow.RunFiles.delete_run(run_id) end)
+      %{run_id: run_id}
+    end
+
+    defp files_in(run_id) do
+      case File.ls(Path.join(PurpleFlow.RunFiles.dir(), run_id)) do
+        {:ok, names} -> names
+        {:error, :enoent} -> []
+      end
+    end
+
+    test "saves stdout whole as a file, past the flow control window", %{run_id: run_id} do
+      bytes = :crypto.strong_rand_bytes(3_000_000)
+      pieces = for <<piece::binary-size(30_000) <- bytes>>, do: {:out, piece}
+      server = SshServer.start!(fn "pg_dump", _ -> pieces ++ [{:err, "done\n"}] end)
+
+      assert {:ok, %{"stdout" => ref, "stderr" => "done\n", "exit_status" => 0}} =
+               Ssh.execute(
+                 nil,
+                 config(server, %{"command" => "pg_dump", "stdout_file" => "shop.sql.gz"})
+               )
+
+      assert %{"name" => "shop.sql.gz", "type" => "application/gzip", "size" => 3_000_000} = ref
+      assert String.starts_with?(ref["file"], run_id <> "/")
+      {:ok, path} = PurpleFlow.RunFiles.path(ref)
+      assert File.read!(path) == bytes
+    end
+
+    test "a name that says nothing of the type is application/octet-stream" do
+      server = SshServer.start!(fn "c", _ -> [{:out, "x"}] end)
+
+      assert {:ok, %{"stdout" => %{"type" => "application/octet-stream", "size" => 1}}} =
+               Ssh.execute(nil, config(server, %{"command" => "c", "stdout_file" => "blob"}))
+    end
+
+    test "a non-zero exit fails, with stderr, and leaves no file", %{run_id: run_id} do
+      server =
+        SshServer.start!(fn "c", _ -> [{:out, "half"}, {:err, "disk full"}, {:exit, 1}] end)
+
+      assert {:error, "exit status 1: disk full"} =
+               Ssh.execute(nil, config(server, %{"command" => "c", "stdout_file" => "a"}))
+
+      assert files_in(run_id) == []
+    end
+
+    test "output over max_file_size fails and leaves no file", %{run_id: run_id} do
+      PurpleFlow.Node.put_files(run_id, 50_000)
+
+      server =
+        SshServer.start!(fn "c", _ ->
+          List.duplicate({:out, String.duplicate("x", 30_000)}, 4)
+        end)
+
+      assert {:error, "file a.txt is over max_file_size (50000 bytes)"} =
+               Ssh.execute(nil, config(server, %{"command" => "c", "stdout_file" => "a.txt"}))
+
+      assert files_in(run_id) == []
+    end
+
+    test "a failed connection makes no file", %{run_id: run_id} do
+      assert {:error, "SSH connection to 127.0.0.1 failed: " <> _} =
+               Ssh.execute(nil, config(%{port: 1}, %{"command" => "c", "stdout_file" => "a"}))
+
+      assert files_in(run_id) == []
+    end
+
+    test "fails to load with stream, or as anything but a file name" do
+      base = %{"host" => "h", "user" => "u", "command" => "c", "password" => "p"}
+
+      assert {:error, "takes stream or stdout_file, not both"} =
+               Ssh.prepare(
+                 Map.merge(base, %{"stream" => "lines", "stdout_file" => "a"}),
+                 ".",
+                 "."
+               )
+
+      for bad <- [true, ""] do
+        assert {:error, "stdout_file must be a file name, not " <> _} =
+                 Ssh.prepare(Map.put(base, "stdout_file", bad), ".", ".")
+      end
+
+      assert {:ok, _} = Ssh.prepare(Map.put(base, "stdout_file", "{{ input.name }}"), ".", ".")
+    end
+  end
 end

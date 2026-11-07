@@ -206,6 +206,15 @@ The output is `{"stdout": "...", "stderr": "...", "exit_status": 0}`. A command 
 
 Add `stream = "lines"` (plain text lines) or `"ndjson"` (one JSON value per line) to hand on each line the command prints as it arrives. With `command = "tail -f /var/log/app.log"`, that follows a log until the step is killed or times out.
 
+To bring a file back from the server, add `stdout_file`: what the command prints is saved as a file with that name, and `stdout` in the output is the file's reference (see Files) instead of text. The type is guessed from the name:
+
+```toml
+command = "pg_dump shop | gzip"
+stdout_file = "shop.sql.gz"
+```
+
+A command that fails, or output bigger than `max_file_size`, fails the step and saves nothing. It can't be used with `stream`.
+
 **Database query (Postgres)**
 
 ```toml
@@ -379,7 +388,7 @@ Your first step usually wants `input.body`. Runs started with the Run button in 
 
 ## Files
 
-Files come into a run from a webhook upload or an HTTP download (`response_file`, see HTTP request). A webhook can take files, sent as a form upload (`multipart/form-data`):
+Files come into a run from a webhook upload, an HTTP download (`response_file`, see HTTP request), or an SSH command's output (`stdout_file`). A webhook can take files, sent as a form upload (`multipart/form-data`):
 
 ```sh
 curl -F note=hello -F doc=@report.pdf "BASE/hooks/my-flow"

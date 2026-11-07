@@ -13,6 +13,7 @@ defmodule PurpleFlow.Nodes.Ssh do
       command = "tail -n 100 /var/log/app.log"
       stdin = "{{ input.text }}"                # optional
       stdin_file = "{{ input.body.upload }}"    # optional, instead: a file's bytes
+      stdout_file = "backup.tar.gz"             # optional: save stdout as a file
       connect_timeout = 30                      # seconds to connect and log in; 0 = no limit
       stream = "lines"                          # optional: "lines" or "ndjson"
 
@@ -24,6 +25,13 @@ defmodule PurpleFlow.Nodes.Ssh do
   `stdin_file` takes a file reference (a webhook upload, see
   `PurpleFlow.RunFiles`) and sends that file's bytes as standard input, so
   `command = "cat > /srv/uploads/report.pdf"` copies it to the server.
+
+  `stdout_file` saves the command's standard output as a file in the run
+  (`PurpleFlow.Node.open_file/2`), named by it, with its type guessed from
+  the name, so `command = "pg_dump shop | gzip"` brings a dump in. Output's
+  `"stdout"` is then the file's reference. A non-zero exit, a lost
+  connection, or a file over `max_file_size` fails and leaves no file. See
+  [specs/260](specs/260_file_transport.md).
 
   `host_key` is the server's key fingerprint, as `ssh-keygen -lf` prints
   it; when set, any other key is refused before logging in. Without it,
@@ -61,6 +69,12 @@ defmodule PurpleFlow.Nodes.Ssh do
       config["stream"] not in [nil | @protocols] ->
         {:error, ~s(stream must be "lines" or "ndjson", not #{inspect(config["stream"])})}
 
+      Map.has_key?(config, "stream") and Map.has_key?(config, "stdout_file") ->
+        {:error, "takes stream or stdout_file, not both"}
+
+      bad_stdout_file?(config) ->
+        {:error, "stdout_file must be a file name, not #{inspect(config["stdout_file"])}"}
+
       true ->
         {:ok, config}
     end
@@ -68,15 +82,40 @@ defmodule PurpleFlow.Nodes.Ssh do
 
   @impl true
   def execute(_input, config) do
-    with {:ok, stdin} <- stdin(config),
+    with :ok <- check_stdout_file(config),
+         {:ok, stdin} <- stdin(config),
          {:ok, conn} <- connect(config) do
+      file = open_stdout_file(config)
+
       try do
-        run(conn, config, stdin)
+        case run(conn, config, stdin, file) do
+          {:error, _} = error ->
+            if file, do: PurpleFlow.RunFiles.discard(file)
+            error
+
+          ok ->
+            ok
+        end
       after
         :ssh.close(conn)
       end
     end
   end
+
+  defp bad_stdout_file?(%{"stdout_file" => name}), do: not is_binary(name) or name == ""
+  defp bad_stdout_file?(_config), do: false
+
+  # A placeholder may have filled in as something that isn't a name.
+  defp check_stdout_file(config) do
+    if bad_stdout_file?(config),
+      do: {:error, "stdout_file must be a file name, not #{inspect(config["stdout_file"])}"},
+      else: :ok
+  end
+
+  defp open_stdout_file(%{"stdout_file" => name}),
+    do: PurpleFlow.Node.open_file(name, MIME.from_path(name))
+
+  defp open_stdout_file(_config), do: nil
 
   defp connect(config) do
     host = config |> Map.fetch!("host") |> to_string() |> String.to_charlist()
@@ -128,7 +167,7 @@ defmodule PurpleFlow.Nodes.Ssh do
 
   # Opens a channel, runs the command, feeds it stdin, and reads until the
   # channel closes.
-  defp run(conn, config, stdin) do
+  defp run(conn, config, stdin, file) do
     command = config |> Map.fetch!("command") |> to_string()
 
     # If the connection itself goes away, reading stops instead of waiting forever.
@@ -142,6 +181,7 @@ defmodule PurpleFlow.Nodes.Ssh do
 
       read(conn, channel, %{
         stream: config["stream"],
+        file: file,
         parser: StreamParser.new(),
         stdout: [],
         stderr: [],
@@ -177,10 +217,16 @@ defmodule PurpleFlow.Nodes.Ssh do
   defp read(conn, channel, state) do
     receive do
       {:ssh_cm, ^conn, {:data, ^channel, type, data}} ->
-        state = data(state, type, data)
-        # Only now ask for more: a stream that's held back holds the server back.
-        :ssh_connection.adjust_window(conn, channel, byte_size(data))
-        read(conn, channel, state)
+        case data(state, type, data) do
+          {:error, _} = error ->
+            :ssh_connection.close(conn, channel)
+            error
+
+          state ->
+            # Only now ask for more: a stream that's held back holds the server back.
+            :ssh_connection.adjust_window(conn, channel, byte_size(data))
+            read(conn, channel, state)
+        end
 
       {:ssh_cm, ^conn, {:exit_status, ^channel, status}} ->
         read(conn, channel, %{state | exit: {:status, status}})
@@ -199,9 +245,14 @@ defmodule PurpleFlow.Nodes.Ssh do
     end
   end
 
-  # Standard output (type 0) is kept, or streamed; standard error (type 1)
-  # is kept, up to a limit when streaming.
-  defp data(%{stream: nil} = state, 0, data), do: %{state | stdout: [state.stdout | data]}
+  # Standard output (type 0) is kept, saved to a file, or streamed; standard
+  # error (type 1) is kept, up to a limit when streaming.
+  defp data(%{file: nil, stream: nil} = state, 0, data),
+    do: %{state | stdout: [state.stdout | data]}
+
+  defp data(%{file: file} = state, 0, data) when file != nil do
+    with {:ok, file} <- PurpleFlow.RunFiles.write(file, data), do: %{state | file: file}
+  end
 
   defp data(state, 0, data) do
     {items, parser} = StreamParser.parse(state.stream, state.parser, data)
@@ -228,6 +279,10 @@ defmodule PurpleFlow.Nodes.Ssh do
     stderr = IO.iodata_to_binary(state.stderr)
 
     case state.exit do
+      {:status, 0} when state.file != nil ->
+        ref = PurpleFlow.RunFiles.close(state.file)
+        {:ok, %{"stdout" => ref, "stderr" => stderr, "exit_status" => 0}}
+
       {:status, 0} when state.stream == nil ->
         {:ok, %{"stdout" => stdout, "stderr" => stderr, "exit_status" => 0}}
 

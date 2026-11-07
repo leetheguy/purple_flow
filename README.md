@@ -98,7 +98,7 @@ wrappers are needed. Here's what you get instead:
   - manual
 - nodes
   - http - your trusty http request node
-  - ssh - run commands on other machines (and send them uploaded files)
+  - ssh - run commands on other machines (and send or fetch files)
   - postgres - only one db for now; but http can cover anything with a REST
 interface
   - code - just a reference to an actual .exs code script
@@ -259,8 +259,9 @@ per step. A Code step's input and steps can be up to 64 MB, set on the runner wi
 `PURPLEFLOW_RUNNER_MAX_REQUEST` (in MB, 0 for no limit).
 A new node type is just a module implementing `execute(input, config)`.
 
-Webhooks take file uploads, and an HTTP step can download one
-(`response_file`). A file is saved with its run (in its own
+Webhooks take file uploads, an HTTP step can download one
+(`response_file`), and an SSH step can save a command's output as one
+(`stdout_file`). A file is saved with its run (in its own
 volume), steps pass around a small reference to it, an HTTP step (`body_file`, `form`) or SSH
 step (`stdin_file`) can send it on, and it's deleted when the run ends. Each file may be up
 to the workflow's `max_file_size` (default 100 MB, `0` for no limit). See
