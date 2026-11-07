@@ -3,7 +3,7 @@
 These rules come from building PurpleFlow (Sep–Oct 2026): 25 specs, 70-odd
 commits, over 90% test coverage, and very few bugs reaching the live app.
 
-Version 1.0 (2026-11-03). Changes are listed at the end.
+Version 2.0 (2026-11-07). Changes are listed at the end.
 
 **These are the rules every agent working on this project follows.** They're
 written for agents, but they hold for people too.
@@ -26,7 +26,7 @@ fills in a table like this, and every rule below uses these names:
 | **precommit** | one command that runs every local check | `make check`, `npm run precommit`, `cargo clippy -- -D warnings && cargo test` |
 | **test** | runs the test suite | `pytest`, `go test ./...`, `cargo test` |
 | **coverage** | runs the tests and enforces the coverage floor | `pytest --cov --cov-fail-under=90`, `cargo llvm-cov --fail-under-lines 90` |
-| **mutation** | runs mutation testing on chosen files (section 4) | `cargo mutants --file src/x.rs`, `mutmut run`, `npx stryker run` |
+| **mutation** | runs mutation testing on the lines a change touches, or on whole files (section 4) | `cargo mutants --in-diff`, `mutmut run`, `npx stryker run --incremental` |
 | **security** | scans dependencies for known vulnerabilities and commits for secrets | `cargo audit`, `pip-audit`, `npm audit`, gitleaks |
 | **run** | starts the app the supported way | `docker compose up -d --build` |
 | **CI** | where the automatic checks run | `.github/workflows/ci.yml` |
@@ -89,7 +89,8 @@ and it points to the numbered specs for detail and for why.
 - `999_todo.md`, the living to-do list. It holds planned work, open
   questions, and ideas, each linking to the spec it came from. Its status is
   always `living`. Add an item when something is left planned or open;
-  delete it when it ships.
+  delete it when it ships. Point to code by module and function, never by
+  line number: line numbers go stale with every change above them.
 
 ### Header
 
@@ -267,7 +268,7 @@ Practices, and Patterns*), and Google's *Software Engineering at Google*.
 | **precommit** | locally, before every commit | build with warnings as errors, remove unused dependencies, format, run the tests, build the code docs |
 | **CI** | every push and pull request | the same checks in **check mode** (it reports problems but doesn't fix them), plus coverage and the **security** scans |
 | **Coverage floor** | locally and in CI | the build fails at 90% coverage or below |
-| **Mutation check** | before every commit, on the files the change touches | every surviving mutant gets a test that kills it, or a reason in the commit why it can't matter (it changes nothing a caller can see) |
+| **Mutation check** | before every commit, on the lines the change touches | every surviving mutant gets a test that kills it, or a reason in the commit why it can't matter (it changes nothing a caller can see). Mutating whole files, to harden a file's tests, is a separate job done when asked; the gaps it finds in lines nobody changed go in 999 |
 | **Independent review** | before merging a big-blast-radius change (section 2) | a fresh agent, which didn't write the change, reviews the diff against its spec and reports what it finds; fixes go in before the merge |
 | **Housekeeping review** | before every commit | section 8 |
 
@@ -396,8 +397,8 @@ yours to do, tell the user in your summary.
 - [ ] No leftover debug output, commented-out code, or TODOs that belong in
       999.
 - [ ] No tests were weakened, skipped, or deleted to get green (section 3).
-- [ ] The mutation check ran on the touched files, and every survivor is
-      killed or explained (section 5).
+- [ ] The mutation check ran on the lines this change touches, and every
+      survivor is killed or explained (section 5).
 - [ ] Every module and public function this change touches has docs in the
       **doc tool**'s format that match what the code does now, with links
       to what they reference (section 7).
@@ -475,3 +476,6 @@ don't change what agents do. A project's `AGENTS.md` names the version it
 follows.
 
 - **1.0** (2026-11-03): the first version.
+- **2.0** (2026-11-07): the mutation check covers only the lines a change
+  touches, not whole files; whole-file runs are a separate hardening job.
+  999 points to code by function, never by line number.

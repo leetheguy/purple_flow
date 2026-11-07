@@ -50,8 +50,42 @@ defmodule Mix.Tasks.MutateTest do
     refute "test/purple_flow/mutate_test.exs" in files
   end
 
+  test "finds a module named in a grouped alias, like `alias PurpleFlow.{Id, RunFiles}`" do
+    files = Mutate.test_files_for(["PurpleFlow." <> "RunFiles"], "test")
+    assert "test/purple_flow/run_files_test.exs" in files
+  end
+
   test "matches a module's whole name, not a longer one that starts with it" do
     files = Mutate.test_files_for(["PurpleFlow." <> "Run"], "test")
     refute "test/purple_flow/runner_test.exs" in files
+  end
+
+  test "reads the changed lines from a diff: added and changed, not removed" do
+    diff = """
+    diff --git a/lib/x.ex b/lib/x.ex
+    --- a/lib/x.ex
+    +++ b/lib/x.ex
+    @@ -4,0 +5,3 @@ def a do
+    +one
+    +two
+    +three
+    @@ -20 +23 @@ def b do
+    -old
+    +new
+    @@ -30,2 +32,0 @@ def c do
+    -gone
+    -gone too
+    """
+
+    assert Mutate.changed_lines(diff) == MapSet.new([5, 6, 7, 23])
+    assert Mutate.changed_lines("") == MapSet.new()
+  end
+
+  test "keeps only the mutants on the given lines, or all of them" do
+    mutants = Mutate.mutants(@source)
+
+    assert Mutate.on_lines(mutants, MapSet.new([4])) == mutants
+    assert Mutate.on_lines(mutants, MapSet.new([3, 5])) == []
+    assert Mutate.on_lines(mutants, :all) == mutants
   end
 end

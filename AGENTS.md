@@ -1,4 +1,4 @@
-**Read `OP-PARAMS.md` (version 1.0) before you do anything else.** It holds the operating
+**Read `OP-PARAMS.md` (version 2.0) before you do anything else.** It holds the operating
 parameters every agent follows: specs, test-driven development, writing
 tests worth having, the quality gates, and the housekeeping review you do
 before every commit. This file adds what's specific to PurpleFlow.
@@ -10,7 +10,7 @@ before every commit. This file adds what's specific to PurpleFlow.
 | **precommit** | `mix precommit` |
 | **test** | `mix test` (needs `PURPLEFLOW_SECRET_KEY` and a test Postgres; see below) |
 | **coverage** | `mix coveralls` (`coveralls.json` sets the 90% floor) |
-| **mutation** | `mix mutate FILE...` (`test/support/mix/tasks/mutate.ex`): makes small bugs in each file, one at a time, runs the tests that name its modules against each, and lists the ones no test caught. Takes seconds to a few minutes per file |
+| **mutation** | `mix mutate` (`test/support/mix/tasks/mutate.ex`): makes small bugs in the lines changed since the last commit, one at a time, runs the tests that name their modules against each, and lists the ones no test caught. With no files named, it takes every changed file in `lib/`; `--since master` covers the whole branch, and `FILE --all` the whole file (for hardening). Seconds when little changed |
 | **security** | `mix hex.audit` (known vulnerabilities and retired packages) and gitleaks (secrets in the whole history; known false positives in `.gitleaksignore`), both in CI |
 | **run** | `docker compose up -d --build` |
 | **CI** | `.github/workflows/ci.yml` (GitHub Actions) |

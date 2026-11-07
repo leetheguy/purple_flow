@@ -5,8 +5,18 @@ defmodule Mix.Tasks.Mutate do
   the tests against each. A bug no test catches (a *surviving mutant*) is a
   gap in the tests. See `OP-PARAMS.md` sections 4 and 5.
 
+      mix mutate                               # every changed file in lib/
       mix mutate lib/purple_flow/watchdog.ex
       mix mutate lib/purple_flow/watchdog.ex --test test/purple_flow/watchdog_test.exs
+      mix mutate --since master                # everything this branch changed
+      mix mutate lib/purple_flow/watchdog.ex --all
+
+  Only lines changed since `--since` (default `HEAD`: what isn't committed
+  yet, staged or not) are mutated, read from `git diff`; a file git doesn't
+  track yet is all changed. With no files named, it takes every changed
+  `.ex` file under `lib/`. `--all` mutates whole files, for hardening a
+  file's tests. A file with nothing to mutate is skipped without running
+  its tests.
 
   The bugs it makes:
 
@@ -51,15 +61,74 @@ defmodule Mix.Tasks.Mutate do
 
   @impl Mix.Task
   def run(args) do
-    {opts, files} = OptionParser.parse!(args, strict: [test: :keep])
-    if files == [], do: Mix.raise("usage: mix mutate FILE... [--test TEST_FILE]...")
+    {opts, files} =
+      OptionParser.parse!(args, strict: [test: :keep, since: :string, all: :boolean])
 
-    survivors = Enum.flat_map(files, &mutate_file(&1, Keyword.get_values(opts, :test)))
+    since = Keyword.get(opts, :since, "HEAD")
+    files = if files == [], do: changed_files(since), else: files
+    if files == [], do: Mix.shell().info("nothing changed since #{since} in lib/")
+
+    survivors =
+      Enum.flat_map(files, fn path ->
+        lines = if opts[:all], do: :all, else: lines_changed(path, since)
+        mutate_file(path, lines, Keyword.get_values(opts, :test))
+      end)
+
     if survivors != [], do: exit({:shutdown, 1})
   end
 
-  defp mutate_file(path, tests) do
-    source = File.read!(path)
+  defp changed_files(since) do
+    {diffed, 0} = System.cmd("git", ["diff", "--name-only", since, "--", "lib"])
+    {untracked, 0} = System.cmd("git", ["ls-files", "--others", "--exclude-standard", "lib"])
+
+    (String.split(diffed) ++ String.split(untracked))
+    |> Enum.filter(&(String.ends_with?(&1, ".ex") and File.exists?(&1)))
+    |> Enum.uniq()
+  end
+
+  defp lines_changed(path, since) do
+    case System.cmd("git", ["ls-files", "--error-unmatch", path], stderr_to_stdout: true) do
+      {_, 0} ->
+        {diff, 0} = System.cmd("git", ["diff", "-U0", since, "--", path])
+        changed_lines(diff)
+
+      _untracked ->
+        :all
+    end
+  end
+
+  @doc """
+  The lines a `git diff -U0` adds or changes, by their numbers in the new
+  file. Each hunk header `@@ -a,b +c,d @@` covers lines `c` to `c + d - 1`
+  (`d` is 1 when left out; 0 means lines were only removed).
+  """
+  def changed_lines(diff) do
+    # Regex.scan leaves out a trailing group that didn't match, so a hunk
+    # with no `,d` gives `[_, c]`.
+    for [_, start | count] <- Regex.scan(~r/^@@ -\S+ \+(\d+)(?:,(\d+))? @@/m, diff),
+        start = String.to_integer(start),
+        count = if(count == [], do: 1, else: String.to_integer(hd(count))),
+        line <- start..(start + count - 1)//1,
+        into: MapSet.new(),
+        do: line
+  end
+
+  @doc "The mutants on `lines` (a set of line numbers), or all of them for `:all`."
+  def on_lines(mutants, :all), do: mutants
+  def on_lines(mutants, lines), do: Enum.filter(mutants, &MapSet.member?(lines, &1.line))
+
+  defp mutate_file(path, lines, tests) do
+    case on_lines(mutants(File.read!(path)), lines) do
+      [] ->
+        Mix.shell().info("#{path}: nothing to mutate on changed lines")
+        []
+
+      mutants ->
+        mutate_file(path, mutants, File.read!(path), tests)
+    end
+  end
+
+  defp mutate_file(path, mutants, source, tests) do
     modules = for [_, name] <- Regex.scan(~r/defmodule\s+([\w.]+)/, source), do: name
     tests = if tests == [], do: test_files_for(modules, "test"), else: tests
     if tests == [], do: Mix.raise("no test files name #{Enum.join(modules, ", ")}; pass --test")
@@ -67,7 +136,6 @@ defmodule Mix.Tasks.Mutate do
     Mix.shell().info("#{path}: running #{Enum.join(tests, " ")} first")
     if not tests_pass?(tests), do: Mix.raise("the tests fail before any mutation; fix them first")
 
-    mutants = mutants(source)
     Mix.shell().info("#{length(mutants)} mutants")
 
     results =
@@ -121,11 +189,23 @@ defmodule Mix.Tasks.Mutate do
 
   @doc """
   Every test file under `dir` that names one of `modules` (full names, like
-  `"PurpleFlow.Watchdog"`).
+  `"PurpleFlow.Watchdog"`), whole or in a grouped alias
+  (`alias PurpleFlow.{Id, Watchdog}`).
   """
   def test_files_for(modules, dir) do
     # The whole name: `PurpleFlow.Run` doesn't match `PurpleFlow.Runner`.
-    patterns = for m <- modules, do: Regex.compile!(Regex.escape(m) <> "(?![\\w])")
+    patterns =
+      Enum.flat_map(modules, fn m ->
+        {parent, [last]} = m |> String.split(".") |> Enum.split(-1)
+        whole = Regex.compile!(Regex.escape(m) <> "(?![\\w])")
+
+        if parent == [] do
+          [whole]
+        else
+          prefix = Regex.escape(Enum.join(parent, "."))
+          [whole, Regex.compile!(prefix <> "\\.\\{[^}]*\\b" <> Regex.escape(last) <> "\\b")]
+        end
+      end)
 
     for file <- Path.wildcard(Path.join(dir, "**/*_test.exs")),
         contents = File.read!(file),
