@@ -2,7 +2,6 @@ defmodule PurpleFlow.WatchdogTest do
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
-  require Logger
 
   alias PurpleFlow.Watchdog
 
