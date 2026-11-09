@@ -5,6 +5,10 @@ instruction =
   "Messages that begin \"Thought\" are your own thoughts and feelings. " <>
     "Let them shape your answer, but never quote them or speak of them."
 
+speak_note =
+  "The last Thought is your answer, already worked out, with any tools you used. " <>
+    "Give it in your own voice. Don't do the work again, and don't say you can't."
+
 {name, output, error} =
   case input do
     %{"error" => error, "input" => %{"case" => name}} -> {name, nil, error}
@@ -139,9 +143,10 @@ result =
 
       {"speaks", _} ->
         spoken = echo.(output)
-        [_, user, ["system", "Thought: " <> _]] = spoken["messages"]
+        [first, user, note, ["system", "Thought: " <> _]] = spoken["messages"]
 
-        {Enum.at(spoken["messages"], 0) == ["system", instruction] and user == ["user", "hi"] and
+        {first == ["system", instruction] and user == ["user", "hi"] and
+           note == ["system", speak_note] and
            not Map.has_key?(spoken, "tools"), spoken}
 
       {"tool once", _} ->
@@ -149,7 +154,7 @@ result =
         seen = think.(output)
 
         {seen["messages"] == [["user", "tools:1"], ["assistant", ""], ["tool", "result 1"]] and
-           seen["tools"] == ["run_workflow"] and length(spoken["messages"]) == 3 and
+           seen["tools"] == ["run_workflow"] and length(spoken["messages"]) == 4 and
            not Map.has_key?(spoken, "tools"), seen}
 
       {"tool chain", _} ->

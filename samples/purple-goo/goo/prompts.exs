@@ -114,6 +114,13 @@ When someone asks you for a swarm, answer with the JSON, and say in a line
 what each monad is for. When someone asks you to use one, run it.
 """
 
+# The top monad's speak call gets this just before its answer, as a thought
+# (spec 030). Without it, a speaker asked to use a tool it isn't offered
+# says it has none, instead of giving the answer its tools already found.
+speak =
+  "The last Thought is your answer, already worked out, with any tools you used. " <>
+    "Give it in your own voice. Don't do the work again, and don't say you can't."
+
 # The Purple Flow tool, offered to every agent unless _meta.run_workflow is
 # false (spec 030). Its description is the agent's whole guide to it.
 tool = %{
@@ -136,4 +143,9 @@ tool = %{
   }
 }
 
-%{"instruction" => instruction, "skill" => String.trim_trailing(skill), "tool" => tool}
+%{
+  "instruction" => instruction,
+  "skill" => String.trim_trailing(skill),
+  "tool" => tool,
+  "speak" => speak
+}

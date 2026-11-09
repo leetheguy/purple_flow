@@ -86,3 +86,9 @@ the request, which never reaches the provider.
   tool call (`check.sh`).
 
 ## Log
+- 2026-11-09 — Lee's first real call (DeepSeek 4.1 Flash): the tool ran and
+  the tool child reported its result, but the speak call, asked to use a
+  tool it wasn't offered, said it had none. Rule 4's speak call now also
+  gets a system message just before the thought: the thought is its
+  answer, already worked out with any tools, to give in its own voice
+  without redoing the work.

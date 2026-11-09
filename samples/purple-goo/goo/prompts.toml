@@ -1,5 +1,6 @@
 # The prompts goo injects: the synthesizer instruction, the swarm skill
-# sheet (a copy of skills/swarm-json/SKILL.md), and the run_workflow tool.
+# sheet (a copy of skills/swarm-json/SKILL.md), the run_workflow tool, and
+# the speak note.
 module = "PurpleFlow.Nodes.Code"
 
 [config]
