@@ -22,7 +22,9 @@ defmodule PurpleFlow.Nodes.OpenAIChat do
   Either way the output, once the answer is complete, is the whole message:
   `{"content", "reasoning", "tool_calls", "finish_reason", "model", "id",
   "usage"}`, so the steps after it (saving the conversation, say) run after
-  the caller already has the answer.
+  the caller already has the answer. `tool_calls` is a list in call order,
+  each `{"id", "type", "function": {"name", "arguments"}}` with `arguments`
+  as JSON text, or `nil` when there were none.
 
   A non-2xx response is an error, and the caller gets that status and body.
   An `error` the provider sends mid-stream is passed on, then fails the step.
