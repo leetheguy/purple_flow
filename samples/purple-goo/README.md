@@ -12,7 +12,7 @@ OpenAI SDK) can use it. Point it at the base URL `/hooks/goo/v1`.
 ## Try it
 
 Copy this folder into your workflows folder. It needs the
-`OPENROUTER_API_KEY` credential (or set `provider_url` to another
+`OPENROUTER_API_KEY` credential (or set `_meta.provider_url` to another
 OpenAI-compatible API).
 
 ```sh
@@ -45,13 +45,14 @@ Every key is optional.
 | `opening` | `{"workflow", "data"}` to run in order before anything else. Each gets `{"frame", "data"}` and returns the frame, changed as it likes |
 | `closing` | the same, after the AI answers. The frame then has `messages` (history without anything injected, data kept) and `response` |
 | `model` | the model for this monad (a child defaults to its parent's) |
-| `provider_url` | the chat completions URL (default OpenRouter) |
+| `_meta` | the environment, inherited by every child (a child's own `_meta` keys win): `provider_url`, the chat completions URL (default OpenRouter), and anything else that should travel down the tree, like a depth counter |
 
-Anything else you add rides along for your opening and closing workflows:
-depth counters, budgets, whatever you want to measure. There are no limits
-on depth, so a tree that builds itself forever runs forever. The provider
-key goes to whatever `provider_url` says, so only point it at providers you
-trust with it.
+Nothing else inherits: a child has exactly the personas, data, and monads
+its own tree gives it. Anything else you add rides along for your opening
+and closing workflows: budgets, whatever you want to measure. There are no
+limits on depth, so a tree that builds itself forever runs forever. The
+provider key goes to whatever `_meta.provider_url` says, so only point it
+at providers you trust with it.
 
 ## Patterns
 

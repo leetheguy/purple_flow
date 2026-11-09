@@ -16,7 +16,8 @@ speak OpenAI's API.
 1. A monad is one call to `goo`: an OpenAI chat request plus `metadata`.
 2. A monad with children is a synthesizer; the children's answers are its
    thoughts. Children can have children.
-3. A child gets only its own metadata subtree.
+3. A child gets only its own metadata subtree. Only `_meta`, the
+   environment (provider URL, counters), cascades down the tree.
 4. Nothing injected is returned upward; a parent sees only responses.
 5. Errors are returned, never swallowed.
 6. Only the top monad streams.
@@ -33,7 +34,7 @@ The details are in [010](010_monad.md).
 | Folder | Workflow | What it does |
 |---|---|---|
 | `goo/` | `goo` | the monad: open, inject data, hear children, call the AI, denormalize, close |
-| `goo_map/` | `goo_map` | calls a list of workflows, returns outputs in order, errors as data |
+| `goo_map/` | `goo_map` | calls a list of workflows at once, returns outputs in list order, errors as data; never knows what it's calling |
 | `goo_chain/` | `goo_chain` | runs workflows one after another on a frame |
 | `tests/goo_tests/` | `goo_tests` | the test suite, as a workflow |
 | `tests/goo_fake_llm/` | `goo_fake_llm` | a fake OpenAI provider that echoes what it got |

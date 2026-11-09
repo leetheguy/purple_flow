@@ -1,15 +1,13 @@
-# Each case is a request to a workflow. Every metadata tree gets the fake
-# provider's URL, at every level, since a child inherits nothing (spec 010
-# rule 2). check.exs says what each case expects.
+# Each case is a request to a workflow. Only the root of each metadata tree
+# gets the fake provider's URL, in _meta; every child inherits it (spec 010
+# log, 2026-11-09). check.exs says what each case expects.
 fake =
   (input["body"] || %{})["fake_url"] ||
     "http://localhost:4000/hooks/goo-fake-llm/chat/completions"
 
 defmodule Tree do
   def fake(tree, url) do
-    tree
-    |> Map.put("provider_url", url)
-    |> Map.update("monads", [], fn monads -> Enum.map(monads, &fake(&1, url)) end)
+    Map.update(tree, "_meta", %{"provider_url" => url}, &Map.put_new(&1, "provider_url", url))
   end
 end
 
@@ -44,6 +42,17 @@ end
   goo.(
     "grandchild",
     %{"monads" => [%{"personas" => ["kid"], "monads" => [%{"personas" => ["grandkid"]}]}]},
+    %{}
+  ),
+  goo.(
+    "environment",
+    %{
+      "_meta" => %{"depth" => 0},
+      "monads" => [
+        %{},
+        %{"_meta" => %{"provider_url" => fake <> "?which=kid2"}, "monads" => [%{}]}
+      ]
+    },
     %{}
   ),
   goo.("child model", %{"monads" => [%{"model" => "m2"}, %{}]}, %{}),

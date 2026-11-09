@@ -121,3 +121,18 @@ The tests are workflows (`tests/goo_tests`), run against a fake provider
 - The callers do nothing on an empty list.
 
 ## Log
+
+- 2026-11-09 — Lee and Muse: `_meta` is the environment, and it cascades.
+  Each child gets its parent's `_meta` with its own `_meta` keys on top.
+  Transport settings live there (`provider_url`, at the top level of
+  metadata no more), and so can counters like depth. Personas, data,
+  monads, opening, and closing never inherit: who is in a mind is always
+  spelled out in the tree. Credentials need nothing: `{{ creds.* }}` is the
+  same at every level.
+- 2026-11-09 — Lee and Muse: data workflows run at the same time, and that's
+  the contract. They read the frame as it was before any of them ran; one
+  that needs another's result composes it itself. `goo_map` puts results
+  back in list order, so finish order never shows.
+- 2026-11-09 — Lee and Muse: one generic caller, `goo_map`, serves both
+  data and monads, and it never knows which it's calling. The design doc's
+  two callers are two uses of it.

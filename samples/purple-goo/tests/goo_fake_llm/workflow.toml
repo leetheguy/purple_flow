@@ -1,7 +1,7 @@
 # A fake OpenAI chat provider for the Purple Goo tests. It answers with one
 # streamed message whose content is JSON describing the request it got:
 # {"model", "has_metadata", "messages": [[role, content], ...]}.
-# Model "boom" makes it fail, so the tests can check errors.
+# A ?which=name query adds "which": name. Model "boom" makes it fail, so the tests can check errors.
 #   base URL: /hooks/goo-fake-llm   (POST /hooks/goo-fake-llm/chat/completions)
 
 [workflow]

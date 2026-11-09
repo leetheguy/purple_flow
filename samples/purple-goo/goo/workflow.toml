@@ -2,7 +2,7 @@
 # the tree, since children are calls to this same workflow.
 # An OpenAI-compatible chat endpoint: point a chat app at the base URL
 # /hooks/goo/v1. Send any chat request plus a "metadata" object (personas,
-# data, monads, opening, closing, model, provider_url); metadata never
+# data, monads, opening, closing, model, _meta); metadata never
 # reaches the provider. The children's answers become this monad's thoughts.
 # The top monad streams its answer; children answer only their parent.
 # Every stage ends the run on failure, so errors come back loudly.

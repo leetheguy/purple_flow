@@ -34,7 +34,7 @@ messages =
   Enum.map(top, system) ++ (request["messages"] || []) ++ data ++ Enum.map(thoughts, system)
 
 %{
-  "url" => meta["provider_url"] || "https://openrouter.ai/api/v1/chat/completions",
+  "url" => meta["_meta"]["provider_url"] || "https://openrouter.ai/api/v1/chat/completions",
   "body" => Map.put(request, "messages", messages),
   "injected" => top ++ thoughts
 }

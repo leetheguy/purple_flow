@@ -60,7 +60,7 @@ sys.exit(1 if r["failed"] else 0)' || failed=1
 # Only the top monad streams (spec 010 rule 7): check it in the real app.
 stream=$(curl -s -N -m 60 -X POST "$BASE/hooks/goo/v1/chat/completions" -H 'content-type: application/json' \
   -d "{\"model\": \"m1\", \"messages\": [{\"role\": \"user\", \"content\": \"hi\"}],
-       \"metadata\": {\"provider_url\": \"$FAKE\", \"monads\": [{\"provider_url\": \"$FAKE\"}]}}")
+       \"metadata\": {\"_meta\": {\"provider_url\": \"$FAKE\"}, \"monads\": [{}]}}")
 if echo "$stream" | grep -q '^data: {' && echo "$stream" | grep -q '^data: \[DONE\]'; then
   echo "PASS  the top monad streams an OpenAI answer"
 else

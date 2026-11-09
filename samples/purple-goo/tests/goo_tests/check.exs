@@ -81,6 +81,12 @@ result =
         [grandkid] = thoughts.(kid["messages"])
         {grandkid["messages"] == [["system", "grandkid"], ["user", "hi"]], seen}
 
+      {"environment", _} ->
+        [kid1, kid2] = output |> echo.() |> Map.fetch!("messages") |> thoughts.()
+        [grandkid] = thoughts.(kid2["messages"])
+        which = [kid1["which"], kid2["which"], grandkid["which"]]
+        {which == [nil, "kid2", "kid2"], which}
+
       {"child model", _} ->
         models =
           output |> echo.() |> Map.fetch!("messages") |> thoughts.() |> Enum.map(& &1["model"])

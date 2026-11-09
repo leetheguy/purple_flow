@@ -4,7 +4,14 @@ body = input["body"]
 
 meta =
   Map.merge(
-    %{"personas" => [], "data" => [], "monads" => [], "opening" => [], "closing" => []},
+    %{
+      "personas" => [],
+      "data" => [],
+      "monads" => [],
+      "opening" => [],
+      "closing" => [],
+      "_meta" => %{}
+    },
     body["metadata"] || %{}
   )
 

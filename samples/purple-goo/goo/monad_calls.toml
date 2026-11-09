@@ -1,5 +1,5 @@
 # Lists the child monads to call: this same workflow, each with its own
-# metadata subtree.
+# metadata subtree, plus the environment (_meta) it inherits.
 module = "PurpleFlow.Nodes.Code"
 
 [config]
