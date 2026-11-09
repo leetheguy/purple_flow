@@ -438,6 +438,45 @@ browser back to `/credentials/oauth/callback` on this site's address
 
 The design is in [specs/](specs/000_overview.md).
 
+### Purple Goo
+
+Purple Goo turns PurpleFlow into a chat endpoint where every answer can
+come from a society of agents: monads that think before the top one
+speaks, run workflows as tools, and start swarms of their own. It's three
+workflows. To install it, copy them (and their docs) from the sample into
+the workflows folder:
+
+```sh
+mkdir -p workflows/purple-goo
+cp -r samples/purple-goo/{goo,goo_map,goo_chain,specs,skills,README.md} workflows/purple-goo/
+```
+
+On a remote install, write the same files through `/fs/` instead (see
+"Workflow files" above). Then:
+
+1. Set the `OPENROUTER_API_KEY` credential at `/credentials`, or point each
+   request's `metadata._meta.provider_url` at another OpenAI-compatible API.
+2. Check that `goo`, `goo_map`, and `goo_chain` loaded, on the Workflows
+   page or at `/api/workflows`.
+3. Point a chat app at the base URL `/hooks/goo/v1`, or try it:
+
+```sh
+curl -N -X POST localhost:4000/hooks/goo/v1/chat/completions \
+  -H 'content-type: application/json' -d '{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "messages": [{"role": "user", "content": "Should I learn to sail?"}],
+  "metadata": {"monads": [{"personas": ["You love adventure."]}, {"personas": ["You worry about safety."]}]}}'
+```
+
+The `goo` webhook has no auth, so anything that can reach it can run
+swarms on your provider key. Keep it off the public internet, or put it
+behind your own gate. How to build swarms is in
+[samples/purple-goo/README.md](samples/purple-goo/README.md), and the
+skill sheet for agents is
+[samples/purple-goo/skills/swarm-json/SKILL.md](samples/purple-goo/skills/swarm-json/SKILL.md).
+Its tests run from a checkout with the app up:
+`samples/purple-goo/check.sh`.
+
 ## License
 
 [MIT](LICENSE) =C2=A9 2026 [Lee Nathan](https://leenathan.com)
