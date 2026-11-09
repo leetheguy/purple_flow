@@ -1,0 +1,6 @@
+# Adds the agent's call and each tool's result to the history, and builds
+# the tool child: this same workflow, continuing the same agent.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "tool_child_call.exs"

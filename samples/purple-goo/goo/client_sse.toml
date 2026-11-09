@@ -1,0 +1,5 @@
+# Writes the agent's call to the client's tools as an OpenAI stream.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "client_sse.exs"

@@ -39,3 +39,6 @@ doc.
 - The copy in `goo/prompts.exs` matches `SKILL.md` (`check.sh`).
 
 ## Log
+- 2026-11-09 — [030](030_tools.md): the sheet says a monad can start a
+  swarm itself by running `goo` with `run_workflow`, and lists
+  `_meta.run_workflow`.

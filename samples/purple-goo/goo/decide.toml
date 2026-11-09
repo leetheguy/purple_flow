@@ -1,0 +1,7 @@
+# Reads the agent's answer: no tool call goes down "answer", run_workflow
+# calls down "tools" (as calls for goo_map), and a top monad's call to the
+# client's own tools down "client".
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "decide.exs"

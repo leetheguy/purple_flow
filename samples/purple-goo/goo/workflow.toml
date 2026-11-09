@@ -4,9 +4,12 @@
 # /hooks/goo/v1. Send any chat request plus a "metadata" object (personas,
 # data, monads, opening, closing, model, _meta); metadata never
 # reaches the provider. The children's answers become this monad's thoughts.
-# The top monad streams its answer; children answer only their parent.
+# Every agent can run workflows as tools (run_workflow); each round is a
+# tool child, goo calling itself. The top monad then speaks: one last call,
+# with the agent's answer as a thought, which streams. Children answer only
+# their parent.
 # Every stage ends the run on failure, so errors come back loudly.
-# See specs/010 for the whole contract.
+# See specs/010 and 030 for the whole contract.
 #   curl -N -X POST localhost:4000/hooks/goo/v1/chat/completions \
 #     -H 'content-type: application/json' -d '{"model": "openai/gpt-4o-mini",
 #       "messages": [{"role": "user", "content": "hi"}],
@@ -66,15 +69,84 @@ after = ["prompts"]
 on_fail = "end_run"
 
 [[steps]]
-name = "agent"
-node = "agent.toml"
+name = "think"
+node = "think.toml"
 after = ["assemble"]
 on_fail = "end_run"
 
 [[steps]]
+name = "decide"
+node = "decide.toml"
+after = ["think"]
+on_fail = "end_run"
+
+[[steps]]
+name = "answered"
+node = "answered.toml"
+after = ["decide"]
+when = "answer"
+
+[[steps]]
+name = "tools"
+node = "map.toml"
+after = ["decide"]
+when = "tools"
+on_fail = "end_run"
+
+[[steps]]
+name = "tool_child_call"
+node = "tool_child_call.toml"
+after = ["tools"]
+on_fail = "end_run"
+
+[[steps]]
+name = "tool_child"
+node = "tool_child.toml"
+after = ["tool_child_call"]
+on_fail = "end_run"
+
+[[steps]]
+name = "tool_done"
+node = "tool_done.toml"
+after = ["tool_child"]
+on_fail = "end_run"
+
+[[steps]]
+name = "client_sse"
+node = "client_sse.toml"
+after = ["decide"]
+when = "client"
+on_fail = "end_run"
+
+[[steps]]
+name = "client_respond"
+node = "client_respond.toml"
+after = ["client_sse"]
+on_fail = "end_run"
+
+[[steps]]
+name = "plan"
+node = "plan.toml"
+after = ["answered", "tool_done", "client_respond"]
+on_fail = "end_run"
+
+[[steps]]
+name = "speak"
+node = "speak.toml"
+after = ["plan"]
+when = "speak"
+on_fail = "end_run"
+
+[[steps]]
+name = "kept"
+node = "kept.toml"
+after = ["plan"]
+when = "done"
+
+[[steps]]
 name = "denormalize"
 node = "denormalize.toml"
-after = ["agent"]
+after = ["speak", "kept"]
 on_fail = "end_run"
 
 [[steps]]

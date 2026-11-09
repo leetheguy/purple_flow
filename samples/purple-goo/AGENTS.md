@@ -5,7 +5,7 @@ what's specific to Purple Goo.
 
 | Binding | Purple Goo |
 |---|---|
-| **precommit** | `samples/purple-goo/check.sh`, from the repo root with the app running: every workflow loads with no problems, `goo_tests` passes, and the top monad streams |
+| **precommit** | `samples/purple-goo/check.sh`, from the repo root with the app running: every workflow loads with no problems, `goo_tests` passes, the skill sheet's copy matches, and the top monad and a client tool call stream |
 | **test** | the `goo_tests` workflow (`tests/goo_tests/cases.exs` and `check.exs`), against `goo_fake_llm` |
 | **coverage** | none; every rule in the specs has a case in their `## Tests` instead |
 | **mutation** | none (left out) |

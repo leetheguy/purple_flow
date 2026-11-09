@@ -21,7 +21,7 @@ WORKFLOWS=${WORKFLOWS_PATH:-$(env_value WORKFLOWS_PATH)}; WORKFLOWS=${WORKFLOWS:
 BASE="http://localhost:$PORT"
 COPY="$WORKFLOWS/zz_purple_goo"
 FAKE="$BASE/hooks/goo-fake-llm/chat/completions"
-NAMES="goo goo_map goo_chain goo_tests goo_fake_llm goo_test_data goo_test_open goo_test_close"
+NAMES="goo goo_map goo_chain goo_tests goo_fake_llm goo_test_data goo_test_open goo_test_close goo_test_tool"
 
 # The skill sheet's copy in goo's prompts must match its source (spec 020).
 python3 - "$HERE" <<'PY' || exit 1
@@ -78,6 +78,18 @@ if echo "$stream" | grep -q '^data: {' && echo "$stream" | grep -q '^data: \[DON
   echo "PASS  the top monad streams an OpenAI answer"
 else
   echo "FAIL  the top monad didn't stream"; echo "       got: ${stream:0:300}"; failed=1
+fi
+
+# A call to the client's own tool goes back to the chat app (spec 030 rule 5).
+stream=$(curl -s -N -m 60 -X POST "$BASE/hooks/goo/v1/chat/completions" -H 'content-type: application/json' \
+  -d "{\"model\": \"m1\", \"messages\": [{\"role\": \"user\", \"content\": \"client:weather\"}],
+       \"tools\": [{\"type\": \"function\", \"function\": {\"name\": \"weather\", \"parameters\": {\"type\": \"object\"}}}],
+       \"metadata\": {\"_meta\": {\"provider_url\": \"$FAKE\"}}}")
+if echo "$stream" | grep -q '"name":"weather"' && echo "$stream" | grep -q '"finish_reason":"tool_calls"' \
+   && echo "$stream" | grep -q '^data: \[DONE\]'; then
+  echo "PASS  a client tool call streams back to the chat app"
+else
+  echo "FAIL  the client tool call didn't come back"; echo "       got: ${stream:0:300}"; failed=1
 fi
 
 [ $failed -eq 0 ] && echo "Purple Goo check passed" || { echo "Purple Goo check FAILED"; exit 1; }

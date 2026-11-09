@@ -1,0 +1,6 @@
+# The top monad speaks ("speak"), unless it handed a call to the client;
+# anything else is done ("done") with the agent's answer.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "plan.exs"

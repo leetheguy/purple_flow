@@ -1,0 +1,6 @@
+# Sends the client tool call to the chat app.
+module = "PurpleFlow.Nodes.Respond"
+
+[config]
+headers = { "content-type" = "text/event-stream", "cache-control" = "no-cache" }
+body = "{{ input.sse }}"

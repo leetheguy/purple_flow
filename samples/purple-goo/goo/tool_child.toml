@@ -1,0 +1,6 @@
+# Runs the tool child. It may run more tools and children of its own; the
+# answer that comes back is the last one in the chain.
+module = "PurpleFlow.Nodes.Workflow"
+
+[config]
+workflow = "goo"

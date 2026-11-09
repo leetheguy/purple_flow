@@ -1,0 +1,5 @@
+# Marks the tool chain's answer as this agent's answer.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "tool_done.exs"

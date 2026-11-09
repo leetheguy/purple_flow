@@ -45,7 +45,7 @@ Every key is optional.
 | `opening` | `{"workflow", "data"}` to run in order before anything else. Each gets `{"frame", "data"}` and returns the frame, changed as it likes |
 | `closing` | the same, after the AI answers. The frame then has `messages` (history without anything injected, data kept) and `response` |
 | `model` | the model for this monad (a child defaults to its parent's) |
-| `_meta` | the environment, inherited by every child (a child's own `_meta` keys win): `provider_url`, the chat completions URL (default OpenRouter); `swarm_skill`, `false` to leave out the skill sheet (below); and anything else that should travel down the tree, like a depth counter |
+| `_meta` | the environment, inherited by every child (a child's own `_meta` keys win): `provider_url`, the chat completions URL (default OpenRouter); `swarm_skill`, `false` to leave out the skill sheet (below); `run_workflow`, `false` to turn off the tool (below); and anything else that should travel down the tree, like a depth counter |
 
 Nothing else inherits: a child has exactly the personas, data, and monads
 its own tree gives it. Anything else you add rides along for your opening
@@ -64,6 +64,25 @@ at providers you trust with it.
   streams.
 - **Mutator:** any monad fed to a synthesizer. Mix and match them per call
   instead of writing every combination by hand.
+
+## Tools
+
+Every agent can run any workflow as a tool: it's offered `run_workflow`
+(`{"name", "params"}`), and the workflow's output comes back as the tool
+result. Each tool round is `goo` calling itself, a tool child, with the
+result added to the history, as many rounds as the agent needs. When an
+agent answers without a tool, the chain collapses to that answer, and the
+top monad gets it as a thought and speaks the answer that streams. So the
+top monad always makes one more AI call than its agent needed.
+
+- A failed tool is a result (`{"error": ...}`), and the agent decides what
+  to do about it.
+- An agent can start a swarm of its own by running `goo`.
+- The chat app's own tools work too: if the top agent calls one, the call
+  goes back to the app, as OpenAI does it. Children aren't offered them.
+- `"_meta": {"run_workflow": false}` turns the tool off for a tree. Nothing
+  caps the rounds; a tool that calls `goo` that calls the tool runs as long
+  as the models keep at it.
 
 ## Designing swarms
 

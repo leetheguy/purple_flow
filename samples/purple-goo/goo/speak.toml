@@ -1,5 +1,5 @@
-# Calls the AI. At the top of the tree, this streams the answer to the chat
-# app; in a child, nobody is waiting, so it just reads it.
+# The top monad's last call, with no tools. At the top of a chat, this is
+# the answer that streams to the chat app.
 module = "PurpleFlow.Nodes.OpenAIChat"
 
 [config]

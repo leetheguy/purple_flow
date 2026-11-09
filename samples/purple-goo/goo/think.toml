@@ -1,0 +1,9 @@
+# The agent's call, with its tools. It doesn't stream, so a tool call is
+# caught before anyone sees it; the top monad's speak step streams instead.
+module = "PurpleFlow.Nodes.OpenAIChat"
+
+[config]
+url = "{{ input.url }}"
+headers = { authorization = "Bearer {{ creds.OPENROUTER_API_KEY }}" }
+body = "{{ input.body }}"
+respond = false

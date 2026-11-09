@@ -15,6 +15,27 @@ defmodule Tree do
 end
 
 hi = [%{"role" => "user", "content" => "hi"}]
+say = fn text -> %{"messages" => [%{"role" => "user", "content" => text}]} end
+
+weather = %{
+  "tools" => [
+    %{
+      "type" => "function",
+      "function" => %{"name" => "weather", "parameters" => %{"type" => "object"}}
+    }
+  ]
+}
+
+say = fn text -> %{"messages" => [%{"role" => "user", "content" => text}]} end
+
+weather = %{
+  "tools" => [
+    %{
+      "type" => "function",
+      "function" => %{"name" => "weather", "parameters" => %{"type" => "object"}}
+    }
+  ]
+}
 
 goo = fn name, metadata, extra ->
   body =
@@ -94,6 +115,14 @@ end
     %{}
   ),
   goo.("failed child", %{"monads" => [%{"model" => "boom"}]}, %{}),
+  goo.("speaks", %{}, %{}),
+  goo.("tool once", %{}, say.("tools:1")),
+  goo.("tool chain", %{}, say.("tools:2")),
+  goo.("tool failed", %{}, say.("tools:fail")),
+  goo.("monad tools", %{"monads" => [%{}]}, say.("tools:1")),
+  goo.("tool off", %{"_meta" => %{"run_workflow" => false}}, %{}),
+  goo.("client tool", %{}, Map.merge(weather, say.("client:weather"))),
+  goo.("children get no client tools", %{"monads" => [%{}]}, weather),
   goo.(
     "failed data",
     %{"data" => [%{"workflow" => "goo_test_data", "data" => %{"kind" => "boom"}}]},

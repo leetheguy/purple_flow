@@ -2,15 +2,21 @@
 # never this monad's personas, data, or children, or its siblings'. Its
 # model is the subtree's, else this request's. The one thing that cascades
 # is _meta, the environment (provider_url, counters): this monad's, with the
-# child's own _meta keys on top.
+# child's own _meta keys on top. Children never get the client's tools:
+# they couldn't hand a call back to it (spec 030).
 %{"request" => request, "meta" => meta} = steps["opening"]["output"]
+request = Map.drop(request, ["tools", "tool_choice", "parallel_tool_calls"])
 
 calls =
   for subtree <- meta["monads"] do
     subtree = Map.put(subtree, "_meta", Map.merge(meta["_meta"], subtree["_meta"] || %{}))
 
     child =
-      Map.merge(request, %{"model" => subtree["model"] || request["model"], "metadata" => subtree})
+      Map.merge(request, %{
+        "model" => subtree["model"] || request["model"],
+        "metadata" => subtree,
+        "goo_role" => "monad"
+      })
 
     %{"workflow" => "goo", "input" => child}
   end

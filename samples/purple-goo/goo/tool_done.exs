@@ -1,0 +1,1 @@
+%{"kind" => "tools", "message" => input}

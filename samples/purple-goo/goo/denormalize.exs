@@ -4,7 +4,7 @@
 assembled = steps["assemble"]["output"]
 injected = MapSet.new(assembled["injected"])
 
-calls = Map.values(input["tool_calls"] || %{})
+calls = input["tool_calls"] || []
 reply = %{"role" => "assistant", "content" => input["content"]}
 reply = if calls == [], do: reply, else: Map.put(reply, "tool_calls", calls)
 

@@ -36,7 +36,7 @@ Every monad in the tree has the same keys, all optional:
 | `model` | the model for this monad; a child without one uses its parent's |
 | `data` | workflows that fetch facts for it: `"name"` or `{"workflow": "name", "data": {...}}` |
 | `opening`, `closing` | workflows that run before and after its AI call: `{"workflow": "name", "data": {...}}` |
-| `_meta` | settings passed down to every child: `provider_url`, `swarm_skill` (`false` leaves this sheet out), and your own keys. A child's own `_meta` keys win |
+| `_meta` | settings passed down to every child: `provider_url`, `swarm_skill` (`false` leaves this sheet out), `run_workflow` (`false` takes away the tool), and your own keys. A child's own `_meta` keys win |
 
 A child sees the conversation and its own branch of the tree, nothing
 else: not its parent's personas, not its siblings. Only `_meta` is passed
@@ -103,8 +103,37 @@ checking the worrier:
 }
 ```
 
+## Tools
+
+Every monad can run workflows with the `run_workflow` tool, for as many
+rounds as it needs, before it answers. To start a swarm yourself, run
+`goo` with the whole request (`model`, `messages`, `metadata`) as `params`;
+its answer comes back as the tool result.
+
 When someone asks you for a swarm, answer with the JSON, and say in a line
-what each monad is for.
+what each monad is for. When someone asks you to use one, run it.
 """
 
-%{"instruction" => instruction, "skill" => String.trim_trailing(skill)}
+# The Purple Flow tool, offered to every agent unless _meta.run_workflow is
+# false (spec 030). Its description is the agent's whole guide to it.
+tool = %{
+  "type" => "function",
+  "function" => %{
+    "name" => "run_workflow",
+    "description" =>
+      "Runs one Purple Flow workflow by name and returns its output. Each workflow " <>
+        "is a skill: run the one you need, with its input as params. To start a " <>
+        "swarm of your own, run \"goo\" with a chat request (model, messages, " <>
+        "metadata) as params.",
+    "parameters" => %{
+      "type" => "object",
+      "properties" => %{
+        "name" => %{"type" => "string", "description" => "the workflow's name"},
+        "params" => %{"type" => "object", "description" => "the workflow's input"}
+      },
+      "required" => ["name"]
+    }
+  }
+}
+
+%{"instruction" => instruction, "skill" => String.trim_trailing(skill), "tool" => tool}

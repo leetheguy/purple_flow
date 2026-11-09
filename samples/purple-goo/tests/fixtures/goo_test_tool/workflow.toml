@@ -1,0 +1,9 @@
+# A tool for the Purple Goo tests: returns "result N" for {"n": N}, or fails
+# for {"fail": true}.
+
+[workflow]
+name = "goo_test_tool"
+
+[[steps]]
+name = "work"
+node = "work.toml"

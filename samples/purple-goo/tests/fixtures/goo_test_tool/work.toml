@@ -1,0 +1,5 @@
+# Answers with the round number, or fails when told to.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "work.exs"

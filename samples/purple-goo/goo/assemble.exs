@@ -2,8 +2,13 @@
 # thoughts]. Everything injected that must not go back up is listed in
 # "injected", so the denormalizer can remove it by exact match. Data stays.
 # The input is the prompts step's output.
-%{"request" => request, "meta" => meta} = steps["opening"]["output"]
-%{"instruction" => instruction, "skill" => skill} = input
+#
+# Two bodies come out (spec 030): "body" for the agent's think call, with
+# the tools, and "speak" for the top monad's last call, which always has
+# the instruction (its answer arrives as a thought) and no tools. A tool
+# child injects nothing: its history already holds its parent's prompts.
+%{"request" => request, "meta" => meta, "role" => role} = steps["opening"]["output"]
+%{"instruction" => instruction, "skill" => skill, "tool" => tool} = input
 
 system = fn text -> %{"role" => "system", "content" => text} end
 
@@ -27,16 +32,24 @@ thoughts =
   end
 
 # The skill sheet is on unless _meta.swarm_skill is false (spec 020).
-top =
-  meta["personas"] ++
-    if(meta["_meta"]["swarm_skill"] == false, do: [], else: [skill]) ++
-    if(thoughts == [], do: [], else: [instruction])
+personas =
+  if role == "tool",
+    do: [],
+    else: meta["personas"] ++ if(meta["_meta"]["swarm_skill"] == false, do: [], else: [skill])
 
-messages =
-  Enum.map(top, system) ++ (request["messages"] || []) ++ data ++ Enum.map(thoughts, system)
+top = personas ++ if(thoughts == [], do: [], else: [instruction])
+rest = (request["messages"] || []) ++ data ++ Enum.map(thoughts, system)
+
+# The client's tools (only the top monad has any), then run_workflow.
+client = Enum.reject(request["tools"] || [], &(&1["function"]["name"] == "run_workflow"))
+tools = client ++ if(meta["_meta"]["run_workflow"] == false, do: [], else: [tool])
+plain = Map.drop(request, ["tools", "tool_choice", "parallel_tool_calls"])
+think = if tools == [], do: plain, else: Map.put(request, "tools", tools)
 
 %{
   "url" => meta["_meta"]["provider_url"] || "https://openrouter.ai/api/v1/chat/completions",
-  "body" => Map.put(request, "messages", messages),
-  "injected" => top ++ thoughts
+  "body" => Map.put(think, "messages", Enum.map(top, system) ++ rest),
+  "speak" => Map.put(plain, "messages", Enum.map(personas ++ [instruction], system) ++ rest),
+  "client_tools" => Enum.map(client, & &1["function"]["name"]),
+  "injected" => top ++ thoughts ++ [instruction]
 }

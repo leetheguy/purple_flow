@@ -138,3 +138,7 @@ The tests are workflows (`tests/goo_tests`), run against a fake provider
   two callers are two uses of it.
 - 2026-11-09 — [020](020_swarm_skill.md): the swarm skill sheet is injected
   after the personas, and the prompts live in their own step, `prompts`.
+- 2026-11-09 — [030](030_tools.md): the AI call is now think, tool rounds,
+  and, for the top monad only, a last speak call; rule 3 step 4's call is
+  the think call, and rule 7's streaming answer is the speak call. Children
+  are no longer sent the client's tools. Each call carries a `goo_role`.

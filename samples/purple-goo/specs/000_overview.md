@@ -23,8 +23,13 @@ speak OpenAI's API.
 6. Only the top monad streams.
 7. Every monad is taught to design swarms: the skill sheet is injected
    after its personas, unless `_meta.swarm_skill` is false.
+8. Every agent can run workflows as tools (`run_workflow`). Each tool round
+   is a tool child: `goo` calling itself with the result. The chain
+   collapses to its last answer, which the top monad gets as a thought
+   before it speaks the answer that streams.
 
-The details are in [010](010_monad.md) and [020](020_swarm_skill.md).
+The details are in [010](010_monad.md), [020](020_swarm_skill.md), and
+[030](030_tools.md).
 
 ## Rules
 
@@ -35,13 +40,13 @@ The details are in [010](010_monad.md) and [020](020_swarm_skill.md).
 
 | Folder | Workflow | What it does |
 |---|---|---|
-| `goo/` | `goo` | the monad: open, inject data, hear children, call the AI, denormalize, close |
+| `goo/` | `goo` | the monad: open, inject data, hear children, think, run tools through tool children, speak (top only), denormalize, close |
 | `goo_map/` | `goo_map` | calls a list of workflows at once, returns outputs in list order, errors as data; never knows what it's calling |
 | `goo_chain/` | `goo_chain` | runs workflows one after another on a frame |
 | `skills/swarm-json/` | | the swarm skill sheet, for agents designing swarms; `goo/prompts.exs` holds a copy, with every other prompt `goo` injects |
 | `tests/goo_tests/` | `goo_tests` | the test suite, as a workflow |
 | `tests/goo_fake_llm/` | `goo_fake_llm` | a fake OpenAI provider that echoes what it got |
-| `tests/fixtures/` | `goo_test_*` | small data, opening, and closing workflows the tests use |
+| `tests/fixtures/` | `goo_test_*` | small data, opening, closing, and tool workflows the tests use |
 
 ## Dependencies
 
@@ -55,4 +60,5 @@ and the `OPENROUTER_API_KEY` credential.
 | [000](000_overview.md) | living | this overview |
 | [010](010_monad.md) | implemented | the monad: metadata, order of work, callers, errors, streaming |
 | [020](020_swarm_skill.md) | implemented | the swarm skill sheet: one source, injected after the personas, `_meta.swarm_skill` to leave it out |
+| [030](030_tools.md) | implemented | tool calls: think, tool children, collapse, the top monad speaks; client tools go back to the client |
 | [999](999_todo.md) | living | planned work and open questions |
