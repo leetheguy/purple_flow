@@ -7,12 +7,12 @@
 
 [![AI automation engineer for hire](https://img.shields.io/badge/AI_automation_engineer-for_hire-orange)](https://leenathan.com)
 
-
-
 PurpleFlow makes building automated workflows as easy for AI as n8n makes
 it for people.
 
-It was also designed to build and orchestrate AI swarms that build and orchestrate AI swarms.
+It was also designed to build and orchestrate AI swarms that build and orchestrate AI swarms. (see the samples)
+
+And it even has a dark mode in the UI!
 
 ## [Live demo](https://leenathan.com/demo)
 
@@ -138,7 +138,7 @@ hands and it works well with PurpleFlow; just sayin')
 8. Your agent can now build workflows that connect anything to anything,
 just like n8n, Make, Zapier, and friends.
 
-## Where are the connectors?
+### Where are the connectors?
 
 The one catch is that you don't have a bunch of convenience nodes for
 connectors. But with AI, you don't need them. Just have your AI look up
@@ -168,7 +168,7 @@ Credentials can also be OAuth logins (Gmail, Google Drive, and friends).
 A credential is a **String** (one line, the default) or **Text**, a box that
 keeps line breaks, for values like SSH private keys and certificates.
 
-## Lazy load your skills
+### Lazy load your skills
 
 I'm a fan of MCP in concept, but not in practice. Many services load an MCP connection with a ton of tools and don't think about an AI's capabilities when creating them.
 
@@ -221,6 +221,17 @@ can be a major issue if someone is passing text secrets and other node code
 sees them. All the solutions I thought of to address this issue required
 more memory or slowed down the app. At this time, I consider efficiency
 over a small, hard-to-exploit security hole to be the path forward.
+
+### Samples
+
+Samples are included to help you get started. Here is the current list of what they do:
+
+- announce the size of numbers in an array
+- send an email
+- create a recursive agentic swarm framework with agents with internal and external worlds that allows agents to spin up child agentic swarms by generating JSON files
+- grab some mock user data
+- turn ing words into ong words - ping to pong, ding to dong, fling to flong
+
 
 ### Free as in free beer
 
