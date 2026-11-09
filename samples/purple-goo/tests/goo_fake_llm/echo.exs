@@ -66,6 +66,12 @@ cond do
 
     seen = if offered == [], do: seen, else: Map.put(seen, "tools", offered)
 
+    # Whether any tool's description tells the agent it can run goo.
+    hint? =
+      Enum.any?(request["tools"] || [], &((&1["function"]["description"] || "") =~ "\"goo\""))
+
+    seen = if hint?, do: Map.put(seen, "goo_hint", true), else: seen
+
     # ?which=name in the URL says which provider URL a monad used.
     which = input["query"]["which"]
     seen = if which, do: Map.put(seen, "which", which), else: seen

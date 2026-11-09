@@ -9,6 +9,13 @@
 # child injects nothing: its history already holds its parent's prompts.
 %{"request" => request, "meta" => meta, "role" => role} = steps["opening"]["output"]
 %{"instruction" => instruction, "skill" => skill, "tool" => tool} = input
+swarm? = meta["_meta"]["swarm_skill"] == true
+
+# The tool mentions goo only when the monad may build swarms (spec 020 log).
+tool =
+  if swarm?,
+    do: update_in(tool, ["function", "description"], &(&1 <> input["swarm_hint"])),
+    else: tool
 
 system = fn text -> %{"role" => "system", "content" => text} end
 
@@ -31,11 +38,11 @@ thoughts =
     end
   end
 
-# The skill sheet is on unless _meta.swarm_skill is false (spec 020).
+# The skill sheet is off unless _meta.swarm_skill is true (spec 020 log).
 personas =
   if role == "tool",
     do: [],
-    else: meta["personas"] ++ if(meta["_meta"]["swarm_skill"] == false, do: [], else: [skill])
+    else: meta["personas"] ++ if(swarm?, do: [skill], else: [])
 
 top = personas ++ if(thoughts == [], do: [], else: [instruction])
 rest = (request["messages"] || []) ++ data ++ Enum.map(thoughts, system)

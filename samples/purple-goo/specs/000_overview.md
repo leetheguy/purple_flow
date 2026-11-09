@@ -21,8 +21,8 @@ speak OpenAI's API.
 4. Nothing injected is returned upward; a parent sees only responses.
 5. Errors are returned, never swallowed.
 6. Only the top monad streams.
-7. Every monad is taught to design swarms: the skill sheet is injected
-   after its personas, unless `_meta.swarm_skill` is false.
+7. A monad can be taught to design swarms: with `_meta.swarm_skill` true,
+   the skill sheet is injected after its personas. It's off by default.
 8. Every agent can run workflows as tools (`run_workflow`). Each tool round
    is a tool child: `goo` calling itself with the result. The chain
    collapses to its last answer, which the top monad gets as a thought
@@ -59,6 +59,6 @@ and the `OPENROUTER_API_KEY` credential.
 |---|---|---|
 | [000](000_overview.md) | living | this overview |
 | [010](010_monad.md) | implemented | the monad: metadata, order of work, callers, errors, streaming |
-| [020](020_swarm_skill.md) | implemented | the swarm skill sheet: one source, injected after the personas, `_meta.swarm_skill` to leave it out |
+| [020](020_swarm_skill.md) | implemented | the swarm skill sheet: one source, injected after the personas when `_meta.swarm_skill` is true (off by default) |
 | [030](030_tools.md) | implemented | tool calls: think, tool children, collapse, the top monad speaks; client tools go back to the client |
 | [999](999_todo.md) | living | planned work and open questions |

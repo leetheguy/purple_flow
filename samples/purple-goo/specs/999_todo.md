@@ -12,3 +12,8 @@ Created: 2026-11-09
   only on the top agent's first call; once a `run_workflow` round starts,
   the tool children can't hand a call back to the chat app. Making that
   work means answering the app mid-chain. See [030](030_tools.md) rule 5.
+- **Prompts that keep swarm-building monads on task.** With the skill sheet
+  and `run_workflow` both on, real models built and ran swarms for ordinary
+  questions, and those swarms did the same. Muse is writing prompts for it;
+  the sheet stays off by default until they hold up. See
+  [020](020_swarm_skill.md)'s log.

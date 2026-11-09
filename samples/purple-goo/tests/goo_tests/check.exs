@@ -111,7 +111,8 @@ result =
           role == "system" and String.starts_with?(text, "# Designing a swarm")
         end
 
-        {Enum.map(seen, &skill?.(&1)) == [false, true, false, false, false] and
+        {think.(output)["goo_hint"] == true and
+           Enum.map(seen, &skill?.(&1)) == [false, true, false, false, false] and
            Enum.at(seen, 2) == ["system", instruction] and
            Enum.map(kid["messages"], &skill?.(&1)) == [true, false] and
            not Enum.any?(output["history"], &skill?.(&1)), seen}

@@ -36,6 +36,13 @@ if copy != source:
 print("PASS  the skill sheet in goo/prompts.exs matches SKILL.md")
 PY
 
+# Workflow names are unique, so the sample can't load beside an installed copy.
+installed=$(grep -rls --include=workflow.toml '^name = "goo"$' "$WORKFLOWS" | grep -v "/zz_purple_goo/")
+if [ -n "$installed" ]; then
+  echo "FAIL  Purple Goo is already installed ($installed); move it out of the workflows folder while the check runs"
+  exit 1
+fi
+
 trap 'rm -rf "$COPY"; echo "Removed $COPY"' EXIT
 rm -rf "$COPY" && cp -r "$HERE" "$COPY" && rm -f "$COPY/check.sh"
 STARTED=$(date -u +%Y-%m-%dT%H:%M:%S)

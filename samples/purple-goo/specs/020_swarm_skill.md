@@ -42,3 +42,14 @@ doc.
 - 2026-11-09 — [030](030_tools.md): the sheet says a monad can start a
   swarm itself by running `goo` with `run_workflow`, and lists
   `_meta.run_workflow`.
+- 2026-11-09 — The sheet is off by default; `_meta.swarm_skill = true`
+  turns it on (rule 3 is now the other way around). In the first real run,
+  monads given the sheet and `run_workflow` answered an ordinary question
+  by designing and running swarms, which did the same, until the runs were
+  stopped by hand. The sheet now says it's off and why, and asks for
+  careful prompting before it's turned on. Better prompts for it are
+  Muse's to write.
+- 2026-11-09 — With the sheet off, the next real run still had both
+  monads start swarms: `run_workflow`'s description said they could run
+  `goo`. That sentence now comes with the sheet, only when
+  `_meta.swarm_skill` is true.

@@ -32,7 +32,7 @@ Every monad in the tree has the same keys, all optional:
 | `model` | the model for this monad; a child without one uses its parent's |
 | `data` | workflows that fetch facts for it: `"name"` or `{"workflow": "name", "data": {...}}` |
 | `opening`, `closing` | workflows that run before and after its AI call: `{"workflow": "name", "data": {...}}` |
-| `_meta` | settings passed down to every child: `provider_url`, `swarm_skill` (`false` leaves this sheet out), `run_workflow` (`false` takes away the tool), and your own keys. A child's own `_meta` keys win |
+| `_meta` | settings passed down to every child: `provider_url`, `swarm_skill` (`true` gives monads this sheet; off by default, see below), `run_workflow` (`false` takes away the tool), and your own keys. A child's own `_meta` keys win |
 
 A child sees the conversation and its own branch of the tree, nothing
 else: not its parent's personas, not its siblings. Only `_meta` is passed
@@ -106,5 +106,20 @@ rounds as it needs, before it answers. To start a swarm yourself, run
 `goo` with the whole request (`model`, `messages`, `metadata`) as `params`;
 its answer comes back as the tool result.
 
+## Giving monads this sheet
+
+`"_meta": {"swarm_skill": true}` adds this sheet to a monad's prompts, and
+to every monad under it. It's off by default, for a reason: in the first
+real test, monads given this sheet and the tool answered an ordinary
+question by designing swarms, then running them, and every swarm they
+started did the same. It multiplied until it was stopped by hand.
+
+Before you turn it on, prompt for it. Give the monads personas that say
+when building a swarm is their job and when it isn't. Turn it on only for
+the monads that need it, and turn `run_workflow` off for those that only
+design. Put a depth counter in `_meta`, with an opening workflow that stops
+at a limit. Try a new tree on a cheap model, and watch the runs page the
+first time.
+
 When someone asks you for a swarm, answer with the JSON, and say in a line
-what each monad is for. When someone asks you to use one, run it.
+what each monad is for. Run one only when you're asked to run it.
