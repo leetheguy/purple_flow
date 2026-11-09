@@ -1,0 +1,5 @@
+# Returns the response, which is all a parent ever sees of this monad.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "answer.exs"

@@ -1,0 +1,5 @@
+# Runs the case's workflow with the case as its input.
+module = "PurpleFlow.Nodes.Workflow"
+
+[config]
+workflow = "{{ input.workflow }}"

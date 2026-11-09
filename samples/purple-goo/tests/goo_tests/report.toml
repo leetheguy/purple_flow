@@ -1,0 +1,5 @@
+# Counts the passes and lists the failures.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "report.exs"

@@ -1,0 +1,9 @@
+# An opening workflow for the Purple Goo tests: adds data.persona to the end
+# of the frame's personas. data.fail makes it fail.
+
+[workflow]
+name = "goo_test_open"
+
+[[steps]]
+name = "add"
+node = "add.toml"

@@ -1,0 +1,6 @@
+# Describes the request as JSON and wraps it in a server-sent event stream,
+# the way OpenAI streams an answer.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "echo.exs"

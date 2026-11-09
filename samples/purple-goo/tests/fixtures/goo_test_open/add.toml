@@ -1,0 +1,5 @@
+# Returns the frame with one more persona.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "add.exs"

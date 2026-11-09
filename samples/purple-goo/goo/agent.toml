@@ -1,0 +1,8 @@
+# Calls the AI. At the top of the tree, this streams the answer to the chat
+# app; in a child, nobody is waiting, so it just reads it.
+module = "PurpleFlow.Nodes.OpenAIChat"
+
+[config]
+url = "{{ input.url }}"
+headers = { authorization = "Bearer {{ creds.OPENROUTER_API_KEY }}" }
+body = "{{ input.body }}"

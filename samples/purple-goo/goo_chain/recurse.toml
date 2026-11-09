@@ -1,0 +1,5 @@
+# Runs the chain again on the rest of the calls.
+module = "PurpleFlow.Nodes.Workflow"
+
+[config]
+workflow = "goo_chain"

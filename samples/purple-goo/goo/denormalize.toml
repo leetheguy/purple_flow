@@ -1,0 +1,6 @@
+# Takes back out everything injected (personas, the instruction, thoughts),
+# keeps the data, and hands the frame to the closing workflows.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "denormalize.exs"

@@ -1,0 +1,2 @@
+# Nothing to call: passes the empty list on.
+module = "PurpleFlow.Nodes.Noop"

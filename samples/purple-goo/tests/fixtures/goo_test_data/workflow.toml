@@ -1,0 +1,10 @@
+# A data workflow for the Purple Goo tests. data.kind picks what it returns:
+# "text" -> "fact: <data.x>", "message" -> a user message, "map" -> {"n": 1}, "boom" -> fails,
+# no data -> "plain".
+
+[workflow]
+name = "goo_test_data"
+
+[[steps]]
+name = "fetch"
+node = "fetch.toml"

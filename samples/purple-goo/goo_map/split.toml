@@ -1,0 +1,6 @@
+# One item per call, numbered so the results can be put back in order. They go
+# down the "calls" route; an empty list goes down "empty" instead.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "split.exs"

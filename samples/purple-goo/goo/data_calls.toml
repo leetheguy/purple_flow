@@ -1,0 +1,5 @@
+# Lists the data workflows to call, each with the frame and its data.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "data_calls.exs"

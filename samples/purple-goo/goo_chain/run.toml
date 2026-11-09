@@ -1,0 +1,5 @@
+# Runs the call's workflow on the frame.
+module = "PurpleFlow.Nodes.Workflow"
+
+[config]
+workflow = "{{ input.call.workflow }}"

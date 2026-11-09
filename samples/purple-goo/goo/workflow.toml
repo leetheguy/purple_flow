@@ -1,0 +1,84 @@
+# Purple Goo's monad: one AI call with an internal world, and every monad in
+# the tree, since children are calls to this same workflow.
+# An OpenAI-compatible chat endpoint: point a chat app at the base URL
+# /hooks/goo/v1. Send any chat request plus a "metadata" object (personas,
+# data, monads, opening, closing, model, provider_url); metadata never
+# reaches the provider. The children's answers become this monad's thoughts.
+# The top monad streams its answer; children answer only their parent.
+# Every stage ends the run on failure, so errors come back loudly.
+# See specs/010 for the whole contract.
+#   curl -N -X POST localhost:4000/hooks/goo/v1/chat/completions \
+#     -H 'content-type: application/json' -d '{"model": "openai/gpt-4o-mini",
+#       "messages": [{"role": "user", "content": "hi"}],
+#       "metadata": {"personas": ["You are kind."], "monads": [{"personas": ["You are wary."]}]}}'
+
+[workflow]
+name = "goo"
+
+[trigger.webhook]
+path = "goo/v1/chat/completions"
+
+[[steps]]
+name = "normalize"
+node = "normalize.toml"
+on_fail = "end_run"
+
+[[steps]]
+name = "opening"
+node = "chain.toml"
+after = ["normalize"]
+on_fail = "end_run"
+
+[[steps]]
+name = "data_calls"
+node = "data_calls.toml"
+after = ["opening"]
+on_fail = "end_run"
+
+[[steps]]
+name = "data"
+node = "map.toml"
+after = ["data_calls"]
+on_fail = "end_run"
+
+[[steps]]
+name = "monad_calls"
+node = "monad_calls.toml"
+after = ["data"]
+on_fail = "end_run"
+
+[[steps]]
+name = "monads"
+node = "map.toml"
+after = ["monad_calls"]
+on_fail = "end_run"
+
+[[steps]]
+name = "assemble"
+node = "assemble.toml"
+after = ["monads"]
+on_fail = "end_run"
+
+[[steps]]
+name = "agent"
+node = "agent.toml"
+after = ["assemble"]
+on_fail = "end_run"
+
+[[steps]]
+name = "denormalize"
+node = "denormalize.toml"
+after = ["agent"]
+on_fail = "end_run"
+
+[[steps]]
+name = "closing"
+node = "chain.toml"
+after = ["denormalize"]
+on_fail = "end_run"
+
+[[steps]]
+name = "answer"
+node = "answer.toml"
+after = ["closing"]
+on_fail = "end_run"

@@ -1,0 +1,44 @@
+# The Purple Goo test suite. Runs every case in cases.exs through its
+# workflow (usually goo) and checks the answer, then reports
+# {"passed", "total", "failed": [{"case", "detail"}]}.
+# The AI calls go to goo_fake_llm, so nothing costs money.
+#   curl -X POST localhost:4000/hooks/goo-tests -H 'content-type: application/json' \
+#     -d '{"fake_url": "http://localhost:4000/hooks/goo-fake-llm/chat/completions"}'
+# fake_url is how the app reaches itself; it defaults to localhost:4000.
+
+[workflow]
+name = "goo_tests"
+
+[trigger.webhook]
+path = "goo-tests"
+
+[[steps]]
+name = "cases"
+node = "cases.toml"
+
+[[steps]]
+name = "run"
+node = "run.toml"
+after = ["cases"]
+timeout = 120
+
+[[steps]]
+name = "check"
+node = "check.toml"
+after = ["run"]
+
+[[steps]]
+name = "check_failed"
+node = "check.toml"
+after = ["run"]
+when = "failed"
+
+[[steps]]
+name = "gather"
+node = "gather.toml"
+after = ["check", "check_failed"]
+
+[[steps]]
+name = "report"
+node = "report.toml"
+after = ["gather"]

@@ -1,0 +1,42 @@
+# Purple Goo's chain: runs workflows one after another on a frame, each
+# getting the frame the last one returned. goo uses it for opening and
+# closing workflows.
+# Input body: {"calls": [{"workflow": "name", "data": ...}, ...], "frame": {...}}.
+# Each workflow gets {"frame", "data"} as its body and returns the new frame.
+# Output: the last frame. An empty list returns the frame unchanged. It runs
+# the first call, then itself on the rest. Every step ends the run on failure, so a failed
+# call fails the chain with the reason.
+# See specs/010.
+
+[workflow]
+name = "goo_chain"
+
+[[steps]]
+name = "next"
+node = "next.toml"
+on_fail = "end_run"
+
+[[steps]]
+name = "run"
+node = "run.toml"
+after = ["next"]
+when = "call"
+on_fail = "end_run"
+
+[[steps]]
+name = "again"
+node = "again.toml"
+after = ["run"]
+on_fail = "end_run"
+
+[[steps]]
+name = "recurse"
+node = "recurse.toml"
+after = ["again"]
+on_fail = "end_run"
+
+[[steps]]
+name = "done"
+node = "done.toml"
+after = ["next"]
+when = "done"

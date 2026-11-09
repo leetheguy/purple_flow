@@ -1,0 +1,5 @@
+# Calls each workflow in the list and returns their outputs in order.
+module = "PurpleFlow.Nodes.Workflow"
+
+[config]
+workflow = "goo_map"

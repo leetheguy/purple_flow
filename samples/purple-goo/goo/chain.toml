@@ -1,0 +1,5 @@
+# Runs the opening or closing workflows in order on the frame.
+module = "PurpleFlow.Nodes.Workflow"
+
+[config]
+workflow = "goo_chain"

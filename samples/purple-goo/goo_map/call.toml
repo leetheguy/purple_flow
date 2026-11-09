@@ -1,0 +1,5 @@
+# Runs the named workflow and waits for its output.
+module = "PurpleFlow.Nodes.Workflow"
+
+[config]
+workflow = "{{ input.call.workflow }}"

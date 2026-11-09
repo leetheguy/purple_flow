@@ -1,0 +1,6 @@
+# Tags an output with its place in the list. A workflow that returned
+# nothing (a step in it failed) becomes an error result.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "collect.exs"

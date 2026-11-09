@@ -1,0 +1,6 @@
+# Pairs the new frame with the calls still to run. Fails if the workflow
+# returned nothing (a step in it failed).
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "again.exs"

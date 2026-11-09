@@ -1,0 +1,6 @@
+# Builds what the AI sees: personas, the synthesizer instruction, the
+# history, the data, and the children's answers as thoughts.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "assemble.exs"

@@ -1,0 +1,5 @@
+# Sends the stream back to the caller.
+module = "PurpleFlow.Nodes.Respond"
+
+[config]
+headers = { "content-type" = "text/event-stream" }

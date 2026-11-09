@@ -1,0 +1,47 @@
+# Purple Goo's caller: calls a list of workflows and returns their outputs
+# in list order. goo uses it for data workflows and for child monads.
+# Input body: {"calls": [{"workflow": "name", "input": <its body>}, ...]}.
+# Output: {"results": [{"output": ...} or {"error": "..."}, ...]}, one per
+# call, in order. A failed call, or one that returns nothing, is returned as an
+# error, not dropped. An
+# empty list calls nothing and returns {"results": []}. See specs/010.
+
+[workflow]
+name = "goo_map"
+
+[[steps]]
+name = "split"
+node = "split.toml"
+
+[[steps]]
+name = "call"
+node = "call.toml"
+after = ["split"]
+when = "calls"
+
+[[steps]]
+name = "collect"
+node = "collect.toml"
+after = ["call"]
+
+[[steps]]
+name = "call_failed"
+node = "call_failed.toml"
+after = ["call"]
+when = "failed"
+
+[[steps]]
+name = "gather"
+node = "gather.toml"
+after = ["collect", "call_failed"]
+
+[[steps]]
+name = "empty"
+node = "empty.toml"
+after = ["split"]
+when = "empty"
+
+[[steps]]
+name = "finish"
+node = "finish.toml"
+after = ["gather", "empty"]

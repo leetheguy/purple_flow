@@ -1,0 +1,5 @@
+# Makes one item per test case: {"case", "workflow", "body"}.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "cases.exs"

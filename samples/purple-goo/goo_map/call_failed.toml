@@ -1,0 +1,5 @@
+# Turns a failed call into an error result, so the caller hears what broke.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "call_failed.exs"

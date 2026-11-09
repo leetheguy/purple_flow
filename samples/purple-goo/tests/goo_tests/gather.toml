@@ -1,0 +1,5 @@
+# Gathers every case's result into one item.
+module = "PurpleFlow.Nodes.Batch"
+
+[config]
+size = 1000

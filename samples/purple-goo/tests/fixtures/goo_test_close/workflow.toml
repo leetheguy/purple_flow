@@ -1,0 +1,10 @@
+# A closing workflow for the Purple Goo tests: adds data.tag to the
+# response's "closed" list and copies the frame's history into the response
+# as "history", [[role, content], ...], so the tests can see both.
+
+[workflow]
+name = "goo_test_close"
+
+[[steps]]
+name = "mark"
+node = "mark.toml"

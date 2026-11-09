@@ -424,10 +424,12 @@ page says so. With no admin login set, the UI is open.
 
 - Workflows live in `workflows/` (see "Workflow files" above), and edits
 there load on their own in dev too. Annotated examples live in `samples/`:
-`hello` (webhook, per-item routes), `users` (HTTP, per-item), `ping`, and
-`gmail` (send email with an OAuth credential); `samples/testing/` holds the
-pressure tests. Copy one into `workflows/` to try it. `samples/AGENTS.md`
-is the guide to put at the top of the workflows folder for visiting agents.
+`hello` (webhook, per-item routes), `users` (HTTP, per-item), `ping`,
+`gmail` (send email with an OAuth credential), and `purple-goo` (a
+recursive society of AI agents, with its own specs and tests);
+`samples/testing/` holds the pressure tests. Copy one into `workflows/`
+to try it. `samples/AGENTS.md` is the guide to put at the top of the
+workflows folder for visiting agents.
 - Credentials are set at `/credentials` and used as `{{ creds.NAME }}`. See
 [specs/080](specs/080_credentials.md) and, for OAuth,
 [specs/200](specs/200_oauth_credentials.md). Connecting OAuth sends the

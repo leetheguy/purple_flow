@@ -1,0 +1,5 @@
+# Checks one case's answer (or its failure) against what the case expects.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "check.exs"

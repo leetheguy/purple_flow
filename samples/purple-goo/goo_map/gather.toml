@@ -1,0 +1,6 @@
+# Gathers every result into one item, once nothing more can arrive.
+# A list longer than `size` comes out as several outputs; raise it if needed.
+module = "PurpleFlow.Nodes.Batch"
+
+[config]
+size = 1000000

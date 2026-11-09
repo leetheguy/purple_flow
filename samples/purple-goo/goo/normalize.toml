@@ -1,0 +1,6 @@
+# Splits the request from its metadata, fills in empty lists, and hands the
+# frame to the opening workflows.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "normalize.exs"

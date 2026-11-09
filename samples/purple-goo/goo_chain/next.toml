@@ -1,0 +1,6 @@
+# Takes the first call off the list (the "call" route), or goes down "done" with the frame
+# when the list is empty.
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "next.exs"
