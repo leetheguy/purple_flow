@@ -7,20 +7,22 @@ what's specific to Purple Goo.
 |---|---|
 | **precommit** | `samples/purple-goo/check.sh`, from the repo root with the app running: every workflow loads with no problems, `goo_tests` passes, and the top monad streams |
 | **test** | the `goo_tests` workflow (`tests/goo_tests/cases.exs` and `check.exs`), against `goo_fake_llm` |
-| **coverage** | none; every rule in spec 010 has a case in `## Tests` instead |
+| **coverage** | none; every rule in the specs has a case in their `## Tests` instead |
 | **mutation** | none (left out) |
 | **security** | the repo's |
 | **run** | copy the folder into the workflows folder |
 | **CI** | none (left out) |
 | **doc tool** | the `#` comment at the top of every `workflow.toml` and node `.toml` (shown on the canvas), and a comment at the top of every `.exs` |
-| **docs** | `specs/`, `README.md` |
-| **copies** | none |
+| **docs** | `specs/`, `README.md`, `skills/swarm-json/SKILL.md` |
+| **copies** | `goo/prompts.exs`'s skill text ← the body of `skills/swarm-json/SKILL.md`, copied by whoever edits it; `check.sh` fails on a mismatch |
 | **branching** | the repo's |
 
 - **The design doc wins.** Lee's `index — 1.11-agent` doc and his rulings
   are the source. If they and spec 010 disagree, report it; don't patch
   over it.
-- **Test first, in workflows.** Add the behavior to spec 010's `## Tests`,
+- **The skill sheet is in our own words.** Don't copy text from the design
+  doc into it; rewrite what it needs.
+- **Test first, in workflows.** Add the behavior to its spec's `## Tests`,
   then a case to `cases.exs` with its expected values written out in
   `check.exs`, then run the check and watch it fail for the reason you
   expect. Then build it.

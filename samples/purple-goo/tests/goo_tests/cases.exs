@@ -1,13 +1,16 @@
 # Each case is a request to a workflow. Only the root of each metadata tree
 # gets the fake provider's URL, in _meta; every child inherits it (spec 010
-# log, 2026-11-09). check.exs says what each case expects.
+# log, 2026-11-09), with the swarm skill sheet off. check.exs says what each
+# case expects.
 fake =
   (input["body"] || %{})["fake_url"] ||
     "http://localhost:4000/hooks/goo-fake-llm/chat/completions"
 
 defmodule Tree do
   def fake(tree, url) do
-    Map.update(tree, "_meta", %{"provider_url" => url}, &Map.put_new(&1, "provider_url", url))
+    # The skill sheet is off unless a case turns it on (spec 020).
+    defaults = %{"provider_url" => url, "swarm_skill" => false}
+    Map.update(tree, "_meta", defaults, &Map.merge(defaults, &1))
   end
 end
 
@@ -52,6 +55,16 @@ end
         %{},
         %{"_meta" => %{"provider_url" => fake <> "?which=kid2"}, "monads" => [%{}]}
       ]
+    },
+    %{}
+  ),
+  goo.(
+    "skill",
+    %{
+      "_meta" => %{"swarm_skill" => true},
+      "personas" => ["p"],
+      "monads" => [%{}],
+      "closing" => [%{"workflow" => "goo_test_close", "data" => %{"tag" => "c1"}}]
     },
     %{}
   ),

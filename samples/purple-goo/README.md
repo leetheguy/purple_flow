@@ -45,7 +45,7 @@ Every key is optional.
 | `opening` | `{"workflow", "data"}` to run in order before anything else. Each gets `{"frame", "data"}` and returns the frame, changed as it likes |
 | `closing` | the same, after the AI answers. The frame then has `messages` (history without anything injected, data kept) and `response` |
 | `model` | the model for this monad (a child defaults to its parent's) |
-| `_meta` | the environment, inherited by every child (a child's own `_meta` keys win): `provider_url`, the chat completions URL (default OpenRouter), and anything else that should travel down the tree, like a depth counter |
+| `_meta` | the environment, inherited by every child (a child's own `_meta` keys win): `provider_url`, the chat completions URL (default OpenRouter); `swarm_skill`, `false` to leave out the skill sheet (below); and anything else that should travel down the tree, like a depth counter |
 
 Nothing else inherits: a child has exactly the personas, data, and monads
 its own tree gives it. Anything else you add rides along for your opening
@@ -64,6 +64,18 @@ at providers you trust with it.
   streams.
 - **Mutator:** any monad fed to a synthesizer. Mix and match them per call
   instead of writing every combination by hand.
+
+## Designing swarms
+
+[skills/swarm-json/SKILL.md](skills/swarm-json/SKILL.md) teaches an agent
+to write these trees: the keys, the patterns above and more, how to write
+personas, and what a tree costs. Give it to any agent you want designing
+swarms. Every monad gets it too, after its personas, so a monad can design
+a child swarm when asked. It's a system message on every call; set
+`"_meta": {"swarm_skill": false}` at the root to leave it out of a tree.
+
+All the prompts `goo` adds live in `goo/prompts.exs`. Its copy of the
+skill sheet must match `SKILL.md`; edit `SKILL.md`, then copy it over.
 
 ## Errors
 

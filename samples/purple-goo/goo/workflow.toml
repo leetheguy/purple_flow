@@ -54,9 +54,15 @@ after = ["monad_calls"]
 on_fail = "end_run"
 
 [[steps]]
+name = "prompts"
+node = "prompts.toml"
+after = ["monads"]
+on_fail = "end_run"
+
+[[steps]]
 name = "assemble"
 node = "assemble.toml"
-after = ["monads"]
+after = ["prompts"]
 on_fail = "end_run"
 
 [[steps]]

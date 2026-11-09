@@ -1,0 +1,6 @@
+# The prompts goo injects: the synthesizer instruction and the swarm skill
+# sheet (a copy of skills/swarm-json/SKILL.md).
+module = "PurpleFlow.Nodes.Code"
+
+[config]
+file = "prompts.exs"

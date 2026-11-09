@@ -1,11 +1,9 @@
-# Messages are [personas, instruction, history, data, thoughts]. Everything
-# injected that must not go back up is listed in "injected", so the
-# denormalizer can remove it by exact match. Data stays.
+# Messages are [personas, skill sheet, instruction, history, data,
+# thoughts]. Everything injected that must not go back up is listed in
+# "injected", so the denormalizer can remove it by exact match. Data stays.
+# The input is the prompts step's output.
 %{"request" => request, "meta" => meta} = steps["opening"]["output"]
-
-instruction =
-  "Messages that begin \"Thought\" are your own thoughts and feelings. " <>
-    "Let them shape your answer, but never quote them or speak of them."
+%{"instruction" => instruction, "skill" => skill} = input
 
 system = fn text -> %{"role" => "system", "content" => text} end
 
@@ -21,14 +19,18 @@ data =
   end
 
 thoughts =
-  for result <- input["results"] do
+  for result <- steps["monads"]["output"]["results"] do
     case result do
       %{"error" => error} -> "Thought (a monad failed): " <> error
       %{"output" => answer} -> "Thought: " <> (answer["content"] || "")
     end
   end
 
-top = meta["personas"] ++ if(thoughts == [], do: [], else: [instruction])
+# The skill sheet is on unless _meta.swarm_skill is false (spec 020).
+top =
+  meta["personas"] ++
+    if(meta["_meta"]["swarm_skill"] == false, do: [], else: [skill]) ++
+    if(thoughts == [], do: [], else: [instruction])
 
 messages =
   Enum.map(top, system) ++ (request["messages"] || []) ++ data ++ Enum.map(thoughts, system)

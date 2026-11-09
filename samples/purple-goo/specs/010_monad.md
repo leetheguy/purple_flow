@@ -136,3 +136,5 @@ The tests are workflows (`tests/goo_tests`), run against a fake provider
 - 2026-11-09 — Lee and Muse: one generic caller, `goo_map`, serves both
   data and monads, and it never knows which it's calling. The design doc's
   two callers are two uses of it.
+- 2026-11-09 — [020](020_swarm_skill.md): the swarm skill sheet is injected
+  after the personas, and the prompts live in their own step, `prompts`.

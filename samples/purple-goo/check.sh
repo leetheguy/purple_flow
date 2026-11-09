@@ -23,6 +23,19 @@ COPY="$WORKFLOWS/zz_purple_goo"
 FAKE="$BASE/hooks/goo-fake-llm/chat/completions"
 NAMES="goo goo_map goo_chain goo_tests goo_fake_llm goo_test_data goo_test_open goo_test_close"
 
+# The skill sheet's copy in goo's prompts must match its source (spec 020).
+python3 - "$HERE" <<'PY' || exit 1
+import sys
+here = sys.argv[1]
+source = open(f"{here}/skills/swarm-json/SKILL.md").read().split("---\n", 2)[2].strip("\n")
+prompts = open(f"{here}/goo/prompts.exs").read()
+copy = prompts.split('skill = ~S"""\n', 1)[1].split('\n"""', 1)[0]
+if copy != source:
+    print("FAIL  goo/prompts.exs's skill sheet differs from skills/swarm-json/SKILL.md; copy it over")
+    sys.exit(1)
+print("PASS  the skill sheet in goo/prompts.exs matches SKILL.md")
+PY
+
 trap 'rm -rf "$COPY"; echo "Removed $COPY"' EXIT
 rm -rf "$COPY" && cp -r "$HERE" "$COPY" && rm -f "$COPY/check.sh"
 STARTED=$(date -u +%Y-%m-%dT%H:%M:%S)

@@ -87,6 +87,19 @@ result =
         which = [kid1["which"], kid2["which"], grandkid["which"]]
         {which == [nil, "kid2", "kid2"], which}
 
+      {"skill", _} ->
+        seen = echo.(output)["messages"]
+        [kid] = thoughts.(seen)
+
+        skill? = fn [role, text] ->
+          role == "system" and String.starts_with?(text, "# Designing a swarm")
+        end
+
+        {Enum.map(seen, &skill?.(&1)) == [false, true, false, false, false] and
+           Enum.at(seen, 2) == ["system", instruction] and
+           Enum.map(kid["messages"], &skill?.(&1)) == [true, false] and
+           not Enum.any?(output["history"], &skill?.(&1)), seen}
+
       {"child model", _} ->
         models =
           output |> echo.() |> Map.fetch!("messages") |> thoughts.() |> Enum.map(& &1["model"])
