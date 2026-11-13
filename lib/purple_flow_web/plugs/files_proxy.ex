@@ -63,8 +63,6 @@ defmodule PurpleFlowWeb.Plugs.FilesProxy do
 
   def call(conn, _opts), do: conn
 
-  defp files_url, do: Application.get_env(:purple_flow, :files_url)
-
   defp authorized?(conn) do
     Auth.agent?(conn) or Auth.basic_login?(conn) or
       (Auth.signed_in?(conn) and not cross_site?(conn))
@@ -122,12 +120,29 @@ defmodule PurpleFlowWeb.Plugs.FilesProxy do
   defp request(conn, body) do
     query = if conn.query_string == "", do: "", else: "?" <> conn.query_string
 
-    [
+    dufs_request(
       method: conn.method,
-      url: files_url() <> conn.request_path <> query,
-      headers: for({k, v} <- conn.req_headers, k not in @not_forwarded, do: {k, v}) ++ login(),
-      body: body,
-      # Passed through untouched: no redirects followed, nothing decoded.
+      url: conn.request_path <> query,
+      headers: for({k, v} <- conn.req_headers, k not in @not_forwarded, do: {k, v}),
+      body: body
+    )
+  end
+
+  @doc """
+  Sends one request to dufs, with its login added, and returns
+  `Req.request/1`'s result. `opts` are Req's options; `url` is a path on
+  the files service, starting with `/fs/`. The body comes back as sent,
+  undecoded, and redirects aren't followed. Used by `/fs/` and by the MCP
+  tools (`PurpleFlowWeb.MCP.Tools`), so both reach dufs the same way.
+  Needs `files_url/0` to be set.
+  """
+  def dufs_request(opts) do
+    {path, opts} = Keyword.pop!(opts, :url)
+    {headers, opts} = Keyword.pop(opts, :headers, [])
+
+    [
+      url: files_url() <> path,
+      headers: headers ++ login(),
       redirect: false,
       retry: false,
       decode_body: false,
@@ -135,8 +150,24 @@ defmodule PurpleFlowWeb.Plugs.FilesProxy do
       raw: true,
       receive_timeout: 60_000
     ]
+    |> Keyword.merge(opts)
     |> Keyword.merge(Application.get_env(:purple_flow, :files_req_options, []))
     |> Req.request()
+  end
+
+  @doc "The files service's address (`PURPLEFLOW_FILES_URL`), or nil when there's none."
+  def files_url, do: Application.get_env(:purple_flow, :files_url)
+
+  @doc """
+  The secrets in dufs's login: the agent token, and the Basic auth value
+  made from it. Anything shown to a caller that dufs could have echoed has
+  these taken out first.
+  """
+  def dufs_secrets do
+    case login() do
+      [] -> []
+      [{"authorization", "Basic " <> basic}] -> [System.get_env("PURPLEFLOW_AGENT_TOKEN"), basic]
+    end
   end
 
   defp login do
