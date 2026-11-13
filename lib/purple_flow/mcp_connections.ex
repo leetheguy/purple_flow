@@ -54,7 +54,8 @@ defmodule PurpleFlow.MCPConnections do
   Trades a code for tokens (`grant_type=authorization_code`). `params` are
   the token request's `code`, `code_verifier`, `client_id`, and
   `redirect_uri`, which must match the ones the code was made for. A code
-  works once. Returns `{:ok, tokens}` (`access_token`, `refresh_token`,
+  works once. The app's earlier connection, if any, is replaced. Returns
+  `{:ok, tokens}` (`access_token`, `refresh_token`,
   `expires_in`) or `{:error, :invalid_grant}`.
   """
   def exchange_code(params, now \\ DateTime.utc_now()) do
@@ -70,6 +71,15 @@ defmodule PurpleFlow.MCPConnections do
          true <- params["client_id"] == connection.client_id,
          true <- params["redirect_uri"] == connection.redirect_uri,
          true <- pkce?(params["code_verifier"], connection.code_challenge) do
+      # An app connecting again throws its old tokens away, so its earlier
+      # connection goes: one row per app, and no old token left working.
+      Repo.delete_all(
+        from c in Connection,
+          where:
+            c.client_id == ^connection.client_id and c.id != ^connection.id and
+              not is_nil(c.access_hash)
+      )
+
       {:ok, issue(connection, now)}
     else
       _ -> {:error, :invalid_grant}

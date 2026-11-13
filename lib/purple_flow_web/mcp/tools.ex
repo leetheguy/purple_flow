@@ -101,6 +101,7 @@ defmodule PurpleFlowWeb.MCP.Tools do
     end
   end
 
+  def call(name, _args) when name in @names, do: bad("arguments must be an object")
   def call(_name, _args), do: {:error, :unknown_tool}
 
   # Arguments

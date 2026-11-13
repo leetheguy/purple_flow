@@ -382,6 +382,7 @@ defmodule PurpleFlowWeb.MCP.ToolsTest do
       assert {:error, {:invalid_arguments, message}} = Tools.call("write", %{"path" => "a"})
       assert message =~ "content"
       assert {:error, {:invalid_arguments, _}} = Tools.call("list", %{"path" => 7})
+      assert {:error, {:invalid_arguments, _}} = Tools.call("list", ["hello"])
     end
   end
 end

@@ -129,7 +129,12 @@ defmodule PurpleFlowWeb.MCPAuthController do
 
   # The cheap checks first; the app's document is fetched last.
   defp check(params) do
-    with :ok <- expect(params["response_type"] == "code", "response_type must be code"),
+    with :ok <-
+           expect(
+             Enum.all?(fields(), &(params[&1] == nil or is_binary(params[&1]))),
+             "every field must be text"
+           ),
+         :ok <- expect(params["response_type"] == "code", "response_type must be code"),
          :ok <- expect(present?(params["code_challenge"]), "the request has no code_challenge"),
          :ok <-
            expect(params["code_challenge_method"] == "S256", "code_challenge_method must be S256"),

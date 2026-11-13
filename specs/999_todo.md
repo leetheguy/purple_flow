@@ -28,6 +28,7 @@ It gathers the "Later" sections and open questions left in other specs and their
 - **Resuming interrupted runs**, as a per-workflow option. From [130](130_failures.md)'s log.
 - **Durable waits.** A Wait step lives in memory, so a restart interrupts it ([180](180_noop_wait_respond.md)). Long waits, and a Wait that resumes when a webhook is called (like n8n's), would need the run's state saved. Likely the same work as resuming interrupted runs.
 - **A non-superuser database role** for the app, as an option. From [050](050_storage.md)'s log.
+- **Two Claude accounts on one PurpleFlow.** Both use Claude's `client_id`, so connecting the second replaces the first. Key connections by something else, or keep one per app? From [270](270_mcp_files.md)'s log.
 - **Scripts sharing the runner VM** can see each other; a VM per workflow is the idea, without losing the shared VM's speed. From [100](100_runner_container.md).
 
 

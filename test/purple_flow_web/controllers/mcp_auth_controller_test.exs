@@ -112,7 +112,7 @@ defmodule PurpleFlowWeb.MCPAuthControllerTest do
             {%{"code_challenge_method" => "plain"}, "S256"},
             {%{"response_type" => "token"}, "response_type"},
             {%{"resource" => "https://other.example/mcp"}, "resource"},
-            {%{"resource" => [@base <> "/mcp"]}, "resource"}
+            {%{"resource" => [@base <> "/mcp"]}, "text"}
           ] do
         params = params(overrides) |> Map.reject(fn {_, v} -> is_nil(v) end)
         conn = get(conn, ~p"/oauth/authorize?#{params}")
@@ -120,6 +120,23 @@ defmodule PurpleFlowWeb.MCPAuthControllerTest do
         assert html_response(conn, 400) =~ says
         assert get_resp_header(conn, "location") == []
       end
+    end
+
+    test "a field sent as a list or a map is refused, not a crash", %{conn: conn} do
+      conn = signed_in(conn)
+      query = URI.encode_query(params()) <> "&state[x]=1"
+
+      assert conn |> get("/oauth/authorize?" <> query) |> html_response(400) =~ "text"
+
+      decided =
+        post(
+          conn,
+          ~p"/oauth/authorize",
+          Map.merge(params(), %{"state" => ["a"], "decision" => "allow"})
+        )
+
+      assert html_response(decided, 400) =~ "text"
+      assert MCPConnections.list() == []
     end
 
     test "resource can be left out, or end in a slash", %{conn: conn} do

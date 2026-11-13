@@ -160,8 +160,27 @@ defmodule PurpleFlow.MCPConnectionsTest do
       allow(DateTime.add(@t0, 120))
 
       assert [%Connection{}] = MCPConnections.list()
-      assert {:ok, _} = exchange(live, %{}, DateTime.add(@t0, 120))
       assert Repo.aggregate(Connection, :count) == 3
+      assert {:ok, _} = exchange(live, %{}, DateTime.add(@t0, 120))
+    end
+
+    test "connecting the same app again replaces its earlier connection" do
+      %{access_token: old_access, refresh_token: old_refresh} = connected()
+      %{access_token: new_access} = connected(DateTime.add(@t0, 10))
+
+      assert [%Connection{}] = MCPConnections.list()
+      assert :error = MCPConnections.verify_access(old_access, DateTime.add(@t0, 10))
+      assert {:ok, _} = MCPConnections.verify_access(new_access, DateTime.add(@t0, 10))
+
+      assert {:error, :invalid_grant} =
+               MCPConnections.refresh(%{"refresh_token" => old_refresh}, @t0)
+    end
+
+    test "an abandoned second sign-in leaves the first connection working" do
+      %{access_token: access} = connected()
+      _abandoned = allow(DateTime.add(@t0, 10))
+
+      assert {:ok, _} = MCPConnections.verify_access(access, DateTime.add(@t0, 10))
     end
 
     test "disconnecting one stops its tokens at once" do

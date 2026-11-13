@@ -1,6 +1,6 @@
 # 270 — Files over MCP
 
-Status: draft
+Status: implemented
 Created: 2026-11-13
 
 Claude on the web, on the phone, and in Claude Code can reach the workflows folder as an MCP connector. A person adds `https://<PHX_HOST>/mcp` as a custom connector in claude.ai, signs in to PurpleFlow when Claude asks, clicks **Allow**, and Claude gets the files service's API as tools.
@@ -32,7 +32,7 @@ Each tool is one dufs request, made the same way `/fs/` makes it ([090](090_work
 - `read` returns the whole file unless `offset` and `length` are given; its description says so, so an agent can read a large file a piece at a time.
 - `copy` and `move` onto an existing path do what dufs does (the tests record it).
 - dufs's WebDAV-only requests (`PROPFIND`, `PROPPATCH`, `LOCK`, `UNLOCK`) have no tools: `list` and `stat` cover what they show, and locks mean nothing to an agent making one request at a time. `?zip` has none either: a zip is no use to an agent.
-- Each tool's description says what it does, what each argument means, and points to `GET /agents` for how workflows are written, so an agent needs no other guide to start.
+- Each tool's description says what it does, what each argument means, and the dufs request it makes. `list`'s description and the server's instructions point to `GET /agents` for how workflows are written, so an agent needs no other guide to start.
 
 ### Paths
 
@@ -40,7 +40,7 @@ A tool's `path` is relative to the workflows folder; a leading `/` means the sam
 
 ### Results and errors
 
-A dufs answer outside 2xx is a tool error (`isError: true`) with the status and a short message: 404 is "nothing at that path"; anything else is the status and dufs's body, cut to 500 characters. If dufs can't be reached, or there's no files service (dev, test), the tool error says so. Requests time out after 60 seconds, like `/fs/`. No result or error contains dufs's login.
+A dufs answer outside 2xx is a tool error (`isError: true`) with the status and a short message: 404 is "nothing at that path"; anything else is the status and dufs's body, cut to 500 characters. If dufs can't be reached, or there's no files service (dev, test), the tool error says so. Requests time out after 60 seconds, like `/fs/`. No error contains dufs's login. (A result is what dufs sent: a file's own content, left as it is.)
 
 ## The MCP endpoint
 
@@ -71,7 +71,7 @@ claude.ai only connects to a remote server through OAuth, so PurpleFlow is its o
 
 **Which app is asking.** PurpleFlow takes Client ID Metadata Documents, the way MCP and Claude prefer: the app's `client_id` is an `https` URL, and PurpleFlow fetches it to learn the app's name and its allowed `redirect_uris`. The fetch is one `GET`, `https` only, no redirects followed, 5 seconds, and at most 5 KB; the document's own `client_id` must equal the URL. There's nothing to register in advance and nothing stored about apps until one is allowed.
 
-**Allowing it: `GET /oauth/authorize`.** Behind the sign-in, so a person who isn't signed in goes through `/login` first and comes back. It checks the request (`response_type=code`, a `client_id` document that loads, a `redirect_uri` listed in it, an S256 `code_challenge`, and `resource`, when given, equal to the `/mcp` URL), then shows one page:
+**Allowing it: `GET /oauth/authorize`.** Behind the sign-in, so a person who isn't signed in goes through `/login` first and comes back. It checks the request (every field is text, `response_type=code`, a `client_id` document that loads, a `redirect_uri` listed in it, an S256 `code_challenge`, and `resource`, when given, equal to the `/mcp` URL), then shows one page:
 
 > **Claude** wants to read and change the files in your workflows folder.
 > It will be sent back to **claude.ai**.
@@ -85,11 +85,15 @@ The name comes from the app's document, and the host from the `redirect_uri`, so
 - `grant_type=refresh_token`: a new access token and a new refresh token; the old refresh token stops working.
 - Errors are RFC 6749's: `invalid_grant` for a used, expired, or unknown code or refresh token, or a verifier that doesn't match; `invalid_request` for a missing field; `unsupported_grant_type`.
 
-**What's stored.** Each allowed app is one row in `mcp_connections`: the app's name and `client_id`, and hashes (SHA-256) of its current code, access token, and refresh token, with their expiry times and when it was last used. Tokens are 32 random bytes, shown once and never stored in the clear, so a copy of the database can't be used to connect.
+**What's stored.** Each allowed app is one row in `mcp_connections`. When an app that's already connected signs in again, the new connection replaces the old one once its code is traded, so the old tokens stop working; a sign-in that's never finished leaves the old one alone. A row holds the app's name and `client_id`, and hashes (SHA-256) of its current code, access token, and refresh token, with their expiry times and when it was last used. Tokens are 32 random bytes, shown once and never stored in the clear, so a copy of the database can't be used to connect.
 
 **Disconnecting.** `/credentials` gets a short **Connected apps** list: each app's name, when it was connected and last used, and a **Disconnect** button, which deletes its row; its tokens stop working at once. Changing the admin password doesn't disconnect apps (it signs browsers out, as before); Disconnect does.
 
 ## Log
+
+- 2026-11-13 — Built and checked against a separate compose stack from the branch with `test/deployed/mcp_check.py`, including the app fetching Claude's real client document. Connecting from claude.ai itself waits on deploying to the public site.
+- 2026-11-13 — Independent review (GLM 5.3): fixed connecting the same app twice leaving two live rows (the new one now replaces the old), a field sent as a list or map crashing the Allow page, and `MCP.Tools.call/2` calling arguments that aren't an object an unknown tool. Not changed: scrubbing dufs's login from results as well as errors, since a result is a file's own content and dufs never echoes its login there.
+- 2026-11-13 — Open: two Claude accounts connected at once. They share Claude's `client_id`, so the second one's sign-in replaces the first. Fine for one person with one Claude; a choice to make if that changes.
 
 ## Tests
 
@@ -114,7 +118,7 @@ Tools (against dufs stubbed as in `files_proxy_test.exs`, each request checked)
 - `write` with base64 content sends the exact bytes
 - a 404 from dufs is a tool error saying nothing is there; another status includes dufs's body, cut to 500 characters
 - with no files service, or dufs unreachable, the tool error says so
-- no tool result or error contains dufs's login
+- no tool error contains dufs's login
 
 Paths
 - a name with a space, `?`, `#`, or `%` reaches the file with that exact name
@@ -130,6 +134,7 @@ Authorize
 - a `redirect_uri` not in the document, a missing or non-S256 `code_challenge`, or a `resource` that isn't `/mcp` is refused the same way
 - Allow redirects with `code`, the same `state`, and `iss`; Deny redirects with `error=access_denied`
 - Allow without a valid CSRF token does nothing
+- a field sent as a list or a map is refused with the page, not a crash
 
 Token
 - the right code and verifier get an access token and a refresh token that work at `/mcp`
@@ -137,20 +142,13 @@ Token
 - a refresh token gets new tokens, and the old refresh token then fails with `invalid_grant`
 - an unknown grant type is `unsupported_grant_type`; a missing field is `invalid_request`
 - the database holds no token or code in the clear
+- connecting the same app again replaces its earlier connection, and its old tokens stop working; an abandoned second sign-in leaves the first working
 
 Disconnecting
 - `/credentials` lists connected apps; Disconnect removes one, and its tokens fail at once
 
-Deployed (against the real compose stack)
-- claude.ai connects at `https://<host>/mcp`, shows the Allow page, and lists and reads the workflows folder
-- a `write` from Claude is live in the app within a couple of seconds, like any save through `/fs/`
-
-## Tasks
-
-- [x] Tools: `PurpleFlowWeb.MCP.Tools`, the eleven dufs requests, paths, and errors
-- [x] Endpoint: `POST /mcp` for both generations, the agent token, the 401 challenge, and the protected resource metadata
-- [x] Connections: the `mcp_connections` table, codes and tokens, and access tokens at `/mcp`
-- [x] Authorize: the authorization server metadata, the client document fetch, and the Allow page
-- [x] Token: `POST /oauth/token`, both grants
-- [x] Connected apps on `/credentials`
-- [ ] Docs (README, `samples/AGENTS.md`, the skill sheet, 000), the deployed check, the independent review, and `implemented`
+Deployed (`test/deployed/mcp_check.py`, against a running compose stack)
+- every tool works against the real dufs, and a workflow written with `write` loads live
+- a path with `..` is refused
+- the whole sign-in works as Claude does it, with Claude's real client document: the Allow page names Claude and claude.ai, Allow sends a code back with `state` and `iss`, the code trades for tokens, the access token works at `/mcp`, and a used refresh token is refused
+- claude.ai connects at `https://<host>/mcp` and lists the workflows folder (by hand, once deployed)
