@@ -400,4 +400,58 @@ defmodule PurpleFlowWeb.CredentialsLiveTest do
       refute has_element?(view, "#missing-credentials")
     end
   end
+
+  describe "connected apps" do
+    defp connect_app(name) do
+      verifier = String.duplicate("v", 43)
+      challenge = Base.url_encode64(:crypto.hash(:sha256, verifier), padding: false)
+      client = "https://#{name}.example/client"
+      redirect = "https://#{name}.example/callback"
+
+      {:ok, code} =
+        PurpleFlow.MCPConnections.allow(%{
+          client_id: client,
+          client_name: name,
+          redirect_uri: redirect,
+          code_challenge: challenge
+        })
+
+      {:ok, tokens} =
+        PurpleFlow.MCPConnections.exchange_code(%{
+          "code" => code,
+          "code_verifier" => verifier,
+          "client_id" => client,
+          "redirect_uri" => redirect
+        })
+
+      tokens
+    end
+
+    test "with none connected, there's no list", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      refute has_element?(view, "#connected-apps")
+    end
+
+    test "lists each connected app", %{conn: conn} do
+      connect_app("Claude")
+      connect_app("Other")
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      assert view |> element("#connected-apps") |> render() =~ "Claude"
+      assert view |> element("#connected-apps") |> render() =~ "Other"
+    end
+
+    test "Disconnect removes the app, and its tokens stop working", %{conn: conn} do
+      %{access_token: token} = connect_app("Claude")
+      [app] = PurpleFlow.MCPConnections.list()
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+      view |> element("#disconnect-app-#{app.id}") |> render_click()
+
+      refute has_element?(view, "#connected-apps")
+      assert render(view) =~ "Claude disconnected"
+      assert PurpleFlow.MCPConnections.verify_access(token) == :error
+    end
+  end
 end

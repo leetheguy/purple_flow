@@ -1,6 +1,8 @@
 defmodule PurpleFlowWeb.CredentialsLive do
   @moduledoc """
-  `/credentials`: create, edit, and archive credentials.
+  `/credentials`: create, edit, and archive credentials. Also lists the apps
+  connected over MCP, with a Disconnect button for each
+  ([specs/270](specs/270_mcp_files.md)).
 
   The server never sends a stored `key` value to the browser, in any form,
   ever. A set credential's secret field shows as a fixed placeholder of dots
@@ -10,8 +12,11 @@ defmodule PurpleFlowWeb.CredentialsLive do
 
   use PurpleFlowWeb, :live_view
 
+  import PurpleFlowWeb.Live.Helpers, only: [timestamp: 1]
+
   alias PurpleFlow.Credentials
   alias PurpleFlow.Credentials.OAuth
+  alias PurpleFlow.MCPConnections
 
   # An arbitrary constant, unrelated to any real value's length, so the UI
   # can't leak even that much about a set credential.
@@ -184,6 +189,15 @@ defmodule PurpleFlowWeb.CredentialsLive do
     {:noreply, socket |> load() |> put_flash(:info, "Credential archived")}
   end
 
+  # Apps signed in to /mcp: specs/270_mcp_files.md.
+  def handle_event("disconnect_app", %{"id" => id}, socket) do
+    id = String.to_integer(id)
+    app = Enum.find(socket.assigns.apps, &(&1.id == id))
+    :ok = MCPConnections.disconnect(id)
+    name = if app, do: app.client_name, else: "App"
+    {:noreply, socket |> load() |> put_flash(:info, "#{name} disconnected")}
+  end
+
   @impl true
   def handle_info(:workflows_reloaded, socket), do: {:noreply, load(socket)}
 
@@ -206,7 +220,10 @@ defmodule PurpleFlowWeb.CredentialsLive do
           String.contains?(String.downcase(c.description), query)
       end)
 
-    socket |> assign(:credentials, credentials) |> assign(:missing, Enum.sort(missing))
+    socket
+    |> assign(:credentials, credentials)
+    |> assign(:missing, Enum.sort(missing))
+    |> assign(:apps, MCPConnections.list())
   end
 
   defp count(1), do: "1 credential"
@@ -528,6 +545,35 @@ defmodule PurpleFlowWeb.CredentialsLive do
           </div>
         </div>
       </div>
+      <section :if={@apps != []} id="connected-apps" class="mt-8 space-y-2">
+        <h2 class="text-sm font-semibold text-base-content/70">Connected apps</h2>
+        <p class="text-xs text-base-content/50">
+          Apps you allowed to read and change the workflows folder over MCP.
+        </p>
+        <div class="rounded-lg border border-base-300 divide-y divide-base-300">
+          <div
+            :for={app <- @apps}
+            id={"app-#{app.id}"}
+            class="flex items-center gap-3 px-3 py-2.5"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="font-medium truncate">{app.client_name}</div>
+              <div class="text-xs text-base-content/50">
+                Connected {timestamp(app.inserted_at)}
+                <span :if={app.last_used_at}>· last used {timestamp(app.last_used_at)}</span>
+              </div>
+            </div>
+            <button
+              phx-click="disconnect_app"
+              phx-value-id={app.id}
+              id={"disconnect-app-#{app.id}"}
+              class="rounded-md border border-base-300 px-2.5 py-1 text-sm hover:bg-base-200 transition"
+            >
+              Disconnect
+            </button>
+          </div>
+        </div>
+      </section>
       <script :type={Phoenix.LiveView.ColocatedHook} name=".CopyToClipboard">
         export default {
           mounted() {

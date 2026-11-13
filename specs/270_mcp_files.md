@@ -152,5 +152,5 @@ Deployed (against the real compose stack)
 - [x] Connections: the `mcp_connections` table, codes and tokens, and access tokens at `/mcp`
 - [x] Authorize: the authorization server metadata, the client document fetch, and the Allow page
 - [x] Token: `POST /oauth/token`, both grants
-- [ ] Connected apps on `/credentials`
+- [x] Connected apps on `/credentials`
 - [ ] Docs (README, `samples/AGENTS.md`, the skill sheet, 000), the deployed check, the independent review, and `implemented`
