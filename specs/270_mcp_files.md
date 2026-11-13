@@ -46,12 +46,12 @@ A dufs answer outside 2xx is a tool error (`isError: true`) with the status and 
 
 `POST /mcp`, MCP's Streamable HTTP transport, answering every request with plain JSON (no event stream). It keeps no sessions: each request stands alone, so a restart drops nothing.
 
-It speaks both generations of the protocol, because clients haven't all moved:
+It speaks both generations of the protocol, because clients haven't all moved. A request whose `params._meta` names `io.modelcontextprotocol/protocolVersion` is the newer kind; anything else is the older kind.
 
-- **`2026-07-28`:** `server/discover`, `tools/list`, and `tools/call`, with the version read from each request's `_meta`. Results carry `resultType: "complete"`, and `tools/list` carries `ttlMs` and `cacheScope: "private"`.
-- **`2025-06-18` and `2025-11-25`:** `initialize` (answered with the version the client asked for when it's one of these, otherwise `2025-11-25`), `notifications/initialized`, `ping`, `tools/list`, and `tools/call`. No `Mcp-Session-Id` is issued.
+- **`2026-07-28`:** `server/discover`, `tools/list`, and `tools/call`. Results carry `resultType: "complete"` and `_meta.io.modelcontextprotocol/serverInfo`; `server/discover` and `tools/list` also carry `ttlMs` (`3600000`) and `cacheScope: "private"`. The HTTP headers must match the body: `MCP-Protocol-Version` the `_meta` version, `Mcp-Method` the method, and, for `tools/call`, `Mcp-Name` the tool's name (decoded first when it's sent as `=?base64?…?=`). A missing or mismatched header is `400` with `-32020`. A version this server doesn't speak is `400` with `-32022`, listing the ones it does. An unknown method is `404` with `-32601`.
+- **`2025-06-18` and `2025-11-25`:** `initialize` (answered with the version the client asked for when it's one of these, otherwise `2025-11-25`), `notifications/initialized`, `ping`, `tools/list`, and `tools/call`. No `Mcp-Session-Id` is issued, and one that's sent is ignored. An unknown method is `-32601`, with `200`.
 
-A notification gets `202` with no body. An unknown method is JSON-RPC's `-32601`; a tool that doesn't exist or bad arguments are `-32602`. `GET /mcp` is `405`. The server's capabilities are `tools` only.
+`server/discover` lists all three versions as `supportedVersions`. The server's capabilities are `tools` only. A notification gets `202` with no body. A tool that doesn't exist, or arguments that don't fit its schema, are `-32602`. A body that isn't JSON-RPC is `400` with `-32600`. `GET` and `DELETE` on `/mcp` are `405`. A request with an `Origin` header naming another site is `403` (MCP requires this, against DNS rebinding); Claude's own requests come from its servers and send none.
 
 A request gets through with either:
 
@@ -99,9 +99,12 @@ Endpoint
 - an expired access token, or one from a disconnected app, is 401
 - `initialize` answers with the version asked for when supported, and `2025-11-25` otherwise; `notifications/initialized` is 202; `ping` answers
 - `server/discover` lists the supported versions and the `tools` capability
-- `tools/list` lists the eleven tools, in a fixed order, each with an input schema
-- an unknown method is `-32601`; an unknown tool or missing argument is `-32602`
-- `GET /mcp` is 405
+- `tools/list` lists the eleven tools, in a fixed order, each with an input schema, in both generations
+- a newer request with a missing or mismatched `MCP-Protocol-Version`, `Mcp-Method`, or `Mcp-Name` is 400 with `-32020`; a base64-encoded `Mcp-Name` that matches is accepted
+- a newer request with an unsupported version is 400 with `-32022` and the supported list
+- an unknown method is 404 with `-32601` for a newer request, and `-32601` with 200 for an older one
+- an unknown tool or missing argument is `-32602`; a body that isn't JSON-RPC is 400
+- `GET` and `DELETE` on `/mcp` are 405; an `Origin` from another site is 403
 
 Tools (against dufs stubbed as in `files_proxy_test.exs`, each request checked)
 - each tool sends the dufs request in the table, with dufs's login and without the caller's token
@@ -141,3 +144,13 @@ Disconnecting
 Deployed (against the real compose stack)
 - claude.ai connects at `https://<host>/mcp`, shows the Allow page, and lists and reads the workflows folder
 - a `write` from Claude is live in the app within a couple of seconds, like any save through `/fs/`
+
+## Tasks
+
+- [ ] Tools: `PurpleFlowWeb.MCP.Tools`, the eleven dufs requests, paths, and errors
+- [ ] Endpoint: `POST /mcp` for both generations, the agent token, the 401 challenge, and the protected resource metadata
+- [ ] Connections: the `mcp_connections` table, codes and tokens, and access tokens at `/mcp`
+- [ ] Authorize: the authorization server metadata, the client document fetch, and the Allow page
+- [ ] Token: `POST /oauth/token`, both grants
+- [ ] Connected apps on `/credentials`
+- [ ] Docs (README, `samples/AGENTS.md`, the skill sheet, 000), the deployed check, the independent review, and `implemented`
