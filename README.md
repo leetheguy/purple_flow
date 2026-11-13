@@ -473,7 +473,7 @@ swarms on your provider key. Keep it off the public internet, or put it
 behind your own gate. How to build swarms is in
 [samples/purple-goo/README.md](samples/purple-goo/README.md), and the
 skill sheet for agents is
-[samples/purple-goo/skills/swarm-json/SKILL.md](samples/purple-goo/skills/swarm-json/SKILL.md).
+`samples/purple-goo/skills/swarm-json/SKILL.md`.
 Its tests run from a checkout with the app up:
 `samples/purple-goo/check.sh`.
 
