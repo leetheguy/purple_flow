@@ -131,7 +131,8 @@ agent get your heads around the nitty gritty.
 6. Visit `localhost:4000` (or your `PORT`) and sign in with your
 `PURPLEFLOW_ADMIN_USERNAME` and `PURPLEFLOW_ADMIN_PASSWORD`.
 7. Send your friendly neighborhood agent to `yourdomain.com/agents`.
-   - It will then want the `PURPLEFLOW_AGENT_TOKEN`.
+   - If you choose to connect with MCP, use `yourdomain.com/mcp`
+   - Otherwise, it will then want the `PURPLEFLOW_AGENT_TOKEN`.
    - With that token comes great power; remind your agent to be responsible.
    - (Muse has a dedicated system to keep the token out of your agent's
 hands and it works well with PurpleFlow; just sayin')
@@ -176,6 +177,8 @@ I've seen a connector with 70+ tools that were often dependent on collecting dat
 
 I had been using Sonnet 4.6 successfully for all kinds of agentic work. But it choked on that MCP.
 
+(All that being said, Purple Flow **does** offer an MCP connector for compatibility. But it was designed to be as simple as possible. I recommend that if you connect with it, you still lazy load your skills instead of relying on a ton of MCPs.)
+
 And that's why I prefer lazy loaded skills.
 
 I have a database table full of 50+ skills. Each skill matches the name of a workflow exactly. The skills all work independently of each other. The skill tells the agent what the workflow does and what it needs to operate. And all workflows use a single params object so agents don't need to reason through special instructions for each one.
@@ -201,9 +204,9 @@ hardened to address several others.
 
 Workflows are stored and versioned locally. A Docker sidecar running [Dufs](https://github.com/sigoden/dufs) has access to the workflows folder and
 makes it available to agents and the web UI. That sidecar has no port and
-no access to the internet or the rest of the docker network, and it wants
+no access to the internet or the rest of the docker network and it wants
 the agent token even from inside that network. It's only reachable through
-an API endpoint with the agent token and the Web UI.
+an API endpoint with the agent token and the Web UI or the (more secure) MCP bridge.
 
 Code nodes are pure Elixir. They also run in a dedicated sidecar with no
 outside access, no internet, no database, no credentials, and read only
