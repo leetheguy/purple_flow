@@ -29,6 +29,38 @@ defmodule PurpleFlowWeb.MCPControllerTest do
 
   defp agent(conn), do: put_req_header(conn, "authorization", "Bearer agent-token")
 
+  # An app that signed in at `at`, and its tokens.
+  defp signed_in_app(at) do
+    verifier = String.duplicate("v", 43)
+    challenge = Base.url_encode64(:crypto.hash(:sha256, verifier), padding: false)
+    redirect = "https://claude.ai/api/mcp/auth_callback"
+    client = "https://claude.ai/oauth/mcp-oauth-client-metadata"
+
+    {:ok, code} =
+      PurpleFlow.MCPConnections.allow(
+        %{
+          client_id: client,
+          client_name: "Claude",
+          redirect_uri: redirect,
+          code_challenge: challenge
+        },
+        at
+      )
+
+    {:ok, tokens} =
+      PurpleFlow.MCPConnections.exchange_code(
+        %{
+          "code" => code,
+          "code_verifier" => verifier,
+          "client_id" => client,
+          "redirect_uri" => redirect
+        },
+        at
+      )
+
+    tokens
+  end
+
   defp post_rpc(conn, message, headers \\ []) do
     headers
     |> Enum.reduce(conn, fn {k, v}, conn -> put_req_header(conn, k, v) end)
@@ -80,6 +112,34 @@ defmodule PurpleFlowWeb.MCPControllerTest do
         |> post_rpc(legacy("ping"))
 
       assert conn.status == 401
+    end
+
+    test "an access token from signing in gets through", %{conn: conn} do
+      %{access_token: token} = signed_in_app(DateTime.utc_now())
+
+      body =
+        conn
+        |> put_req_header("authorization", "Bearer " <> token)
+        |> post_rpc(legacy("ping"))
+        |> json_response(200)
+
+      assert body["result"] == %{}
+    end
+
+    test "an expired access token, or one from a disconnected app, is 401", %{conn: conn} do
+      %{access_token: expired} = signed_in_app(DateTime.add(DateTime.utc_now(), -3601))
+      %{access_token: disconnected} = signed_in_app(DateTime.utc_now())
+
+      for connection <- PurpleFlow.MCPConnections.list(),
+          connection.access_expires_at |> DateTime.compare(DateTime.utc_now()) == :gt,
+          do: PurpleFlow.MCPConnections.disconnect(connection.id)
+
+      for token <- [expired, disconnected] do
+        conn =
+          conn |> put_req_header("authorization", "Bearer " <> token) |> post_rpc(legacy("ping"))
+
+        assert conn.status == 401
+      end
     end
 
     test "the agent token gets through", %{conn: conn} do

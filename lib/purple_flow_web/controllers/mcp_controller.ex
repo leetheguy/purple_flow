@@ -5,13 +5,15 @@ defmodule PurpleFlowWeb.MCPController do
   And the protected resource metadata, which tells a client where to sign
   in. See [specs/270](specs/270_mcp_files.md).
 
-  A request needs `Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>`. Without
-  it, the answer is 401 with a `WWW-Authenticate` header pointing at the
+  A request needs `Authorization: Bearer <token>`: an access token from
+  signing in (`PurpleFlow.MCPConnections`), or `PURPLEFLOW_AGENT_TOKEN`.
+  Without one, the answer is 401 with a `WWW-Authenticate` header pointing at the
   metadata ([RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728)).
   """
 
   use PurpleFlowWeb, :controller
 
+  alias PurpleFlow.MCPConnections
   alias PurpleFlowWeb.Auth
   alias PurpleFlowWeb.MCP.Server
 
@@ -55,7 +57,13 @@ defmodule PurpleFlowWeb.MCPController do
 
   defp metadata_url, do: url(~p"/.well-known/oauth-protected-resource/mcp")
 
-  defp authorized?(conn), do: Auth.agent?(conn)
+  defp authorized?(conn) do
+    Auth.agent?(conn) or
+      case get_req_header(conn, "authorization") do
+        ["Bearer " <> token] -> match?({:ok, _}, MCPConnections.verify_access(token))
+        _ -> false
+      end
+  end
 
   # MCP requires refusing a page on another site that tries to reach the
   # endpoint through a browser (DNS rebinding). Claude's own requests come
