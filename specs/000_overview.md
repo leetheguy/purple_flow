@@ -26,7 +26,7 @@ It's a power tool: safeguards are options with defaults, not limits. See `AGENTS
 - **One node contract.** Every node is a module with `execute(input, config)` returning `{:ok, output}`, `{:ok, output, route}`, or `{:error, reason}`. There's no connector library. See [020](020_nodes.md).
 - **TOML, one file per node, one folder per workflow.** No YAML, no frontmatter. Workflows can sit in subfolders ([110](110_workflow_folders.md)). See [010](010_workflows.md).
 - **No credentials in TOML, ever.** Credentials are stored encrypted in Postgres, set only by a person on `/credentials`, referenced as `{{ creds.NAME }}`, and redacted from every record. See [080](080_credentials.md), [200](200_oauth_credentials.md), [230](230_credential_value_types.md).
-- **Agents write workflows, people hold the secrets.** Agents edit the workflows folder through the files service and read `/agents`; they can't see or set credentials. See [090](090_workflow_files.md).
+- **Agents write workflows, people hold the secrets.** Agents edit the workflows folder through the files service, at `/fs/` or as MCP tools at `/mcp`, and read `/agents`; they can't see or set credentials. See [090](090_workflow_files.md), [270](270_mcp_files.md).
 - **Untrusted code runs elsewhere.** Code node scripts run in a separate runner container with no secrets, no database, and no network beyond answering the app. See [100](100_runner_container.md).
 - **Fail loud.** A failure leaves a full record. Retries are an open idea, not a feature ([999](999_todo.md)).
 - **Light docs in code.** Module docs and comments are short and plain, like these specs. Someone who doesn't know Elixir should be able to follow them: say what it does and why, and explain Elixir/OTP terms in a few words when they come up.
@@ -50,7 +50,7 @@ Docker Compose runs four services, behind one site and one sign-in:
 
 Docker restarts the app and the runner when they exit. A watchdog in the app halts it when its own `/health` stops answering, and Erlang's `heart` kills either VM if it freezes, so a hang becomes a restart ([250](250_watchdog.md)). Both containers run with `init: true`, so the VM isn't PID 1.
 
-Run files live in a volume of their own, each up to the workflow's `max_file_size`, and are deleted when the run ends ([190](190_run_files.md), [260](260_file_transport.md)). The whole UI is behind a login form; `/hooks/*`, `/health`, and `/agents` are open, and a webhook can require a token (`auth`, [040](040_triggers.md)).
+Run files live in a volume of their own, each up to the workflow's `max_file_size`, and are deleted when the run ends ([190](190_run_files.md), [260](260_file_transport.md)). The whole UI is behind a login form; `/hooks/*`, `/health`, and `/agents` are open, and a webhook can require a token (`auth`, [040](040_triggers.md)). `/mcp` takes the agent token or an access token from PurpleFlow's own OAuth sign-in for MCP apps like Claude; its metadata (`/.well-known/*`) and `/oauth/token` are open, and the Allow page is behind the login ([270](270_mcp_files.md)).
 
 ## Process tree (app)
 
@@ -82,9 +82,11 @@ Order matters: nothing accepts a trigger until everything a run needs is up, and
 | `lib/purple_flow/runner/` | the Code runner (both sides) |
 | `lib/purple_flow/credentials*` | encrypted credentials and OAuth |
 | `lib/purple_flow_web/` | UI (LiveViews), webhooks, login, files proxy |
+| `lib/purple_flow_web/mcp/`, `mcp_controller.ex`, `mcp_auth_controller.ex`, `lib/purple_flow/mcp_connections*` | files over MCP: the tools, the endpoint, the OAuth sign-in, and connected apps |
 | `samples/` | sample workflows, the agent guide (`AGENTS.md`), and pressure tests (`testing/`) |
 | `.claude/skills/purpleflow-workflows/` | the skill sheet for agents building workflows |
 | `test/support/mix/tasks/mutate.ex` | `mix mutate`, the mutation testing tool (test-only) |
+| `test/deployed/` | checks run against the real Docker stack |
 
 ## Dependencies
 
@@ -136,4 +138,4 @@ Check current versions on Hex before adding any.
 - [240 — OpenAI Chat node](240_openai_chat.md)
 - [250 — Watchdog and heart](250_watchdog.md): restarting a hung or frozen app.
 - [260 — File transport](260_file_transport.md): files in and out over HTTP, SSH, and Postgres; `max_file_size`.
-- [270 — Files over MCP](270_mcp_files.md): *draft.* Claude reaches the workflows folder as an MCP connector, signing in with OAuth.
+- [270 — Files over MCP](270_mcp_files.md): Claude reaches the workflows folder as an MCP connector, signing in with PurpleFlow's own OAuth.

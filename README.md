@@ -404,6 +404,30 @@ it
 read and write workflow files and check what loaded, and nothing else: no
 UI, no run history, no credentials.
 
+### Claude over MCP
+
+Claude (on the web, the phone, and the desktop) can reach the workflows
+folder as a connector. In Claude's connector settings, add a custom
+connector with the address `https://<your PHX_HOST>/mcp`. Claude sends you
+to PurpleFlow to sign in, then asks "Claude wants to read and change the
+files in your workflows folder." Click **Allow**, and Claude gets the files
+service as tools: `list`, `search`, `read`, `stat`, `hash`, `write`,
+`append`, `mkdir`, `copy`, `move`, and `delete`, one dufs request each.
+
+- PurpleFlow does the sign-in itself, with its own login. There's nothing
+  to register and no third party.
+- Connected apps are listed at the bottom of **Credentials**, each with a
+  **Disconnect** button that cuts it off at once.
+- Claude Code and other clients that can send a header can skip the
+  sign-in: point them at `/mcp` with
+  `Authorization: Bearer $PURPLEFLOW_AGENT_TOKEN`.
+- The address must be public https, since Claude connects from its own
+  servers. Allowing an app gives it what the agent token gives: it can
+  write workflows, and workflows can use your credentials.
+
+`python3 test/deployed/mcp_check.py` checks it all against a running
+stack. See [specs/270](specs/270_mcp_files.md).
+
 ### Local development
 
 For local development without Docker, you need Elixir and Postgres (dev

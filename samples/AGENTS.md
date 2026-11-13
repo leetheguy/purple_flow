@@ -40,6 +40,8 @@ curl -H "Authorization: Bearer TOKEN" -T workflow.toml "BASE/fs/my_flow/workflow
 
 Start by listing `BASE/fs/?json` and reading an existing workflow or two. They're the best examples of how things are done here.
 
+**Connected over MCP?** If you reached this folder as an MCP connector (`BASE/mcp`), the same requests are tools: `list`, `search`, `read`, `stat`, `hash`, `write`, `append`, `mkdir`, `copy`, `move`, and `delete`, each taking a `path` like `some_folder/file.toml`. Everything else here applies as written. Checking your work (below) still needs the token, so ask for it if you don't have it.
+
 ## What a workflow is
 
 Each workflow is one folder containing:

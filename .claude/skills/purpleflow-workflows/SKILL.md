@@ -37,6 +37,7 @@ The workflows folder is its own git repo, separate from the app. Nobody commits 
   ```
 
   WebDAV works too (`MKCOL`, `MOVE` with a `Destination` header), so tools like rclone can mount `http://localhost:4000/fs/` with the token as a bearer token.
+- **Over MCP**, the same files are tools at `/mcp` (`list`, `search`, `read`, `stat`, `hash`, `write`, `append`, `mkdir`, `copy`, `move`, `delete`), one dufs request each. Claude signs in with OAuth through the app; Claude Code can use `--header "Authorization: Bearer <PURPLEFLOW_AGENT_TOKEN>"` instead. See `specs/270_mcp_files.md`.
 - **In a dev checkout** (`mix phx.server`), it's just `workflows/` in the repo; edit the files directly.
 
 ### Comments (shown to people)
