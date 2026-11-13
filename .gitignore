@@ -51,8 +51,6 @@ phx_server.log
 
 /memories/
 
-# The dufs MCP server: its own git repo, nested here.
-/dufs-mcp/
 
 # Independent review reports (test/review/README.md)
 /test/review/reports/
