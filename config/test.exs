@@ -46,6 +46,7 @@ config :purple_flow,
   http_req_options: [plug: {Req.Test, PurpleFlow.Nodes.Http}],
   oauth_req_options: [plug: {Req.Test, PurpleFlow.Credentials.OAuth}],
   files_req_options: [plug: {Req.Test, PurpleFlowWeb.Plugs.FilesProxy}],
+  mcp_client_req_options: [plug: {Req.Test, PurpleFlowWeb.MCP.ClientDocument}],
   openai_chat_req_options: [plug: {Req.Test, PurpleFlow.Nodes.OpenAIChat}]
 
 # Requests from here are refused, as from the Code node runner's network.
