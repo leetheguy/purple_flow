@@ -292,7 +292,8 @@ every step's queue, what's running, how many succeeded, and every
 execution's input and output.
 - **Files**: the workflows folder, to browse and edit in place.
 - **Credentials**: secrets that workflows use by name, as plain values or
-OAuth logins (connected once, kept fresh by the app).
+OAuth logins (connected once, kept fresh by the app). Apps connected over
+MCP, like Claude, are listed at the bottom, each with a Disconnect button.
 
 ### Under pressure
 
@@ -368,8 +369,9 @@ breaks
 write
   a file, `DELETE`, `GET /fs/folder/?json` to list) and WebDAV for mounting
   it as a folder. WebDAV clients that only do Basic auth (Finder, Windows)
-  can use the admin login instead. dufs has no port of its own, and it never
-  sees the folder's `.git`.
+  can use the admin login instead. Claude and other MCP apps get the same
+  files as tools at `/mcp` (see "Claude over MCP" below). dufs has no port
+  of its own, and it never sees the folder's `.git`.
 - **Agents check their changes** at `GET /api/workflows` on the app, with
   the same token: what loaded, what didn't, and why.
 - **Subfolders are groups.** Any folder with a `workflow.toml` is a
