@@ -88,6 +88,16 @@ defmodule PurpleFlowWeb.Router do
 
     get "/.well-known/oauth-protected-resource", MCPController, :resource_metadata
     get "/.well-known/oauth-protected-resource/mcp", MCPController, :resource_metadata
+    get "/.well-known/oauth-authorization-server", MCPAuthController, :metadata
+    post "/oauth/token", MCPAuthController, :token
+  end
+
+  # Allowing an MCP app, behind the sign-in: specs/270_mcp_files.md.
+  scope "/oauth", PurpleFlowWeb do
+    pipe_through [:browser, :signed_in]
+
+    get "/authorize", MCPAuthController, :authorize
+    post "/authorize", MCPAuthController, :decide
   end
 
   scope "/hooks", PurpleFlowWeb do

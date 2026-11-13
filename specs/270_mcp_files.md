@@ -150,7 +150,7 @@ Deployed (against the real compose stack)
 - [x] Tools: `PurpleFlowWeb.MCP.Tools`, the eleven dufs requests, paths, and errors
 - [x] Endpoint: `POST /mcp` for both generations, the agent token, the 401 challenge, and the protected resource metadata
 - [x] Connections: the `mcp_connections` table, codes and tokens, and access tokens at `/mcp`
-- [ ] Authorize: the authorization server metadata, the client document fetch, and the Allow page
-- [ ] Token: `POST /oauth/token`, both grants
+- [x] Authorize: the authorization server metadata, the client document fetch, and the Allow page
+- [x] Token: `POST /oauth/token`, both grants
 - [ ] Connected apps on `/credentials`
 - [ ] Docs (README, `samples/AGENTS.md`, the skill sheet, 000), the deployed check, the independent review, and `implemented`
