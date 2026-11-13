@@ -148,7 +148,7 @@ Deployed (against the real compose stack)
 ## Tasks
 
 - [x] Tools: `PurpleFlowWeb.MCP.Tools`, the eleven dufs requests, paths, and errors
-- [ ] Endpoint: `POST /mcp` for both generations, the agent token, the 401 challenge, and the protected resource metadata
+- [x] Endpoint: `POST /mcp` for both generations, the agent token, the 401 challenge, and the protected resource metadata
 - [ ] Connections: the `mcp_connections` table, codes and tokens, and access tokens at `/mcp`
 - [ ] Authorize: the authorization server metadata, the client document fetch, and the Allow page
 - [ ] Token: `POST /oauth/token`, both grants

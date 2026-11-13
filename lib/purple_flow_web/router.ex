@@ -7,6 +7,8 @@ defmodule PurpleFlowWeb.Router do
     require a token; see [specs/040](specs/040_triggers.md)).
   - `/api/workflows`: for agents, with `PURPLEFLOW_AGENT_TOKEN`
     ([specs/090](specs/090_workflow_files.md)).
+  - `/mcp`: for MCP clients like Claude, with a token, and the public
+    metadata that says where to sign in ([specs/270](specs/270_mcp_files.md)).
   - Everything else is the UI, behind the admin login
     ([specs/080](specs/080_credentials.md)).
 
@@ -75,6 +77,17 @@ defmodule PurpleFlowWeb.Router do
     pipe_through :api
 
     get "/workflows", WorkflowStatusController, :index
+  end
+
+  # MCP, for Claude and other MCP clients: specs/270_mcp_files.md. Each
+  # checks its own token, like webhooks, so no pipeline.
+  scope "/", PurpleFlowWeb do
+    post "/mcp", MCPController, :handle
+    get "/mcp", MCPController, :not_allowed
+    delete "/mcp", MCPController, :not_allowed
+
+    get "/.well-known/oauth-protected-resource", MCPController, :resource_metadata
+    get "/.well-known/oauth-protected-resource/mcp", MCPController, :resource_metadata
   end
 
   scope "/hooks", PurpleFlowWeb do
